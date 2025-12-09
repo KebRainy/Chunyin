@@ -1,54 +1,32 @@
 package com.example.demo1.entity;
 
+import com.baomidou.mybatisplus.annotation.*;
 import com.example.demo1.common.enums.UserRole;
-import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.NoArgsConstructor;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.jpa.domain.support.AuditingEntityListener;
 
 import java.time.LocalDateTime;
 
-@Entity
-@Table(name = "user")
 @Data
-@NoArgsConstructor
-@AllArgsConstructor
-@EntityListeners(AuditingEntityListener.class)
+@TableName("user")
 public class User {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @TableId(type = IdType.AUTO)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 50)
     private String username;
-
-    @Column(nullable = false)
     private String password;
-
-    @Column(nullable = false, unique = true, length = 100)
     private String email;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @TableField(value = "role")
     private UserRole role = UserRole.USER;
 
-    @Column(length = 255)
     private String avatarUrl;
-
-    @Column(columnDefinition = "TEXT")
     private String bio;
 
-    @CreatedDate
-    @Column(nullable = false, updatable = false)
+    @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 
-    @LastModifiedDate
-    @Column(nullable = false)
+    @TableField(fill = FieldFill.INSERT_UPDATE)
     private LocalDateTime updatedAt;
 
-    @Column(nullable = false)
     private Boolean isActive = true;
 }

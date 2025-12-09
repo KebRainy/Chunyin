@@ -1,33 +1,42 @@
 import { defineStore } from 'pinia'
+import { getCurrentUser, logout as logoutApi } from '@/api/auth'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
-    token: localStorage.getItem('token') || '',
-    userInfo: JSON.parse(localStorage.getItem('userInfo') || '{}')
+    userInfo: null,
+    loading: false,
+    initialized: false
   }),
 
   getters: {
-    isLoggedIn: (state) => !!state.token,
-    isAdmin: (state) => state.userInfo.role === 'ADMIN',
-    isSeller: (state) => state.userInfo.role === 'SELLER'
+    isLoggedIn: (state) => !!state.userInfo?.id,
+    isAdmin: (state) => state.userInfo?.role === 'ADMIN',
+    isSeller: (state) => state.userInfo?.role === 'SELLER'
   },
 
   actions: {
-    setToken(token) {
-      this.token = token
-      localStorage.setItem('token', token)
-    },
-
     setUserInfo(userInfo) {
       this.userInfo = userInfo
-      localStorage.setItem('userInfo', JSON.stringify(userInfo))
     },
 
-    logout() {
-      this.token = ''
-      this.userInfo = {}
-      localStorage.removeItem('token')
-      localStorage.removeItem('userInfo')
+    async fetchUserInfo() {
+      this.loading = true
+      try {
+        const res = await getCurrentUser()
+        this.userInfo = res.data
+      } catch (err) {
+        this.userInfo = null
+        return Promise.reject(err)
+      } finally {
+        this.loading = false
+        this.initialized = true
+      }
+    },
+
+    async logout() {
+      await logoutApi()
+      this.userInfo = null
+      this.initialized = true
     }
   }
 })

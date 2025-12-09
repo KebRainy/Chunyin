@@ -16,9 +16,16 @@ export const register = (data) => {
   })
 }
 
-export const getUserInfo = () => {
+export const getCurrentUser = () => {
   return request({
-    url: '/auth/info',
+    url: '/auth/me',
     method: 'get'
+  })
+}
+
+export const logout = () => {
+  return request({
+    url: '/auth/logout',
+    method: 'post'
   })
 }

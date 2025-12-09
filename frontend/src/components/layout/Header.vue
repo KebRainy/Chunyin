@@ -3,7 +3,7 @@
     <div class="header-content">
       <div class="logo" @click="goHome">
         <el-icon :size="28"><Wine /></el-icon>
-        <span>酒饮平台</span>
+        <span>醇饮社区</span>
       </div>
 
       <el-menu
@@ -13,11 +13,26 @@
         router
       >
         <el-menu-item index="/">首页</el-menu-item>
-        <el-menu-item index="/beverages">酒品库</el-menu-item>
-        <el-menu-item index="/announcements">公告</el-menu-item>
+        <el-menu-item index="/beverages">酒单</el-menu-item>
+        <el-menu-item index="/announcements">活动</el-menu-item>
+        <el-menu-item index="/wiki">Wiki</el-menu-item>
+        <el-menu-item index="/search">搜索</el-menu-item>
       </el-menu>
 
       <div class="header-right">
+        <el-input
+          v-model="searchKeyword"
+          placeholder="搜索圈子动态 / 酒款 / 用户"
+          class="header-search"
+          size="small"
+          clearable
+          @keyup.enter="goSearch"
+        >
+          <template #suffix>
+            <el-icon class="search-icon" @click="goSearch"><Search /></el-icon>
+          </template>
+        </el-input>
+
         <template v-if="userStore.isLoggedIn">
           <el-dropdown @command="handleCommand">
             <span class="user-info">
@@ -43,51 +58,40 @@
   </div>
 </template>
 
-<script>
-import { computed } from 'vue'
+<script setup>
+import { computed, onMounted, ref } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
 import { ElMessage } from 'element-plus'
 
-export default {
-  name: 'Header',
-  setup() {
-    const router = useRouter()
-    const route = useRoute()
-    const userStore = useUserStore()
+const router = useRouter()
+const route = useRoute()
+const userStore = useUserStore()
+const searchKeyword = ref('')
 
-    const activeMenu = computed(() => route.path)
+const activeMenu = computed(() => route.path)
 
-    const goHome = () => {
-      router.push('/')
-    }
+onMounted(() => {
+  if (!userStore.initialized && !userStore.loading) {
+    userStore.fetchUserInfo().catch(() => {})
+  }
+})
 
-    const goLogin = () => {
-      router.push('/login')
-    }
+const goHome = () => router.push('/')
+const goLogin = () => router.push('/login')
+const goRegister = () => router.push('/register')
+const goSearch = () => {
+  if (!searchKeyword.value) return
+  router.push({ path: '/search', query: { q: searchKeyword.value } })
+}
 
-    const goRegister = () => {
-      router.push('/register')
-    }
-
-    const handleCommand = (command) => {
-      if (command === 'profile') {
-        router.push('/user/profile')
-      } else if (command === 'logout') {
-        userStore.logout()
-        ElMessage.success('退出成功')
-        router.push('/')
-      }
-    }
-
-    return {
-      userStore,
-      activeMenu,
-      goHome,
-      goLogin,
-      goRegister,
-      handleCommand
-    }
+const handleCommand = async (command) => {
+  if (command === 'profile') {
+    router.push('/user/profile')
+  } else if (command === 'logout') {
+    await userStore.logout()
+    ElMessage.success('已退出登录')
+    router.push('/')
   }
 }
 </script>
@@ -127,7 +131,7 @@ export default {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 
 .user-info {
@@ -140,5 +144,13 @@ export default {
 .username {
   font-size: 14px;
   color: #606266;
+}
+
+.header-search {
+  width: 220px;
+}
+
+.search-icon {
+  cursor: pointer;
 }
 </style>

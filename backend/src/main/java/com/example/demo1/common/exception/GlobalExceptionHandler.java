@@ -36,7 +36,7 @@ public class GlobalExceptionHandler {
         return Result.error(403, "权限不足");
     }
 
-    @ExceptionHandler({MethodArgumentNotValidException.class, BindException.class})
+    @ExceptionHandler({ MethodArgumentNotValidException.class, BindException.class })
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Result<?> handleValidationException(Exception e) {
         String message = "参数校验失败";

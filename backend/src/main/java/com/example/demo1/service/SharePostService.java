@@ -114,6 +114,15 @@ public class SharePostService {
         return new PageResult<>(mpPage.getTotal(), (int) mpPage.getCurrent(), (int) mpPage.getSize(), vos);
     }
 
+    public SharePostVO getPostById(Long postId) {
+        SharePost post = sharePostMapper.selectById(postId);
+        if (post == null) {
+            return null;
+        }
+        User author = userService.getUserById(post.getUserId());
+        return toVo(post, author);
+    }
+
     public List<SharePostVO> search(String keyword, int limit) {
         LambdaQueryWrapper<SharePost> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(StringUtils.isNotBlank(keyword), SharePost::getContent, keyword)

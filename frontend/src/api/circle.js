@@ -35,6 +35,14 @@ export const circleApi = {
       method: 'get',
       params: { city, page, pageSize }
     })
+  },
+
+  // 获取单条动态详情
+  getPost: (id) => {
+    return request({
+      url: `/circle/posts/${id}`,
+      method: 'get'
+    })
   }
 }
 

@@ -30,4 +30,3 @@ export const updateWikiPage = (id, data) => {
     data
   })
 }
-

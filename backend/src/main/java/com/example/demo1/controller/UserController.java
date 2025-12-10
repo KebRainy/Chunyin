@@ -3,6 +3,7 @@ package com.example.demo1.controller;
 import com.example.demo1.common.exception.BusinessException;
 import com.example.demo1.common.response.Result;
 import com.example.demo1.dto.request.UpdateProfileRequest;
+import com.example.demo1.dto.response.SimpleUserVO;
 import com.example.demo1.dto.response.UserProfileVO;
 import com.example.demo1.entity.User;
 import com.example.demo1.security.UserPrincipal;
@@ -18,6 +19,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/users")
@@ -63,6 +67,18 @@ public class UserController {
         }
         userService.unfollow(principal.getId(), id);
         return Result.success();
+    }
+
+    @GetMapping("/followees")
+    public Result<List<SimpleUserVO>> getFollowees(@AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) {
+            throw new BusinessException(401, "请先登录");
+        }
+        List<User> followees = userService.getFollowees(principal.getId());
+        List<SimpleUserVO> result = followees.stream()
+                .map(userService::buildSimpleUser)
+                .collect(Collectors.toList());
+        return Result.success(result);
     }
 }
 

@@ -69,6 +69,33 @@ public class SharePostService {
         return new PageResult<>(mpPage.getTotal(), (int) mpPage.getCurrent(), (int) mpPage.getSize(), vos);
     }
 
+    public PageResult<SharePostVO> listFollowingPosts(Long userId, int page, int pageSize) {
+        // 获取用户关注的所有用户
+        List<User> followees = userService.getFollowees(userId);
+        List<Long> followeeIds = followees.stream().map(User::getId).collect(Collectors.toList());
+
+        if (followeeIds.isEmpty()) {
+            return new PageResult<>(0L, page, pageSize, new ArrayList<>());
+        }
+
+        // 查询这些用户发布的动态
+        Page<SharePost> mpPage = sharePostMapper.selectPage(new Page<>(page, pageSize),
+            new LambdaQueryWrapper<SharePost>()
+                .in(SharePost::getUserId, followeeIds)
+                .orderByDesc(SharePost::getCreatedAt));
+
+        List<Long> userIds = mpPage.getRecords().stream()
+            .map(SharePost::getUserId)
+            .collect(Collectors.toList());
+        Map<Long, User> userMap = userService.mapByIds(userIds);
+
+        List<SharePostVO> vos = mpPage.getRecords().stream()
+            .map(post -> toVo(post, userMap.get(post.getUserId())))
+            .collect(Collectors.toList());
+
+        return new PageResult<>(mpPage.getTotal(), (int) mpPage.getCurrent(), (int) mpPage.getSize(), vos);
+    }
+
     public List<SharePostVO> search(String keyword, int limit) {
         LambdaQueryWrapper<SharePost> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(StringUtils.isNotBlank(keyword), SharePost::getContent, keyword)

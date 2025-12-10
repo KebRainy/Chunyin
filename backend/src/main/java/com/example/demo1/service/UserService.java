@@ -201,6 +201,17 @@ public class UserService implements UserDetailsService {
                 .collect(Collectors.toList());
     }
 
+    public List<User> getFollowees(Long followerId) {
+        List<UserFollow> follows = userFollowMapper.selectList(
+                new LambdaQueryWrapper<UserFollow>()
+                        .eq(UserFollow::getFollowerId, followerId)
+                        .orderByDesc(UserFollow::getCreatedAt));
+        return follows.stream()
+                .map(f -> getUserById(f.getFolloweeId()))
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
+    }
+
     public Map<Long, User> mapByIds(List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return Collections.emptyMap();

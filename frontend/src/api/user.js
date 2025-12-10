@@ -29,3 +29,10 @@ export const unfollowUser = (id) => {
   })
 }
 
+export const getFollowees = () => {
+  return request({
+    url: '/users/followees',
+    method: 'get'
+  })
+}
+

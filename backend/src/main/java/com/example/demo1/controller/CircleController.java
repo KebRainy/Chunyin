@@ -7,6 +7,7 @@ import com.example.demo1.dto.request.SharePostRequest;
 import com.example.demo1.dto.response.SharePostVO;
 import com.example.demo1.security.UserPrincipal;
 import com.example.demo1.service.SharePostService;
+import com.example.demo1.service.UserService;
 import com.example.demo1.util.IpUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -25,6 +26,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class CircleController {
 
     private final SharePostService sharePostService;
+    private final UserService userService;
 
     @PostMapping("/posts")
     public Result<SharePostVO> publish(@AuthenticationPrincipal UserPrincipal principal,
@@ -41,5 +43,15 @@ public class CircleController {
     public Result<PageResult<SharePostVO>> list(@RequestParam(defaultValue = "1") Integer page,
             @RequestParam(defaultValue = "10") Integer pageSize) {
         return Result.success(sharePostService.listPosts(page, pageSize));
+    }
+
+    @GetMapping("/feed")
+    public Result<PageResult<SharePostVO>> feed(@AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer pageSize) {
+        if (principal == null) {
+            throw new BusinessException(401, "请先登录");
+        }
+        return Result.success(sharePostService.listFollowingPosts(principal.getId(), page, pageSize));
     }
 }

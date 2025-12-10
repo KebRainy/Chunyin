@@ -1,16 +1,15 @@
 package com.example.demo1.service;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.demo1.common.exception.BusinessException;
+import com.example.demo1.entity.Image;
+import com.example.demo1.mapper.ImageMapper;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -19,27 +18,85 @@ import java.util.UUID;
 public class FileStorageService {
 
     private static final Set<String> ALLOWED_TYPES = Set.of("image/png", "image/jpeg", "image/gif", "image/webp");
+    private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
-    @Value("${app.storage.upload-dir:uploads}")
-    private String uploadDir;
+    private final ImageMapper imageMapper;
 
-    public String store(MultipartFile file) {
+    public String storeImage(MultipartFile file, Long userId) {
         if (file.isEmpty()) {
             throw new BusinessException("不能为空文件");
         }
         if (!ALLOWED_TYPES.contains(file.getContentType())) {
             throw new BusinessException("文件类型不支持");
         }
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new BusinessException("文件大小不能超过5MB");
+        }
+
         try {
-            Path directory = Paths.get(uploadDir).toAbsolutePath().normalize();
-            Files.createDirectories(directory);
-            String extension = StringUtils.getFilenameExtension(file.getOriginalFilename());
-            String filename = UUID.randomUUID() + (extension != null ? "." + extension : "");
-            Path target = directory.resolve(filename);
-            Files.copy(file.getInputStream(), target);
-            return "/files/" + filename;
+            String uuid = UUID.randomUUID().toString();
+            byte[] imageData = file.getBytes();
+
+            Image image = new Image();
+            image.setUuid(uuid);
+            image.setImageData(imageData);
+            image.setFileName(file.getOriginalFilename());
+            image.setMimeType(file.getContentType());
+            image.setFileSize((int) file.getSize());
+            image.setUploadedBy(userId);
+
+            imageMapper.insert(image);
+            return "/files/" + uuid;
         } catch (IOException e) {
-            throw new BusinessException("文件上传失败");
+            throw new BusinessException("文件上传失败: " + e.getMessage());
         }
     }
+
+    public Map<String, Object> storeImageAndGetInfo(MultipartFile file, Long userId) {
+        if (file.isEmpty()) {
+            throw new BusinessException("不能为空文件");
+        }
+        if (!ALLOWED_TYPES.contains(file.getContentType())) {
+            throw new BusinessException("文件类型不支持");
+        }
+        if (file.getSize() > MAX_FILE_SIZE) {
+            throw new BusinessException("文件大小不能超过5MB");
+        }
+
+        try {
+            String uuid = UUID.randomUUID().toString();
+            byte[] imageData = file.getBytes();
+
+            Image image = new Image();
+            image.setUuid(uuid);
+            image.setImageData(imageData);
+            image.setFileName(file.getOriginalFilename());
+            image.setMimeType(file.getContentType());
+            image.setFileSize((int) file.getSize());
+            image.setUploadedBy(userId);
+
+            imageMapper.insert(image);
+            return Map.of(
+                "id", image.getId(),
+                "url", "/files/" + uuid,
+                "uuid", uuid
+            );
+        } catch (IOException e) {
+            throw new BusinessException("文件上传失败: " + e.getMessage());
+        }
+    }
+
+    public Image getImageByUuid(String uuid) {
+        return imageMapper.selectOne(new LambdaQueryWrapper<Image>()
+                .eq(Image::getUuid, uuid));
+    }
+
+    public Image getImageById(Long imageId) {
+        return imageMapper.selectById(imageId);
+    }
+
+    public void deleteImage(Long imageId) {
+        imageMapper.deleteById(imageId);
+    }
 }
+

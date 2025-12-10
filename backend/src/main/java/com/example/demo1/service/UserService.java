@@ -85,7 +85,9 @@ public class UserService implements UserDetailsService {
     public void updateProfile(Long userId, UpdateProfileRequest request) {
         LambdaUpdateWrapper<User> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(User::getId, userId);
-        if (StringUtils.isNotBlank(request.getAvatarUrl())) {
+        if (request.getAvatarImageId() != null) {
+            updateWrapper.set(User::getAvatarImageId, request.getAvatarImageId());
+        } else if (StringUtils.isNotBlank(request.getAvatarUrl())) {
             updateWrapper.set(User::getAvatarUrl, request.getAvatarUrl().trim());
         }
         if (request.getBio() != null) {
@@ -120,7 +122,7 @@ public class UserService implements UserDetailsService {
                 .username(target.getUsername())
                 .email(target.getEmail())
                 .role(target.getRole())
-                .avatarUrl(target.getAvatarUrl())
+                .avatarUrl(buildAvatarUrl(target))
                 .bio(target.getBio())
                 .createdAt(target.getCreatedAt())
                 .followerCount(followerCount)
@@ -134,12 +136,20 @@ public class UserService implements UserDetailsService {
         if (user == null) {
             return null;
         }
+        String avatarUrl = buildAvatarUrl(user);
         return SimpleUserVO.builder()
                 .id(user.getId())
                 .username(user.getUsername())
-                .avatarUrl(user.getAvatarUrl())
+                .avatarUrl(avatarUrl)
                 .bio(user.getBio())
                 .build();
+    }
+
+    public String buildAvatarUrl(User user) {
+        if (user.getAvatarImageId() != null) {
+            return "/files/" + user.getAvatarImageId();
+        }
+        return String.format(DEFAULT_AVATAR_TEMPLATE, user.getUsername());
     }
 
     @Transactional

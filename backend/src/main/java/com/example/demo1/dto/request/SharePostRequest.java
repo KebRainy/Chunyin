@@ -13,7 +13,8 @@ public class SharePostRequest {
     @Size(max = 2000, message = "分享内容不能超过 2000 个字符")
     private String content;
 
-    private List<String> imageUrls = new ArrayList<>();
+    private List<Long> imageIds = new ArrayList<>();
     private String location;
 }
+
 

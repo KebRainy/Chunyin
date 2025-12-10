@@ -4,11 +4,12 @@ CREATE TABLE IF NOT EXISTS user (
     password VARCHAR(255) NOT NULL,
     email VARCHAR(100) NOT NULL UNIQUE,
     role ENUM('USER', 'SELLER', 'ADMIN') NOT NULL DEFAULT 'USER',
-    avatar_url VARCHAR(255),
+    avatar_image_id BIGINT,
     bio TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (avatar_image_id) REFERENCES image(id) ON DELETE SET NULL,
     INDEX idx_username (username),
     INDEX idx_email (email),
     INDEX idx_role (role)
@@ -25,7 +26,7 @@ CREATE TABLE IF NOT EXISTS beverage (
     description TEXT,
     ingredients TEXT,
     taste_notes TEXT,
-    cover_image_url VARCHAR(255),
+    cover_image_id BIGINT,
     rating DECIMAL(3,2) DEFAULT 0.00,
     rating_count INT DEFAULT 0,
     view_count INT DEFAULT 0,
@@ -33,6 +34,7 @@ CREATE TABLE IF NOT EXISTS beverage (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (cover_image_id) REFERENCES image(id) ON DELETE SET NULL,
     FOREIGN KEY (created_by) REFERENCES user(id) ON DELETE SET NULL,
     INDEX idx_name (name),
     INDEX idx_type (type),
@@ -43,12 +45,11 @@ CREATE TABLE IF NOT EXISTS beverage (
 CREATE TABLE IF NOT EXISTS beverage_image (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     beverage_id BIGINT NOT NULL,
-    image_url VARCHAR(255) NOT NULL,
+    image_id BIGINT NOT NULL,
     image_order INT DEFAULT 0,
-    uploaded_by BIGINT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (beverage_id) REFERENCES beverage(id) ON DELETE CASCADE,
-    FOREIGN KEY (uploaded_by) REFERENCES user(id) ON DELETE SET NULL,
+    FOREIGN KEY (image_id) REFERENCES image(id) ON DELETE CASCADE,
     INDEX idx_beverage_id (beverage_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -115,7 +116,7 @@ CREATE TABLE IF NOT EXISTS announcement (
     event_type VARCHAR(50),
     location VARCHAR(200),
     event_date TIMESTAMP NULL,
-    cover_image_url VARCHAR(255),
+    cover_image_id BIGINT,
     status ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING',
     reviewed_by BIGINT,
     reviewed_at TIMESTAMP NULL,
@@ -125,6 +126,7 @@ CREATE TABLE IF NOT EXISTS announcement (
     is_active BOOLEAN DEFAULT TRUE,
     view_count INT DEFAULT 0,
     FOREIGN KEY (seller_id) REFERENCES user(id) ON DELETE CASCADE,
+    FOREIGN KEY (cover_image_id) REFERENCES image(id) ON DELETE SET NULL,
     FOREIGN KEY (reviewed_by) REFERENCES user(id) ON DELETE SET NULL,
     INDEX idx_seller_id (seller_id),
     INDEX idx_status (status),
@@ -160,13 +162,23 @@ CREATE TABLE IF NOT EXISTS share_post (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     user_id BIGINT NOT NULL,
     content TEXT NOT NULL,
-    image_urls JSON,
     location VARCHAR(255),
     ip_address VARCHAR(64),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
     INDEX idx_share_post_user (user_id),
     INDEX idx_share_post_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS share_post_image (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    share_post_id BIGINT NOT NULL,
+    image_id BIGINT NOT NULL,
+    image_order INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (share_post_id) REFERENCES share_post(id) ON DELETE CASCADE,
+    FOREIGN KEY (image_id) REFERENCES image(id) ON DELETE CASCADE,
+    INDEX idx_share_post_id (share_post_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS wiki_page (
@@ -208,4 +220,18 @@ CREATE TABLE IF NOT EXISTS private_message (
     INDEX idx_message_sender (sender_id),
     INDEX idx_message_receiver (receiver_id),
     INDEX idx_message_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS image (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    uuid VARCHAR(36) NOT NULL UNIQUE,
+    image_data LONGBLOB NOT NULL,
+    file_name VARCHAR(255),
+    mime_type VARCHAR(100),
+    file_size INT,
+    uploaded_by BIGINT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (uploaded_by) REFERENCES user(id) ON DELETE SET NULL,
+    INDEX idx_uuid (uuid),
+    INDEX idx_uploaded_by (uploaded_by)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

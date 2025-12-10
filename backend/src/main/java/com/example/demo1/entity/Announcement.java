@@ -22,7 +22,7 @@ public class Announcement {
     private String eventType;
     private String location;
     private LocalDateTime eventDate;
-    private String coverImageUrl;
+    private Long coverImageId;
     private ReviewStatus status = ReviewStatus.PENDING;
     private Long reviewedBy;
     private LocalDateTime reviewedAt;

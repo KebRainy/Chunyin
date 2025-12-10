@@ -1,18 +1,22 @@
 import request from './request'
 
-export const fetchCirclePosts = (params) => {
-  return request({
-    url: '/circle/posts',
-    method: 'get',
-    params
-  })
-}
+export const circleApi = {
+  // 获取动态列表（分页）
+  listPosts: (page = 1, pageSize = 12) => {
+    return request({
+      url: '/circle/posts',
+      method: 'get',
+      params: { page, pageSize }
+    })
+  },
 
-export const createCirclePost = (data) => {
-  return request({
-    url: '/circle/posts',
-    method: 'post',
-    data
-  })
+  // 发布新动态
+  createPost: (data) => {
+    return request({
+      url: '/circle/posts',
+      method: 'post',
+      data
+    })
+  }
 }
 

@@ -9,6 +9,17 @@ const routes = [
     component: () => import('@/views/Home.vue')
   },
   {
+    path: '/feed',
+    name: 'Feed',
+    component: () => import('@/views/Feed.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/nearby',
+    name: 'Nearby',
+    component: () => import('@/views/Nearby.vue')
+  },
+  {
     path: '/beverages',
     name: 'BeverageList',
     component: () => import('@/views/beverage/BeverageList.vue')
@@ -35,9 +46,25 @@ const routes = [
     meta: { requiresAuth: true }
   },
   {
+    path: '/wiki/:slug',
+    name: 'WikiDetail',
+    component: () => import('@/views/wiki/WikiDetail.vue')
+  },
+  {
+    path: '/posts/:id',
+    name: 'PostDetail',
+    component: () => import('@/views/post/PostDetail.vue')
+  },
+  {
     path: '/search',
     name: 'Search',
     component: () => import('@/views/Search.vue')
+  },
+  {
+    path: '/messages',
+    name: 'Messages',
+    component: () => import('@/views/message/Messages.vue'),
+    meta: { requiresAuth: true }
   },
   {
     path: '/login',
@@ -53,6 +80,12 @@ const routes = [
     path: '/user/profile',
     name: 'UserProfile',
     component: () => import('@/views/user/Profile.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/user/settings',
+    name: 'UserSettings',
+    component: () => import('@/views/user/Settings.vue'),
     meta: { requiresAuth: true }
   },
   {

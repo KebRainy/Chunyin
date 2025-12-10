@@ -6,9 +6,13 @@ import com.example.demo1.common.response.PageResult;
 import com.example.demo1.dto.request.SharePostRequest;
 import com.example.demo1.dto.response.SharePostVO;
 import com.example.demo1.dto.response.SimpleUserVO;
+import com.example.demo1.entity.Image;
 import com.example.demo1.entity.SharePost;
+import com.example.demo1.entity.SharePostImage;
 import com.example.demo1.entity.User;
+import com.example.demo1.mapper.ImageMapper;
 import com.example.demo1.mapper.SharePostMapper;
+import com.example.demo1.mapper.SharePostImageMapper;
 import com.example.demo1.util.IpUtils;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
@@ -25,6 +29,8 @@ import java.util.stream.Collectors;
 public class SharePostService {
 
     private final SharePostMapper sharePostMapper;
+    private final SharePostImageMapper sharePostImageMapper;
+    private final ImageMapper imageMapper;
     private final UserService userService;
 
     public SharePostVO createPost(Long userId, SharePostRequest request, String ipAddress) {
@@ -33,8 +39,19 @@ public class SharePostService {
         post.setContent(request.getContent());
         post.setLocation(request.getLocation());
         post.setIpAddress(ipAddress);
-        post.setImageUrls(request.getImageUrls() == null ? new ArrayList<>() : request.getImageUrls());
         sharePostMapper.insert(post);
+
+        // 保存关联的图片
+        if (request.getImageIds() != null && !request.getImageIds().isEmpty()) {
+            for (int i = 0; i < request.getImageIds().size(); i++) {
+                SharePostImage image = new SharePostImage();
+                image.setSharePostId(post.getId());
+                image.setImageId(request.getImageIds().get(i));
+                image.setImageOrder(i);
+                sharePostImageMapper.insert(image);
+            }
+        }
+
         User author = userService.getUserById(userId);
         return toVo(post, author);
     }
@@ -62,13 +79,32 @@ public class SharePostService {
         return posts.stream().map(post -> toVo(post, userMap.get(post.getUserId()))).collect(Collectors.toList());
     }
 
+    public List<Long> getPostImageIds(Long postId) {
+        return sharePostImageMapper.selectList(
+                new LambdaQueryWrapper<SharePostImage>()
+                    .eq(SharePostImage::getSharePostId, postId)
+                    .orderByAsc(SharePostImage::getImageOrder))
+            .stream()
+            .map(SharePostImage::getImageId)
+            .collect(Collectors.toList());
+    }
+
     private SharePostVO toVo(SharePost post, User user) {
         SimpleUserVO author = userService.buildSimpleUser(user);
+        List<Long> imageIds = getPostImageIds(post.getId());
+        List<String> imageUrls = imageIds.stream()
+            .map(id -> {
+                Image image = imageMapper.selectById(id);
+                return image != null ? "/files/" + image.getUuid() : null;
+            })
+            .filter(Objects::nonNull)
+            .collect(Collectors.toList());
+
         return SharePostVO.builder()
             .id(post.getId())
             .author(author)
             .content(post.getContent())
-            .imageUrls(post.getImageUrls() == null ? List.of() : post.getImageUrls())
+            .imageUrls(imageUrls)
             .location(post.getLocation())
             .ipAddressMasked(IpUtils.maskIp(post.getIpAddress()))
             .createdAt(post.getCreatedAt())

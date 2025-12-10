@@ -19,6 +19,7 @@ public class User {
     @TableField(value = "role")
     private UserRole role = UserRole.USER;
 
+    private Long avatarImageId;
     private String avatarUrl;
     private String bio;
 

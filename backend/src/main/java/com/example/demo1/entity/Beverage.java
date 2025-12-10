@@ -25,7 +25,7 @@ public class Beverage {
     private String description;
     private String ingredients;
     private String tasteNotes;
-    private String coverImageUrl;
+    private Long coverImageId;
     private BigDecimal rating = BigDecimal.ZERO;
     private Integer ratingCount = 0;
     private Integer viewCount = 0;

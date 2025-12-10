@@ -12,7 +12,7 @@ public class BeverageSummaryVO {
     private String name;
     private String type;
     private String origin;
-    private String coverImageUrl;
+    private Long coverImageId;
     private BigDecimal rating;
 }
 

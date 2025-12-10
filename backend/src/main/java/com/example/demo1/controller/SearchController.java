@@ -65,7 +65,7 @@ public class SearchController {
                 .name(beverage.getName())
                 .type(beverage.getType())
                 .origin(beverage.getOrigin())
-                .coverImageUrl(beverage.getCoverImageUrl())
+                .coverImageId(beverage.getCoverImageId())
                 .rating(beverage.getRating())
                 .build())
             .collect(Collectors.toList());

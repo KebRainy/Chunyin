@@ -54,4 +54,11 @@ public class CircleController {
         }
         return Result.success(sharePostService.listFollowingPosts(principal.getId(), page, pageSize));
     }
+
+    @GetMapping("/nearby")
+    public Result<PageResult<SharePostVO>> nearby(@RequestParam String city,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "12") Integer pageSize) {
+        return Result.success(sharePostService.listPostsByCity(city, page, pageSize));
+    }
 }

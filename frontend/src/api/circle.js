@@ -26,6 +26,15 @@ export const circleApi = {
       method: 'post',
       data
     })
+  },
+
+  // 获取指定城市的动态列表（分页）
+  listPostsByCity: (city, page = 1, pageSize = 12) => {
+    return request({
+      url: '/circle/nearby',
+      method: 'get',
+      params: { city, page, pageSize }
+    })
   }
 }
 

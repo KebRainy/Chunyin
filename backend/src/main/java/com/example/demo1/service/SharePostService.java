@@ -96,6 +96,24 @@ public class SharePostService {
         return new PageResult<>(mpPage.getTotal(), (int) mpPage.getCurrent(), (int) mpPage.getSize(), vos);
     }
 
+    public PageResult<SharePostVO> listPostsByCity(String city, int page, int pageSize) {
+        Page<SharePost> mpPage = sharePostMapper.selectPage(new Page<>(page, pageSize),
+            new LambdaQueryWrapper<SharePost>()
+                .eq(SharePost::getLocation, city)
+                .orderByDesc(SharePost::getCreatedAt));
+
+        List<Long> userIds = mpPage.getRecords().stream()
+            .map(SharePost::getUserId)
+            .collect(Collectors.toList());
+        Map<Long, User> userMap = userService.mapByIds(userIds);
+
+        List<SharePostVO> vos = mpPage.getRecords().stream()
+            .map(post -> toVo(post, userMap.get(post.getUserId())))
+            .collect(Collectors.toList());
+
+        return new PageResult<>(mpPage.getTotal(), (int) mpPage.getCurrent(), (int) mpPage.getSize(), vos);
+    }
+
     public List<SharePostVO> search(String keyword, int limit) {
         LambdaQueryWrapper<SharePost> wrapper = new LambdaQueryWrapper<>();
         wrapper.like(StringUtils.isNotBlank(keyword), SharePost::getContent, keyword)

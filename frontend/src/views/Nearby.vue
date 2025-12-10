@@ -1,23 +1,31 @@
 <template>
   <div class="nearby-container">
     <div class="city-selector">
-      <el-select v-model="selectedCity" placeholder="选择城市">
-        <el-option value="beijing" label="北京" />
-        <el-option value="shanghai" label="上海" />
-        <el-option value="guangzhou" label="广州" />
-        <el-option value="shenzhen" label="深圳" />
-        <el-option value="hangzhou" label="杭州" />
-        <el-option value="chengdu" label="成都" />
-        <el-option value="wuhan" label="武汉" />
-        <el-option value="xiamen" label="厦门" />
-        <el-option value="nanjing" label="南京" />
+      <label>选择城市:</label>
+      <el-select v-model="selectedCity" @change="onCityChange" placeholder="选择城市">
+        <el-option value="北京" label="北京" />
+        <el-option value="上海" label="上海" />
+        <el-option value="广州" label="广州" />
+        <el-option value="深圳" label="深圳" />
+        <el-option value="杭州" label="杭州" />
+        <el-option value="成都" label="成都" />
+        <el-option value="武汉" label="武汉" />
+        <el-option value="厦门" label="厦门" />
+        <el-option value="南京" label="南京" />
       </el-select>
     </div>
 
-    <div v-if="loading" class="loading">加载中...</div>
-    <div v-else-if="posts.length === 0" class="empty">该城市还没有动态</div>
+    <div v-if="loading && posts.length === 0" class="loading">加载中...</div>
+    <div v-else-if="posts.length === 0" class="empty">
+      <el-empty :description="`${selectedCity}还没有动态`" />
+    </div>
     <div v-else class="posts-grid">
-      <div v-for="post in posts" :key="post.id" class="post-card">
+      <div
+        v-for="post in posts"
+        :key="post.id"
+        class="post-card"
+        @click="goToPost(post.id)"
+      >
         <div v-if="post.imageUrls && post.imageUrls.length > 0" class="post-image">
           <img :src="post.imageUrls[0]" :alt="post.content" />
         </div>
@@ -34,12 +42,22 @@
         </div>
       </div>
     </div>
+
+    <!-- 加载更多 -->
+    <div v-if="!loading && hasMore" class="load-more">
+      <el-button @click="loadMore">加载更多</el-button>
+    </div>
+    <div v-if="!hasMore && posts.length > 0" class="no-more">
+      已加载全部内容
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
 import { circleApi } from '@/api/circle'
+import { Picture } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/zh-cn'
@@ -47,15 +65,27 @@ import 'dayjs/locale/zh-cn'
 dayjs.extend(relativeTime)
 dayjs.locale('zh-cn')
 
-const selectedCity = ref('beijing')
+const router = useRouter()
+
+const selectedCity = ref('北京')
 const posts = ref([])
 const loading = ref(false)
+const currentPage = ref(1)
+const pageSize = ref(12)
+const hasMore = ref(true)
 
 const loadPosts = async () => {
   loading.value = true
   try {
-    const response = await circleApi.listPosts(1, 20)
-    posts.value = (response.data || []).filter(post => post.location)
+    const response = await circleApi.listPostsByCity(selectedCity.value, currentPage.value, pageSize.value)
+    const pageData = response.data
+
+    if (currentPage.value === 1) {
+      posts.value = pageData.items || []
+    } else {
+      posts.value.push(...(pageData.items || []))
+    }
+    hasMore.value = (pageData.items || []).length >= pageSize.value
   } catch (error) {
     console.error('Failed to load nearby posts:', error)
   } finally {
@@ -63,9 +93,21 @@ const loadPosts = async () => {
   }
 }
 
-watch(selectedCity, () => {
+const onCityChange = () => {
+  currentPage.value = 1
+  posts.value = []
+  hasMore.value = true
   loadPosts()
-}, { immediate: true })
+}
+
+const loadMore = () => {
+  currentPage.value++
+  loadPosts()
+}
+
+const goToPost = (postId) => {
+  router.push(`/posts/${postId}`)
+}
 
 const formatTime = (time) => {
   if (!time) return ''
@@ -89,7 +131,12 @@ const formatTime = (time) => {
 }
 
 .city-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin-bottom: 24px;
+  font-size: 14px;
+  color: #333;
 }
 
 :deep(.el-select) {
@@ -106,6 +153,7 @@ const formatTime = (time) => {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
   gap: 16px;
+  margin-bottom: 20px;
 }
 
 .post-card {
@@ -171,4 +219,18 @@ const formatTime = (time) => {
   font-size: 11px;
   color: #999;
 }
+
+.load-more {
+  text-align: center;
+  padding: 20px;
+  margin-top: 20px;
+}
+
+.no-more {
+  text-align: center;
+  padding: 20px;
+  color: #999;
+  font-size: 12px;
+}
 </style>
+

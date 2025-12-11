@@ -22,6 +22,21 @@ export const fetchWikiHistory = (slug) => {
   })
 }
 
+export const fetchWikiDiscussions = (slug) => {
+  return request({
+    url: `/wiki/pages/${slug}/discussions`,
+    method: 'get'
+  })
+}
+
+export const createWikiDiscussion = (slug, data) => {
+  return request({
+    url: `/wiki/pages/${slug}/discussions`,
+    method: 'post',
+    data
+  })
+}
+
 export const fetchWikiStats = () => {
   return request({
     url: '/wiki/pages/stats',

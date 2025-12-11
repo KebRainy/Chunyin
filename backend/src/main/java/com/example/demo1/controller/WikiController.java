@@ -3,7 +3,9 @@ package com.example.demo1.controller;
 import com.example.demo1.common.exception.BusinessException;
 import com.example.demo1.common.response.PageResult;
 import com.example.demo1.common.response.Result;
+import com.example.demo1.dto.request.WikiDiscussionRequest;
 import com.example.demo1.dto.request.WikiPageRequest;
+import com.example.demo1.dto.response.WikiDiscussionVO;
 import com.example.demo1.dto.response.WikiPageVO;
 import com.example.demo1.dto.response.WikiRevisionVO;
 import com.example.demo1.dto.response.WikiStatsVO;
@@ -51,6 +53,21 @@ public class WikiController {
         return Result.success(wikiService.listRevisions(slug));
     }
 
+    @GetMapping("/{slug}/discussions")
+    public Result<List<WikiDiscussionVO>> discussions(@PathVariable String slug) {
+        return Result.success(wikiService.listDiscussions(slug));
+    }
+
+    @PostMapping("/{slug}/discussions")
+    public Result<WikiDiscussionVO> createDiscussion(@PathVariable String slug,
+                                                     @AuthenticationPrincipal UserPrincipal principal,
+                                                     @Valid @RequestBody WikiDiscussionRequest request) {
+        if (principal == null) {
+            throw new BusinessException(401, "请先登录");
+        }
+        return Result.success(wikiService.createDiscussion(slug, principal.getId(), request));
+    }
+
     @GetMapping("/stats")
     public Result<WikiStatsVO> stats() {
         return Result.success(wikiService.getStats());
@@ -84,4 +101,3 @@ public class WikiController {
         return Result.success(wikiService.toggleFavorite(id, principal.getId()));
     }
 }
-

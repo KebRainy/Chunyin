@@ -15,6 +15,14 @@ export const updateProfile = (data) => {
   })
 }
 
+export const changePassword = (data) => {
+  return request({
+    url: '/users/password',
+    method: 'put',
+    data
+  })
+}
+
 export const followUser = (id) => {
   return request({
     url: `/users/${id}/follow`,
@@ -59,4 +67,3 @@ export const recordFootprint = (data) => {
     data
   })
 }
-

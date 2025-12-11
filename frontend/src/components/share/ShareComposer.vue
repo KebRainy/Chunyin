@@ -46,7 +46,7 @@
             v-if="mode === 'modal'"
             v-model:file-list="uploadFileList"
             list-type="picture-card"
-            action="/api/files/upload"
+            action="/api/files/upload?category=POST"
             multiple
             :on-success="handleUploadSuccess"
             :on-remove="handleRemove"
@@ -167,7 +167,7 @@ const handleInlineFiles = async (event) => {
     const formData = new FormData()
     formData.append('file', file)
     try {
-      const result = await fetch('/api/files/upload', {
+      const result = await fetch('/api/files/upload?category=POST', {
         method: 'POST',
         body: formData,
         credentials: 'include'

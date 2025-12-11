@@ -12,9 +12,9 @@ public class CollectionItemVO {
     private Long id;
     private CollectionTargetType targetType;
     private Long targetId;
+    private String slug;
     private String title;
     private String summary;
     private String coverUrl;
     private LocalDateTime createdAt;
 }
-

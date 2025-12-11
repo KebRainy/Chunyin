@@ -9,7 +9,7 @@
           <el-avatar :src="avatarPreview" :size="80" :alt="`${form.username || '用户'}的头像预览`" />
           <el-upload
             class="avatar-upload"
-            action="/api/files/upload"
+            action="/api/files/upload?category=AVATAR"
             :show-file-list="false"
             :on-success="handleAvatarSuccess"
             :before-upload="beforeAvatarUpload"
@@ -40,9 +40,9 @@
       <!-- 性别 -->
       <el-form-item label="性别">
         <el-radio-group v-model="form.gender">
-          <el-radio value="male">男</el-radio>
-          <el-radio value="female">女</el-radio>
-          <el-radio value="secret">保密</el-radio>
+          <el-radio value="MALE">男</el-radio>
+          <el-radio value="FEMALE">女</el-radio>
+          <el-radio value="SECRET">保密</el-radio>
         </el-radio-group>
       </el-form-item>
 
@@ -125,6 +125,7 @@
 import { ref } from 'vue'
 import { useUserStore } from '@/store/modules/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { updateProfile, changePassword as changePasswordApi } from '@/api/user'
 
 const userStore = useUserStore()
 const avatarPreview = ref(userStore.userInfo?.avatarUrl)
@@ -133,7 +134,7 @@ const passwordDialogVisible = ref(false)
 const form = ref({
   username: userStore.userInfo?.username || '',
   bio: userStore.userInfo?.bio || '',
-  gender: userStore.userInfo?.gender || 'secret',
+  gender: userStore.userInfo?.gender || 'SECRET',
   email: userStore.userInfo?.email || '',
   birthday: userStore.userInfo?.birthday ? new Date(userStore.userInfo.birthday) : null,
   avatarImageId: null
@@ -144,6 +145,15 @@ const passwordForm = ref({
   newPassword: '',
   confirmPassword: ''
 })
+
+const toDateString = (value) => {
+  if (!value) return null
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return null
+  }
+  return date.toISOString().slice(0, 10)
+}
 
 const beforeAvatarUpload = (file) => {
   const isImage = file.type.startsWith('image/')
@@ -177,7 +187,7 @@ const saveSettings = async () => {
       bio: form.value.bio,
       gender: form.value.gender,
       email: form.value.email,
-      birthday: form.value.birthday,
+      birthday: toDateString(form.value.birthday),
       avatarImageId: form.value.avatarImageId
     })
     await userStore.fetchUserInfo()
@@ -191,7 +201,7 @@ const resetForm = () => {
   form.value = {
     username: userStore.userInfo?.username || '',
     bio: userStore.userInfo?.bio || '',
-    gender: userStore.userInfo?.gender || 'secret',
+    gender: userStore.userInfo?.gender || 'SECRET',
     email: userStore.userInfo?.email || '',
     birthday: userStore.userInfo?.birthday ? new Date(userStore.userInfo.birthday) : null,
     avatarImageId: null
@@ -213,7 +223,10 @@ const changePassword = async () => {
   }
 
   try {
-    // TODO: 调用API修改密码
+    await changePasswordApi({
+      oldPassword: passwordForm.value.oldPassword,
+      newPassword: passwordForm.value.newPassword
+    })
     ElMessage.success('密码修改成功')
     passwordDialogVisible.value = false
     passwordForm.value = {

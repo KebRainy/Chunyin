@@ -5,13 +5,17 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.demo1.common.enums.WikiStatus;
 import com.example.demo1.common.exception.BusinessException;
 import com.example.demo1.common.response.PageResult;
+import com.example.demo1.dto.request.WikiDiscussionRequest;
 import com.example.demo1.dto.request.WikiPageRequest;
+import com.example.demo1.dto.response.WikiDiscussionVO;
 import com.example.demo1.dto.response.WikiPageVO;
 import com.example.demo1.dto.response.WikiRevisionVO;
 import com.example.demo1.dto.response.WikiStatsVO;
 import com.example.demo1.entity.User;
+import com.example.demo1.entity.WikiDiscussion;
 import com.example.demo1.entity.WikiPage;
 import com.example.demo1.entity.WikiRevision;
+import com.example.demo1.mapper.WikiDiscussionMapper;
 import com.example.demo1.mapper.WikiPageMapper;
 import com.example.demo1.mapper.WikiRevisionMapper;
 import com.example.demo1.util.SlugUtils;
@@ -21,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -30,6 +35,7 @@ public class WikiService {
 
     private final WikiPageMapper wikiPageMapper;
     private final WikiRevisionMapper wikiRevisionMapper;
+    private final WikiDiscussionMapper wikiDiscussionMapper;
     private final UserService userService;
     private final CollectionService collectionService;
 
@@ -150,6 +156,49 @@ public class WikiService {
             throw new BusinessException(404, "词条不存在");
         }
         return collectionService.toggleWikiFavorite(userId, page);
+    }
+
+    public List<WikiDiscussionVO> listDiscussions(String slugOrId) {
+        WikiPage page = findPage(slugOrId);
+        if (page == null) {
+            throw new BusinessException(404, "词条不存在");
+        }
+        List<WikiDiscussion> discussions = wikiDiscussionMapper.selectList(new LambdaQueryWrapper<WikiDiscussion>()
+            .eq(WikiDiscussion::getPageId, page.getId())
+            .orderByDesc(WikiDiscussion::getCreatedAt));
+        if (discussions.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        Map<Long, User> userMap = userService.mapByIds(
+            discussions.stream().map(WikiDiscussion::getUserId).collect(Collectors.toList()));
+        return discussions.stream()
+            .map(discussion -> WikiDiscussionVO.builder()
+                .id(discussion.getId())
+                .author(userService.buildSimpleUser(userMap.get(discussion.getUserId())))
+                .content(discussion.getContent())
+                .createdAt(discussion.getCreatedAt())
+                .build())
+            .toList();
+    }
+
+    @Transactional
+    public WikiDiscussionVO createDiscussion(String slugOrId, Long userId, WikiDiscussionRequest request) {
+        WikiPage page = findPage(slugOrId);
+        if (page == null) {
+            throw new BusinessException(404, "词条不存在");
+        }
+        User author = userService.getRequiredUser(userId);
+        WikiDiscussion discussion = new WikiDiscussion();
+        discussion.setPageId(page.getId());
+        discussion.setUserId(userId);
+        discussion.setContent(request.getContent());
+        wikiDiscussionMapper.insert(discussion);
+        return WikiDiscussionVO.builder()
+            .id(discussion.getId())
+            .author(userService.buildSimpleUser(author))
+            .content(discussion.getContent())
+            .createdAt(discussion.getCreatedAt())
+            .build();
     }
 
     private WikiPage findPage(String slugOrId) {

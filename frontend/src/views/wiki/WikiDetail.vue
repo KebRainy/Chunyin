@@ -49,9 +49,52 @@
         <section class="wiki-discussion">
           <div class="section-header">
             <h3>讨论</h3>
-            <el-button text size="small">发起讨论</el-button>
+            <el-button text size="small" @click="focusDiscussionInput">发起讨论</el-button>
           </div>
-          <el-empty description="暂时还没有讨论，快来参与吧" />
+          <div v-if="discussionLoading" class="discussion-loading">
+            <el-skeleton :rows="3" animated />
+          </div>
+          <div v-else>
+            <div v-if="userStore.isLoggedIn" class="discussion-form">
+              <el-input
+                ref="discussionInputRef"
+                v-model="discussionContent"
+                type="textarea"
+                placeholder="写下你的问题或观点..."
+                :rows="3"
+                maxlength="1000"
+                show-word-limit
+              />
+              <div class="discussion-actions">
+                <el-button
+                  type="primary"
+                  size="small"
+                  :loading="submittingDiscussion"
+                  @click="submitDiscussion"
+                >
+                  发布讨论
+                </el-button>
+              </div>
+            </div>
+            <div v-else class="discussion-login">
+              <el-button type="text" @click="goLogin">登录后参与讨论</el-button>
+            </div>
+            <div v-if="discussions.length === 0" class="discussion-empty">
+              <el-empty description="暂时还没有讨论，快来参与吧" />
+            </div>
+            <div v-else class="discussion-list">
+              <div v-for="item in discussions" :key="item.id" class="discussion-item">
+                <el-avatar :src="item.author?.avatarUrl" :size="36" />
+                <div class="discussion-body">
+                  <div class="discussion-meta">
+                    <span class="author">{{ item.author?.username || '匿名用户' }}</span>
+                    <span class="time">{{ formatTime(item.createdAt) }}</span>
+                  </div>
+                  <p class="discussion-text">{{ item.content }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
         </section>
 
         <section class="wiki-history">
@@ -80,7 +123,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import dayjs from 'dayjs'
-import { fetchWikiPage, fetchWikiHistory, favoriteWikiPage } from '@/api/wiki'
+import { fetchWikiPage, fetchWikiHistory, favoriteWikiPage, fetchWikiDiscussions, createWikiDiscussion } from '@/api/wiki'
 import { recordFootprint } from '@/api/user'
 import { useUserStore } from '@/store/modules/user'
 import { ElMessage } from 'element-plus'
@@ -92,6 +135,11 @@ const userStore = useUserStore()
 const wiki = ref(null)
 const history = ref([])
 const loading = ref(true)
+const discussions = ref([])
+const discussionLoading = ref(true)
+const discussionContent = ref('')
+const submittingDiscussion = ref(false)
+const discussionInputRef = ref(null)
 
 const tocItems = computed(() => {
   if (!wiki.value?.content) return []
@@ -112,6 +160,7 @@ const loadWiki = async () => {
     const response = await fetchWikiPage(route.params.slug)
     wiki.value = response.data
     await loadHistory()
+    await loadDiscussions()
     recordWikiFootprint()
   } catch (error) {
     ElMessage.error('加载词条失败')
@@ -126,6 +175,18 @@ const loadHistory = async () => {
     history.value = res.data || []
   } catch (error) {
     history.value = []
+  }
+}
+
+const loadDiscussions = async () => {
+  discussionLoading.value = true
+  try {
+    const res = await fetchWikiDiscussions(route.params.slug)
+    discussions.value = res.data || []
+  } catch (error) {
+    discussions.value = []
+  } finally {
+    discussionLoading.value = false
   }
 }
 
@@ -171,6 +232,40 @@ const favoritePage = async () => {
   } catch (error) {
     ElMessage.error('操作失败')
   }
+}
+
+const focusDiscussionInput = () => {
+  if (!userStore.isLoggedIn) {
+    goLogin()
+    return
+  }
+  discussionInputRef.value?.focus()
+}
+
+const submitDiscussion = async () => {
+  if (!userStore.isLoggedIn) {
+    goLogin()
+    return
+  }
+  if (!discussionContent.value.trim()) {
+    ElMessage.warning('请输入讨论内容')
+    return
+  }
+  submittingDiscussion.value = true
+  try {
+    const res = await createWikiDiscussion(route.params.slug, { content: discussionContent.value.trim() })
+    discussions.value.unshift(res.data)
+    discussionContent.value = ''
+    ElMessage.success('讨论已发布')
+  } catch (error) {
+    ElMessage.error(error.response?.data?.message || '发布失败')
+  } finally {
+    submittingDiscussion.value = false
+  }
+}
+
+const goLogin = () => {
+  router.push('/login')
 }
 
 onMounted(() => {
@@ -290,6 +385,56 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+}
+
+.discussion-form {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.discussion-actions {
+  text-align: right;
+}
+
+.discussion-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.discussion-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid #f0f2f5;
+  border-radius: 12px;
+  background-color: #fafbfc;
+}
+
+.discussion-body {
+  flex: 1;
+}
+
+.discussion-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 6px;
+}
+
+.discussion-text {
+  margin: 0;
+  color: #303133;
+  line-height: 1.6;
+}
+
+.discussion-login {
+  margin-bottom: 12px;
+  text-align: center;
+  color: #909399;
 }
 
 .history-list {

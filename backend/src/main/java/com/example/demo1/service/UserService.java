@@ -3,6 +3,7 @@ package com.example.demo1.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.example.demo1.common.exception.BusinessException;
+import com.example.demo1.dto.request.ChangePasswordRequest;
 import com.example.demo1.dto.request.RegisterRequest;
 import com.example.demo1.dto.request.UpdateProfileRequest;
 import com.example.demo1.dto.response.SimpleUserVO;
@@ -122,6 +123,19 @@ public class UserService implements UserDetailsService {
             updateWrapper.set(User::getBirthday, request.getBirthday());
         }
         userMapper.update(null, updateWrapper);
+    }
+
+    @Transactional
+    public void changePassword(Long userId, ChangePasswordRequest request) {
+        User user = getRequiredUser(userId);
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+            throw new BusinessException("原密码不正确");
+        }
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new BusinessException("新密码不能与原密码相同");
+        }
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        userMapper.updateById(user);
     }
 
     public boolean existsByUsername(String username) {

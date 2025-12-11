@@ -106,7 +106,7 @@ const goToPost = (postId) => {
 }
 
 const goToUser = (userId) => {
-  router.push(`/user/${userId}`)
+  router.push(`/users/${userId}`)
 }
 
 onMounted(() => {

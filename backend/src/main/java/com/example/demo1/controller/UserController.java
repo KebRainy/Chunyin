@@ -2,6 +2,7 @@ package com.example.demo1.controller;
 
 import com.example.demo1.common.exception.BusinessException;
 import com.example.demo1.common.response.Result;
+import com.example.demo1.dto.request.ChangePasswordRequest;
 import com.example.demo1.dto.request.UpdateProfileRequest;
 import com.example.demo1.dto.response.SimpleUserVO;
 import com.example.demo1.dto.response.UserProfileVO;
@@ -49,6 +50,16 @@ public class UserController {
         return Result.success(userService.buildProfile(user, principal.getId()));
     }
 
+    @PutMapping("/password")
+    public Result<Void> changePassword(@AuthenticationPrincipal UserPrincipal principal,
+                                       @Valid @RequestBody ChangePasswordRequest request) {
+        if (principal == null) {
+            throw new BusinessException(401, "请先登录");
+        }
+        userService.changePassword(principal.getId(), request);
+        return Result.success();
+    }
+
     @PostMapping("/{id}/follow")
     public Result<Void> follow(@PathVariable Long id,
                                @AuthenticationPrincipal UserPrincipal principal) {
@@ -81,5 +92,4 @@ public class UserController {
         return Result.success(result);
     }
 }
-
 

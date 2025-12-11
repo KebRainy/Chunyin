@@ -1,6 +1,7 @@
 package com.example.demo1.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.example.demo1.common.enums.FileCategory;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -12,11 +13,11 @@ public class Image {
     private Long id;
 
     private String uuid;
-    private byte[] imageData;
     private String fileName;
     private String mimeType;
     private Integer fileSize;
     private Long uploadedBy;
+    private FileCategory category = FileCategory.GENERAL;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;

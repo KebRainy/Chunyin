@@ -1,5 +1,6 @@
 package com.example.demo1.controller;
 
+import com.example.demo1.common.enums.FileCategory;
 import com.example.demo1.common.exception.BusinessException;
 import com.example.demo1.common.response.Result;
 import com.example.demo1.entity.Image;
@@ -23,11 +24,12 @@ public class FileController {
 
     @PostMapping("/upload")
     public Result<Map<String, Object>> upload(@AuthenticationPrincipal UserPrincipal principal,
-                                              @RequestParam("file") MultipartFile file) {
+                                              @RequestParam("file") MultipartFile file,
+                                              @RequestParam(value = "category", required = false) FileCategory category) {
         if (principal == null) {
             throw new BusinessException(401, "请先登录");
         }
-        Map<String, Object> result = fileStorageService.storeImageAndGetInfo(file, principal.getId());
+        Map<String, Object> result = fileStorageService.storeImageAndGetInfo(file, principal.getId(), category);
         return Result.success(result);
     }
 
@@ -37,10 +39,11 @@ public class FileController {
         if (image == null) {
             throw new BusinessException(404, "图片不存在");
         }
+        byte[] data = fileStorageService.loadData(image);
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(image.getMimeType()))
                 .contentLength(image.getFileSize())
-                .body(image.getImageData());
+                .body(data);
     }
 
     @DeleteMapping("/{uuid}")
@@ -60,5 +63,4 @@ public class FileController {
         return Result.success();
     }
 }
-
 

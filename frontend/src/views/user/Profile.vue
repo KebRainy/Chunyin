@@ -111,13 +111,21 @@
           <el-empty description="暂无收藏" />
         </div>
         <div v-else class="card-grid">
-          <div v-for="item in filteredCollections" :key="item.id" class="card">
+          <div
+            v-for="item in filteredCollections"
+            :key="item.id"
+            class="card"
+            @click="openCollection(item)"
+          >
             <h4>{{ item.title }}</h4>
             <p>{{ item.summary }}</p>
             <div class="card-meta">
               <span>{{ item.targetType === 'POST' ? '动态' : '维基' }}</span>
               <span>{{ formatTime(item.createdAt) }}</span>
             </div>
+            <el-button type="primary" link size="small" @click.stop="openCollection(item)">
+              查看详情
+            </el-button>
           </div>
         </div>
       </div>
@@ -291,6 +299,21 @@ const goMessages = () => {
 
 const goPost = (id) => {
   router.push(`/posts/${id}`)
+}
+
+const openCollection = (item) => {
+  if (!item) return
+  if (item.targetType === 'POST') {
+    router.push(`/posts/${item.targetId}`)
+    return
+  }
+  if (item.targetType === 'WIKI') {
+    if (item.slug) {
+      router.push(`/wiki/${item.slug}`)
+    } else {
+      router.push(`/wiki/${item.targetId}`)
+    }
+  }
 }
 
 const goSettings = () => {

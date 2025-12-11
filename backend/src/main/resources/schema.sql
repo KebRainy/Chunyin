@@ -1,11 +1,11 @@
 CREATE TABLE IF NOT EXISTS image (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     uuid VARCHAR(36) NOT NULL UNIQUE,
-    image_data LONGBLOB NOT NULL,
     file_name VARCHAR(255),
     mime_type VARCHAR(100),
     file_size INT,
     uploaded_by BIGINT,
+    category ENUM('GENERAL','POST','AVATAR','WIKI') DEFAULT 'GENERAL',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_uuid (uuid),
     INDEX idx_uploaded_by (uploaded_by)
@@ -120,6 +120,78 @@ SET @add_image_mime_type = IF(
 );
 
 PREPARE stmt FROM @add_image_mime_type;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @image_category_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'image'
+      AND COLUMN_NAME = 'category'
+);
+
+SET @add_image_category = IF(
+    @image_category_exists = 0,
+    'ALTER TABLE image ADD COLUMN category ENUM(''GENERAL'',''POST'',''AVATAR'',''WIKI'') DEFAULT ''GENERAL'' AFTER uploaded_by',
+    'SELECT 1'
+);
+
+PREPARE stmt FROM @add_image_category;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+UPDATE image SET category = 'GENERAL' WHERE category IS NULL;
+
+CREATE TABLE IF NOT EXISTS general_image_data (
+    image_id BIGINT PRIMARY KEY,
+    image_data LONGBLOB NOT NULL,
+    FOREIGN KEY (image_id) REFERENCES image(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS post_image_data (
+    image_id BIGINT PRIMARY KEY,
+    image_data LONGBLOB NOT NULL,
+    FOREIGN KEY (image_id) REFERENCES image(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS avatar_image_data (
+    image_id BIGINT PRIMARY KEY,
+    image_data LONGBLOB NOT NULL,
+    FOREIGN KEY (image_id) REFERENCES image(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS wiki_image_data (
+    image_id BIGINT PRIMARY KEY,
+    image_data LONGBLOB NOT NULL,
+    FOREIGN KEY (image_id) REFERENCES image(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+SET @image_data_column_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'image'
+      AND COLUMN_NAME = 'image_data'
+);
+
+SET @migrate_image_data = IF(
+    @image_data_column_exists = 0,
+    'SELECT 1',
+    'INSERT INTO general_image_data (image_id, image_data) SELECT id, image_data FROM image WHERE image_data IS NOT NULL ON DUPLICATE KEY UPDATE image_data = VALUES(image_data)'
+);
+
+PREPARE stmt FROM @migrate_image_data;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @drop_image_data_column = IF(
+    @image_data_column_exists = 0,
+    'SELECT 1',
+    'ALTER TABLE image DROP COLUMN image_data'
+);
+
+PREPARE stmt FROM @drop_image_data_column;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
@@ -623,6 +695,17 @@ CREATE TABLE IF NOT EXISTS wiki_revision (
     INDEX idx_revision_page (page_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS wiki_discussion (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    page_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    content TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (page_id) REFERENCES wiki_page(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    INDEX idx_discussion_page (page_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS user_follow (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     follower_id BIGINT NOT NULL,
@@ -672,4 +755,33 @@ CREATE TABLE IF NOT EXISTS user_footprint (
     FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
     UNIQUE KEY uk_footprint (user_id, target_type, target_id),
     INDEX idx_footprint_visited (visited_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS daily_question (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    question_date DATE NOT NULL UNIQUE,
+    question VARCHAR(255) NOT NULL,
+    option_a VARCHAR(255) NOT NULL,
+    option_b VARCHAR(255) NOT NULL,
+    option_c VARCHAR(255) NOT NULL,
+    option_d VARCHAR(255) NOT NULL,
+    correct_option TINYINT NOT NULL,
+    count_a INT DEFAULT 0,
+    count_b INT DEFAULT 0,
+    count_c INT DEFAULT 0,
+    count_d INT DEFAULT 0,
+    explanation TEXT,
+    wiki_link VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS daily_question_answer (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    question_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    selected_option TINYINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (question_id) REFERENCES daily_question(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_daily_answer (question_id, user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

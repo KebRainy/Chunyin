@@ -39,16 +39,22 @@
             </div>
           </template>
 
-          <div class="question-content">
+          <div v-if="questionLoading" class="question-content">
+            <el-skeleton :rows="4" animated />
+          </div>
+          <div v-else-if="!dailyQuestion" class="question-content">
+            <el-empty description="暂未发布今日题目" />
+          </div>
+          <div v-else class="question-content">
             <h4>{{ dailyQuestion.question }}</h4>
             <div class="options">
               <div
-                v-for="(option, idx) in dailyQuestion.options"
-                :key="idx"
-                :class="['option', getOptionClass(idx)]"
-                @click="selectOption(idx)"
+                v-for="option in dailyQuestion.options"
+                :key="option.index"
+                :class="['option', getOptionClass(option.index), { disabled: submittingAnswer }]"
+                @click="selectOption(option.index)"
               >
-                <span class="option-text">{{ option.text }}</span>
+                <span class="option-text">{{ option.label }}. {{ option.text }}</span>
                 <div v-if="answered" class="option-stats">
                   <div class="progress-bar" :style="{ width: option.percentage + '%' }"></div>
                   <span class="option-count">{{ formatCount(option.count) }}</span>
@@ -57,10 +63,24 @@
             </div>
 
             <div v-if="answered" class="answer-result">
-              <span v-if="selectedOption === dailyQuestion.correctAnswer" class="correct">
+              <span v-if="selectedOption === dailyQuestion.correctOption" class="correct">
                 ✓ 回答正确！
               </span>
-              <span v-else class="wrong">✗ 回答错误，正确答案是：{{ dailyQuestion.options[dailyQuestion.correctAnswer].text }}</span>
+              <span v-else class="wrong">
+                ✗ 回答错误，正确答案是：{{ dailyQuestion.options[dailyQuestion.correctOption].text }}
+              </span>
+            </div>
+            <div v-if="answered && dailyQuestion.explanation" class="answer-explanation">
+              <p>{{ dailyQuestion.explanation }}</p>
+              <el-button
+                v-if="dailyQuestion.wikiLink"
+                size="small"
+                type="primary"
+                link
+                @click="goWiki(dailyQuestion.wikiLink)"
+              >
+                查看相关词条
+              </el-button>
             </div>
           </div>
         </el-card>
@@ -100,6 +120,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
 import { circleApi } from '@/api/circle'
+import { fetchTodayQuestion, answerDailyQuestion } from '@/api/dailyQuestion'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
@@ -125,20 +146,12 @@ const shareEditorExpanded = ref(false)
 const inlineComposerRef = ref(null)
 
 // 每日一题
-const dailyQuestion = ref({
-  id: 1,
-  question: '你最喜欢的酒精饮料类型是？',
-  options: [
-    { text: '葡萄酒', count: 1234, percentage: 35 },
-    { text: '威士忌', count: 2456, percentage: 45 },
-    { text: '啤酒', count: 890, percentage: 15 },
-    { text: '其他', count: 321, percentage: 5 }
-  ],
-  correctAnswer: 1
-})
-const answered = ref(false)
-const selectedOption = ref(null)
+const dailyQuestion = ref(null)
+const questionLoading = ref(false)
+const submittingAnswer = ref(false)
 const todayDate = computed(() => dayjs().format('M月D日'))
+const answered = computed(() => dailyQuestion.value?.answered || false)
+const selectedOption = computed(() => dailyQuestion.value?.selectedOption ?? null)
 
 const loadPosts = async () => {
   loading.value = true
@@ -182,6 +195,18 @@ const foldShareEditor = () => {
   inlineComposerRef.value?.resetForm()
 }
 
+const loadDailyQuestion = async () => {
+  questionLoading.value = true
+  try {
+    const res = await fetchTodayQuestion()
+    dailyQuestion.value = res.data
+  } catch (error) {
+    dailyQuestion.value = null
+  } finally {
+    questionLoading.value = false
+  }
+}
+
 const goToPost = (postId) => {
   router.push(`/posts/${postId}`)
 }
@@ -190,20 +215,31 @@ const goLogin = () => {
   router.push('/login')
 }
 
-const selectOption = (idx) => {
-  if (!answered.value) {
-    selectedOption.value = idx
-    answered.value = true
+const selectOption = async (idx) => {
+  if (!dailyQuestion.value || dailyQuestion.value.answered) return
+  if (!userStore.isLoggedIn) {
+    router.push('/login')
+    return
+  }
+  submittingAnswer.value = true
+  try {
+    const res = await answerDailyQuestion(dailyQuestion.value.id, idx)
+    dailyQuestion.value = res.data
+    ElMessage.success('已记录你的选择')
+  } catch (error) {
+    ElMessage.error(error.response?.data?.message || '提交失败')
+  } finally {
+    submittingAnswer.value = false
   }
 }
 
 const getOptionClass = (idx) => {
-  if (!answered.value) return 'clickable'
+  if (!dailyQuestion.value || !dailyQuestion.value.answered) return 'clickable'
 
-  if (idx === dailyQuestion.value.correctAnswer) {
+  if (idx === dailyQuestion.value.correctOption) {
     return 'correct'
   }
-  if (idx === selectedOption.value && idx !== dailyQuestion.value.correctAnswer) {
+  if (idx === dailyQuestion.value.selectedOption && idx !== dailyQuestion.value.correctOption) {
     return 'wrong'
   }
   return 'other'
@@ -233,8 +269,19 @@ const truncateText = (text, length) => {
   return text && text.length > length ? text.substring(0, length) + '...' : text
 }
 
+const goWiki = (link) => {
+  if (!link) return
+  if (link.startsWith('http')) {
+    window.open(link, '_blank')
+    return
+  }
+  const normalized = link.startsWith('/') ? link : `/wiki/${link}`
+  router.push(normalized)
+}
+
 onMounted(() => {
   loadPosts()
+  loadDailyQuestion()
 })
 </script>
 
@@ -362,6 +409,11 @@ onMounted(() => {
   opacity: 0.6;
 }
 
+.option.disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 .option-text {
   flex: 1;
   font-weight: 500;
@@ -400,6 +452,18 @@ onMounted(() => {
 
 .answer-result .wrong {
   color: #f56c6c;
+}
+
+.answer-explanation {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background-color: #f5f7fa;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #606266;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 /* ============ 主体区域 ============ */

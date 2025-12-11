@@ -44,7 +44,11 @@
         </div>
         <el-card v-for="beverage in results.beverages" :key="beverage.id" class="result-card">
           <div class="beverage">
-            <img :src="beverage.coverImageUrl" alt="" v-if="beverage.coverImageUrl" />
+            <img
+              v-if="beverage.coverImageUrl"
+              :src="beverage.coverImageUrl"
+              :alt="`${beverage.name}封面`"
+            />
             <div>
               <strong>{{ beverage.name }}</strong>
               <p>{{ beverage.type }} ｜ {{ beverage.origin || '产地未知' }}</p>
@@ -64,7 +68,7 @@
           class="result-card user-card"
           @click="goUser(user.id)"
         >
-          <el-avatar :src="user.avatarUrl">
+          <el-avatar :src="user.avatarUrl" :alt="`${user.username}的头像`">
             <el-icon><User /></el-icon>
           </el-avatar>
           <div>

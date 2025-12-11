@@ -16,6 +16,7 @@ import com.example.demo1.mapper.SharePostImageMapper;
 import com.example.demo1.mapper.SharePostMapper;
 import com.example.demo1.mapper.UserCollectionMapper;
 import com.example.demo1.mapper.WikiPageMapper;
+import com.example.demo1.util.FileUrlResolver;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,7 @@ public class CollectionService {
     private final WikiPageMapper wikiPageMapper;
     private final SharePostImageMapper sharePostImageMapper;
     private final ImageMapper imageMapper;
+    private final FileUrlResolver fileUrlResolver;
 
     @Transactional
     public boolean togglePostFavorite(Long userId, SharePost post) {
@@ -207,7 +209,7 @@ public class CollectionService {
         for (Map.Entry<Long, Long> entry : firstImageIds.entrySet()) {
             Image image = imageMap.get(entry.getValue());
             if (image != null) {
-                coverMap.put(entry.getKey(), "/files/" + image.getUuid());
+                coverMap.put(entry.getKey(), fileUrlResolver.resolve(image.getUuid()));
             }
         }
         return coverMap;

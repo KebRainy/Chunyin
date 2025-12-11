@@ -21,6 +21,7 @@ import com.example.demo1.mapper.SharePostCommentMapper;
 import com.example.demo1.mapper.SharePostImageMapper;
 import com.example.demo1.mapper.SharePostLikeMapper;
 import com.example.demo1.mapper.SharePostMapper;
+import com.example.demo1.util.FileUrlResolver;
 import com.example.demo1.util.IpUtils;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
@@ -47,6 +48,7 @@ public class SharePostService {
     private final SharePostCommentMapper sharePostCommentMapper;
     private final CollectionService collectionService;
     private final UserService userService;
+    private final FileUrlResolver fileUrlResolver;
 
     public SharePostVO createPost(Long userId, SharePostRequest request, String ipAddress) {
         SharePost post = new SharePost();
@@ -280,7 +282,7 @@ public class SharePostService {
         List<String> imageUrls = imageIds.stream()
             .map(id -> {
                 Image image = imageMapper.selectById(id);
-                return image != null ? "/files/" + image.getUuid() : null;
+                return image != null ? fileUrlResolver.resolve(image.getUuid()) : null;
             })
             .filter(Objects::nonNull)
             .collect(Collectors.toList());
@@ -340,4 +342,3 @@ public class SharePostService {
             .collect(Collectors.joining(","));
     }
 }
-

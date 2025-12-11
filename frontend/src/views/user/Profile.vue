@@ -2,7 +2,12 @@
   <div v-if="userStore.userInfo" class="space-page">
     <section class="space-hero">
       <div class="hero-left">
-        <el-avatar :size="96" :src="userStore.userInfo.avatarUrl" @click="goSettings" />
+        <el-avatar
+          :size="96"
+          :src="userStore.userInfo.avatarUrl"
+          :alt="`${userStore.userInfo.username || '用户'}的头像`"
+          @click="goSettings"
+        />
         <div>
           <div class="user-line">
             <h1>{{ userStore.userInfo.username }}</h1>

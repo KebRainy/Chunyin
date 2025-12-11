@@ -5,7 +5,11 @@
       <div class="share-section">
         <template v-if="userStore.isLoggedIn">
           <div v-if="!shareEditorExpanded" class="share-hint" @click="shareEditorExpanded = true">
-            <el-avatar :src="userStore.userInfo?.avatarUrl" :size="44" />
+            <el-avatar
+              :src="userStore.userInfo?.avatarUrl"
+              :size="44"
+              :alt="`${userStore.userInfo?.username || '用户'}的头像`"
+            />
             <div class="hint-text">
               <p>此刻在喝什么？</p>
               <span>点击打开编辑器，支持图文/标签/IP属地</span>

@@ -11,6 +11,118 @@ CREATE TABLE IF NOT EXISTS image (
     INDEX idx_uploaded_by (uploaded_by)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+SET @image_uuid_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'image'
+      AND COLUMN_NAME = 'uuid'
+);
+
+SET @add_image_uuid = IF(
+    @image_uuid_exists = 0,
+    'ALTER TABLE image ADD COLUMN uuid VARCHAR(36) AFTER id',
+    'SELECT 1'
+);
+
+PREPARE stmt FROM @add_image_uuid;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+UPDATE image SET uuid = UUID() WHERE uuid IS NULL OR uuid = '';
+
+SET @uuid_nullable = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'image'
+      AND COLUMN_NAME = 'uuid'
+      AND IS_NULLABLE = 'YES'
+);
+
+SET @set_uuid_not_null = IF(
+    @uuid_nullable = 0,
+    'SELECT 1',
+    'ALTER TABLE image MODIFY COLUMN uuid VARCHAR(36) NOT NULL'
+);
+
+PREPARE stmt FROM @set_uuid_not_null;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @uuid_unique_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'image'
+      AND COLUMN_NAME = 'uuid'
+      AND NON_UNIQUE = 0
+);
+
+SET @add_uuid_unique = IF(
+    @uuid_unique_exists = 0,
+    'ALTER TABLE image ADD UNIQUE KEY uk_image_uuid (uuid)',
+    'SELECT 1'
+);
+
+PREPARE stmt FROM @add_uuid_unique;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @image_filename_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'image'
+      AND COLUMN_NAME = 'filename'
+);
+
+SET @rename_image_filename = IF(
+    @image_filename_exists = 0,
+    'SELECT 1',
+    'ALTER TABLE image CHANGE COLUMN filename file_name VARCHAR(255)'
+);
+
+PREPARE stmt FROM @rename_image_filename;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @image_content_type_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'image'
+      AND COLUMN_NAME = 'content_type'
+);
+
+SET @rename_image_content_type = IF(
+    @image_content_type_exists = 0,
+    'SELECT 1',
+    'ALTER TABLE image CHANGE COLUMN content_type mime_type VARCHAR(100)'
+);
+
+PREPARE stmt FROM @rename_image_content_type;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @image_mime_type_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'image'
+      AND COLUMN_NAME = 'mime_type'
+);
+
+SET @add_image_mime_type = IF(
+    @image_mime_type_exists = 0,
+    'ALTER TABLE image ADD COLUMN mime_type VARCHAR(100) AFTER file_name',
+    'SELECT 1'
+);
+
+PREPARE stmt FROM @add_image_mime_type;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 CREATE TABLE IF NOT EXISTS user (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     username VARCHAR(50) NOT NULL UNIQUE,

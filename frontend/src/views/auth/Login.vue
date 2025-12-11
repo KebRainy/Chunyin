@@ -48,6 +48,9 @@ const submitForm = () => {
       userStore.setUserInfo(res.data.profile)
       ElMessage.success('登录成功')
       router.push('/')
+    } catch (error) {
+      const message = error?.response?.data?.message || error.message || '登录失败，请检查账号和密码'
+      ElMessage.error(message)
     } finally {
       loading.value = false
     }

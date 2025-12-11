@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.example.demo1.common.exception.BusinessException;
 import com.example.demo1.entity.Image;
 import com.example.demo1.mapper.ImageMapper;
+import com.example.demo1.util.FileUrlResolver;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,6 +22,7 @@ public class FileStorageService {
     private static final long MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
     private final ImageMapper imageMapper;
+    private final FileUrlResolver fileUrlResolver;
 
     public String storeImage(MultipartFile file, Long userId) {
         if (file.isEmpty()) {
@@ -46,7 +48,7 @@ public class FileStorageService {
             image.setUploadedBy(userId);
 
             imageMapper.insert(image);
-            return "/files/" + uuid;
+            return fileUrlResolver.resolve(uuid);
         } catch (IOException e) {
             throw new BusinessException("文件上传失败: " + e.getMessage());
         }
@@ -78,7 +80,7 @@ public class FileStorageService {
             imageMapper.insert(image);
             return Map.of(
                 "id", image.getId(),
-                "url", "/files/" + uuid,
+                "url", fileUrlResolver.resolve(uuid),
                 "uuid", uuid
             );
         } catch (IOException e) {
@@ -99,4 +101,3 @@ public class FileStorageService {
         imageMapper.deleteById(imageId);
     }
 }
-

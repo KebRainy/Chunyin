@@ -17,7 +17,11 @@
             :class="['conversation-item', { active: activeConversation === conv.peer.id }]"
             @click="selectConversation(conv.peer.id)"
           >
-            <el-avatar :src="conv.peer.avatarUrl" :size="40" />
+            <el-avatar
+              :src="conv.peer.avatarUrl"
+              :size="40"
+              :alt="`${conv.peer.username || '用户'}的头像`"
+            />
             <div class="conv-info">
               <div class="conv-user">{{ conv.peer.username }}</div>
               <div class="conv-preview">{{ conv.lastMessage }}</div>
@@ -45,7 +49,12 @@
               :key="msg.id"
               :class="['message-item', msg.mine ? 'self' : 'other']"
             >
-              <el-avatar v-if="!msg.mine" :src="currentUser?.avatarUrl" :size="32" />
+              <el-avatar
+                v-if="!msg.mine"
+                :src="currentUser?.avatarUrl"
+                :size="32"
+                :alt="`${currentUser?.username || '用户'}的头像`"
+              />
               <div class="message-bubble">
                 <p>{{ msg.content }}</p>
                 <span>{{ msg.createdAt }}</span>

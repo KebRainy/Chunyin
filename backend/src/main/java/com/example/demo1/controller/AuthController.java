@@ -10,6 +10,7 @@ import com.example.demo1.entity.User;
 import com.example.demo1.security.UserPrincipal;
 import com.example.demo1.service.JwtService;
 import com.example.demo1.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -38,27 +39,31 @@ public class AuthController {
     private long expirationMillis;
 
     @PostMapping("/register")
-    public Result<LoginResponse> register(@Valid @RequestBody RegisterRequest request, HttpServletResponse response) {
+    public Result<LoginResponse> register(@Valid @RequestBody RegisterRequest request,
+                                          HttpServletRequest httpRequest,
+                                          HttpServletResponse response) {
         User user = userService.register(request);
-        setAuthCookie(response, jwtService.generateToken(user));
+        setAuthCookie(httpRequest, response, jwtService.generateToken(user));
         UserProfileVO profile = userService.buildProfile(user, user.getId());
         return Result.success(new LoginResponse(profile));
     }
 
     @PostMapping("/login")
-    public Result<LoginResponse> login(@Valid @RequestBody LoginRequest request, HttpServletResponse response) {
+    public Result<LoginResponse> login(@Valid @RequestBody LoginRequest request,
+                                       HttpServletRequest httpRequest,
+                                       HttpServletResponse response) {
         User user = userService.getByUsername(request.getUsername());
         if (user == null || !passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             throw new BusinessException(401, "用户名或密码错误");
         }
-        setAuthCookie(response, jwtService.generateToken(user));
+        setAuthCookie(httpRequest, response, jwtService.generateToken(user));
         UserProfileVO profile = userService.buildProfile(user, user.getId());
         return Result.success(new LoginResponse(profile));
     }
 
     @PostMapping("/logout")
-    public Result<Void> logout(HttpServletResponse response) {
-        clearCookie(response);
+    public Result<Void> logout(HttpServletRequest httpRequest, HttpServletResponse response) {
+        clearCookie(httpRequest, response);
         return Result.success();
     }
 
@@ -71,25 +76,37 @@ public class AuthController {
         return Result.success(userService.buildProfile(user, principal.getId()));
     }
 
-    private void setAuthCookie(HttpServletResponse response, String token) {
+    private void setAuthCookie(HttpServletRequest request, HttpServletResponse response, String token) {
         ResponseCookie cookie = ResponseCookie.from(cookieName, token)
             .httpOnly(true)
             .path("/api")
             .sameSite("Lax")
+            .secure(shouldUseSecureCookie(request))
             .maxAge(Duration.ofMillis(expirationMillis))
             .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 
-    private void clearCookie(HttpServletResponse response) {
+    private void clearCookie(HttpServletRequest request, HttpServletResponse response) {
         ResponseCookie cookie = ResponseCookie.from(cookieName, "")
             .httpOnly(true)
             .path("/api")
             .sameSite("Lax")
+            .secure(shouldUseSecureCookie(request))
             .maxAge(Duration.ZERO)
             .build();
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
-}
 
+    private boolean shouldUseSecureCookie(HttpServletRequest request) {
+        if (request == null) {
+            return false;
+        }
+        if (request.isSecure()) {
+            return true;
+        }
+        String proto = request.getHeader("X-Forwarded-Proto");
+        return proto != null && proto.equalsIgnoreCase("https");
+    }
+}
 

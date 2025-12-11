@@ -15,6 +15,7 @@ import com.example.demo1.mapper.UserFollowMapper;
 import com.example.demo1.mapper.UserMapper;
 import com.example.demo1.mapper.ImageMapper;
 import com.example.demo1.mapper.SharePostMapper;
+import com.example.demo1.util.FileUrlResolver;
 import com.example.demo1.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
@@ -40,6 +41,7 @@ public class UserService implements UserDetailsService {
     private final PasswordEncoder passwordEncoder;
     private final SharePostMapper sharePostMapper;
     private final ImageMapper imageMapper;
+    private final FileUrlResolver fileUrlResolver;
 
     private static final String DEFAULT_AVATAR_TEMPLATE = "https://api.dicebear.com/7.x/thumbs/svg?seed=%s";
 
@@ -186,7 +188,7 @@ public class UserService implements UserDetailsService {
         if (user.getAvatarImageId() != null) {
             Image image = imageMapper.selectById(user.getAvatarImageId());
             if (image != null) {
-                return "/files/" + image.getUuid();
+                return fileUrlResolver.resolve(image.getUuid());
             }
         }
         if (StringUtils.isNotBlank(user.getAvatarUrl())) {

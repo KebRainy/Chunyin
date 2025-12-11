@@ -22,6 +22,7 @@ request.interceptors.response.use(
       const requestUrl = config?.url || ''
       const isAuthCheck = requestUrl.includes('/auth/me')
       const isAuthPage = ['/login', '/register'].some((path) => window.location.pathname.startsWith(path))
+      const isAuthEndpoint = ['/auth/login', '/auth/register'].some((path) => requestUrl.includes(path))
       const serverMessage = data?.message
 
       switch (status) {
@@ -29,8 +30,10 @@ request.interceptors.response.use(
           if (isAuthCheck) {
             break
           }
-          ElMessage.error(serverMessage || '请先登录')
-          if (!isAuthPage) {
+          if (!isAuthEndpoint) {
+            ElMessage.error(serverMessage || '请先登录')
+          }
+          if (!isAuthPage && !isAuthEndpoint) {
             window.location.href = '/login'
           }
           break

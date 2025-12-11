@@ -2,7 +2,7 @@
   <div class="user-home" v-if="profile">
     <div class="profile-hero">
       <div class="hero-left">
-        <el-avatar :size="96" :src="profile.avatarUrl">
+        <el-avatar :size="96" :src="profile.avatarUrl" :alt="`${profile.username || '用户'}的头像`">
           <el-icon><User /></el-icon>
         </el-avatar>
         <div>

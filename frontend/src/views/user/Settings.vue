@@ -6,7 +6,7 @@
       <!-- 头像上传 -->
       <el-form-item label="头像">
         <div class="avatar-section">
-          <el-avatar :src="avatarPreview" :size="80" />
+          <el-avatar :src="avatarPreview" :size="80" :alt="`${form.username || '用户'}的头像预览`" />
           <el-upload
             class="avatar-upload"
             action="/api/files/upload"

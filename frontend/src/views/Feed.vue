@@ -11,7 +11,11 @@
           :title="followee.username"
           @click="goToUser(followee.id)"
         >
-          <el-avatar :src="followee.avatarUrl" :size="48" />
+          <el-avatar
+            :src="followee.avatarUrl"
+            :size="48"
+            :alt="`${followee.username}的头像`"
+          />
           <span class="followee-name">{{ followee.username }}</span>
         </div>
       </div>

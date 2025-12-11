@@ -22,3 +22,8 @@ export const sendMessage = (userId, data) => {
   })
 }
 
+export const messageApi = {
+  fetchConversations,
+  fetchConversationWith,
+  sendMessage
+}

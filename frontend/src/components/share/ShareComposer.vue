@@ -2,7 +2,11 @@
   <div :class="['share-composer', mode]">
     <div class="composer-main">
       <div class="composer-avatar">
-        <el-avatar :src="userStore.userInfo?.avatarUrl" :size="48" />
+        <el-avatar
+          :src="userStore.userInfo?.avatarUrl"
+          :size="48"
+          :alt="`${userStore.userInfo?.username || '用户'}的头像`"
+        />
       </div>
       <div class="composer-body">
         <el-input
@@ -65,8 +69,8 @@
               @change="handleInlineFiles"
             >
             <div class="inline-preview" v-if="thumbnails.length">
-              <div v-for="item in thumbnails" :key="item.uid" class="thumb">
-                <img :src="item.url" alt="preview">
+              <div v-for="(item, index) in thumbnails" :key="item.uid" class="thumb">
+                <img :src="item.url" :alt="`已选择的图片${index + 1}`">
                 <el-icon class="remove" @click="removeThumbnail(item.uid)"><Close /></el-icon>
               </div>
             </div>
@@ -294,6 +298,9 @@ defineExpose({
 
 .hidden-input {
   display: none;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
 }
 
 .inline-preview {

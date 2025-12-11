@@ -13,6 +13,7 @@
           :src="post.author.avatarUrl"
           :size="48"
           class="avatar"
+          :alt="`${post.author.username}的头像`"
           @click="goToUser(post.author.id)"
         />
         <div class="author-info">
@@ -38,7 +39,7 @@
             v-for="(url, idx) in post.imageUrls"
             :key="idx"
             :src="url"
-            :alt="`image-${idx}`"
+            :alt="`${post.author?.username || '用户'}的分享图片${idx + 1}`"
             class="post-image"
           />
         </div>
@@ -98,7 +99,11 @@
           </div>
           <div v-else>
             <div v-for="comment in comments" :key="comment.id" class="comment-item">
-              <el-avatar :src="comment.author?.avatarUrl" :size="32" />
+              <el-avatar
+                :src="comment.author?.avatarUrl"
+                :size="32"
+                :alt="`${comment.author?.username || '用户'}的头像`"
+              />
               <div class="comment-content">
                 <div class="comment-header">
                   <span class="comment-author">{{ comment.author?.username }}</span>
@@ -114,7 +119,11 @@
                     :key="reply.id"
                     class="reply-item"
                   >
-                    <el-avatar :src="reply.author?.avatarUrl" :size="24" />
+                    <el-avatar
+                      :src="reply.author?.avatarUrl"
+                      :size="24"
+                      :alt="`${reply.author?.username || '用户'}的头像`"
+                    />
                     <div>
                       <div class="comment-header">
                         <span class="comment-author">{{ reply.author?.username }}</span>

@@ -1,7 +1,10 @@
 <template>
   <div :class="['post-card', layout]" @click="$emit('select', post)">
     <div class="card-image" v-if="post.imageUrls?.length">
-      <img :src="post.imageUrls[0]" :alt="post.content">
+      <img
+        :src="post.imageUrls[0]"
+        :alt="post.content || `${post.author?.username || '用户'}的分享图片`"
+      >
       <span v-if="post.imageUrls.length > 1" class="count">+{{ post.imageUrls.length - 1 }}</span>
     </div>
     <div class="card-image placeholder" v-else>
@@ -9,7 +12,11 @@
     </div>
     <div class="card-body">
       <div class="author">
-        <el-avatar :src="post.author?.avatarUrl" :size="32" />
+        <el-avatar
+          :src="post.author?.avatarUrl"
+          :size="32"
+          :alt="`${post.author?.username || '用户'}的头像`"
+        />
         <div>
           <p class="name">{{ post.author?.username }}</p>
           <p class="time">{{ formatTime(post.createdAt) }}</p>

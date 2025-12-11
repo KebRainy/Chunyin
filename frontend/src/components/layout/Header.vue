@@ -45,7 +45,11 @@
         <template v-if="userStore.isLoggedIn">
           <el-dropdown @command="handleCommand">
             <span class="user-avatar">
-              <el-avatar :size="32" :src="userStore.userInfo.avatarUrl">
+              <el-avatar
+                :size="32"
+                :src="userStore.userInfo.avatarUrl"
+                :alt="`${userStore.userInfo?.username || '用户'}的头像`"
+              >
                 <el-icon><User /></el-icon>
               </el-avatar>
             </span>
@@ -163,6 +167,7 @@ const handleCommand = async (command) => {
   position: sticky;
   top: 0;
   z-index: 100;
+  -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 }
 

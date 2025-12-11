@@ -7,10 +7,14 @@ import com.example.demo1.dto.request.RegisterRequest;
 import com.example.demo1.dto.request.UpdateProfileRequest;
 import com.example.demo1.dto.response.SimpleUserVO;
 import com.example.demo1.dto.response.UserProfileVO;
+import com.example.demo1.entity.Image;
 import com.example.demo1.entity.User;
 import com.example.demo1.entity.UserFollow;
+import com.example.demo1.entity.SharePost;
 import com.example.demo1.mapper.UserFollowMapper;
 import com.example.demo1.mapper.UserMapper;
+import com.example.demo1.mapper.ImageMapper;
+import com.example.demo1.mapper.SharePostMapper;
 import com.example.demo1.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
@@ -34,6 +38,8 @@ public class UserService implements UserDetailsService {
     private final UserMapper userMapper;
     private final UserFollowMapper userFollowMapper;
     private final PasswordEncoder passwordEncoder;
+    private final SharePostMapper sharePostMapper;
+    private final ImageMapper imageMapper;
 
     private static final String DEFAULT_AVATAR_TEMPLATE = "https://api.dicebear.com/7.x/thumbs/svg?seed=%s";
 
@@ -83,15 +89,35 @@ public class UserService implements UserDetailsService {
 
     @Transactional
     public void updateProfile(Long userId, UpdateProfileRequest request) {
+        User current = getRequiredUser(userId);
         LambdaUpdateWrapper<User> updateWrapper = new LambdaUpdateWrapper<>();
         updateWrapper.eq(User::getId, userId);
+        if (StringUtils.isNotBlank(request.getUsername()) && !request.getUsername().equals(current.getUsername())) {
+            if (existsByUsername(request.getUsername())) {
+                throw new BusinessException("昵称已被使用");
+            }
+            updateWrapper.set(User::getUsername, request.getUsername().trim());
+        }
+        if (StringUtils.isNotBlank(request.getEmail()) && !request.getEmail().equals(current.getEmail())) {
+            if (existsByEmail(request.getEmail())) {
+                throw new BusinessException("邮箱已被使用");
+            }
+            updateWrapper.set(User::getEmail, request.getEmail().trim());
+        }
         if (request.getAvatarImageId() != null) {
             updateWrapper.set(User::getAvatarImageId, request.getAvatarImageId());
+            updateWrapper.set(User::getAvatarUrl, null);
         } else if (StringUtils.isNotBlank(request.getAvatarUrl())) {
             updateWrapper.set(User::getAvatarUrl, request.getAvatarUrl().trim());
         }
         if (request.getBio() != null) {
             updateWrapper.set(User::getBio, request.getBio());
+        }
+        if (request.getGender() != null) {
+            updateWrapper.set(User::getGender, request.getGender());
+        }
+        if (request.getBirthday() != null) {
+            updateWrapper.set(User::getBirthday, request.getBirthday());
         }
         userMapper.update(null, updateWrapper);
     }
@@ -116,6 +142,13 @@ public class UserService implements UserDetailsService {
                 && userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
                         .eq(UserFollow::getFollowerId, currentUserId)
                         .eq(UserFollow::getFolloweeId, target.getId())) > 0;
+        long likeReceived = sharePostMapper.selectList(new LambdaQueryWrapper<SharePost>()
+                .eq(SharePost::getUserId, target.getId()))
+            .stream()
+            .map(SharePost::getLikeCount)
+            .filter(Objects::nonNull)
+            .mapToLong(Integer::longValue)
+            .sum();
 
         return UserProfileVO.builder()
                 .id(target.getId())
@@ -124,11 +157,15 @@ public class UserService implements UserDetailsService {
                 .role(target.getRole())
                 .avatarUrl(buildAvatarUrl(target))
                 .bio(target.getBio())
+                .gender(target.getGender())
+                .birthday(target.getBirthday())
+                .level(target.getLevel())
                 .createdAt(target.getCreatedAt())
                 .followerCount(followerCount)
                 .followingCount(followingCount)
                 .following(isFollowing)
                 .self(isSelf)
+                .likeReceived(likeReceived)
                 .build();
     }
 
@@ -147,7 +184,13 @@ public class UserService implements UserDetailsService {
 
     public String buildAvatarUrl(User user) {
         if (user.getAvatarImageId() != null) {
-            return "/files/" + user.getAvatarImageId();
+            Image image = imageMapper.selectById(user.getAvatarImageId());
+            if (image != null) {
+                return "/files/" + image.getUuid();
+            }
+        }
+        if (StringUtils.isNotBlank(user.getAvatarUrl())) {
+            return user.getAvatarUrl();
         }
         return String.format(DEFAULT_AVATAR_TEMPLATE, user.getUsername());
     }

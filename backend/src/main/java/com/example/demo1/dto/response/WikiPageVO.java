@@ -17,5 +17,5 @@ public class WikiPageVO {
     private WikiStatus status;
     private String lastEditorName;
     private LocalDateTime updatedAt;
+    private Boolean favorited;
 }
-

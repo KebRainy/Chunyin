@@ -12,17 +12,17 @@
         />
         <div class="conversations-list">
           <div
-            v-for="conv in conversations"
-            :key="conv.id"
-            :class="['conversation-item', { active: activeConversation === conv.id }]"
-            @click="selectConversation(conv.id)"
+            v-for="conv in filteredConversations"
+            :key="conv.peer.id"
+            :class="['conversation-item', { active: activeConversation === conv.peer.id }]"
+            @click="selectConversation(conv.peer.id)"
           >
-            <el-avatar :src="conv.avatar" :size="40" />
+            <el-avatar :src="conv.peer.avatarUrl" :size="40" />
             <div class="conv-info">
-              <div class="conv-user">{{ conv.username }}</div>
+              <div class="conv-user">{{ conv.peer.username }}</div>
               <div class="conv-preview">{{ conv.lastMessage }}</div>
             </div>
-            <div v-if="conv.unread > 0" class="unread-badge">{{ conv.unread }}</div>
+            <div v-if="conv.unreadCount > 0" class="unread-badge">{{ conv.unreadCount }}</div>
           </div>
         </div>
       </div>
@@ -39,18 +39,17 @@
           </div>
 
           <!-- 消息列表 -->
-          <div class="messages-list">
+          <div class="messages-list" ref="chatBodyRef">
             <div
               v-for="msg in messages"
               :key="msg.id"
-              :class="['message-item', msg.isSelf ? 'self' : 'other']"
+              :class="['message-item', msg.mine ? 'self' : 'other']"
             >
-              <el-avatar
-                v-if="!msg.isSelf"
-                :src="currentUser?.avatarUrl"
-                :size="32"
-              />
-              <div class="message-bubble">{{ msg.content }}</div>
+              <el-avatar v-if="!msg.mine" :src="currentUser?.avatarUrl" :size="32" />
+              <div class="message-bubble">
+                <p>{{ msg.content }}</p>
+                <span>{{ msg.createdAt }}</span>
+              </div>
             </div>
           </div>
 
@@ -70,45 +69,75 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, nextTick } from 'vue'
 import { messageApi } from '@/api/message'
+import { ElMessage } from 'element-plus'
 
 const searchKeyword = ref('')
 const activeConversation = ref(null)
 const messageInput = ref('')
-const conversations = ref([
-  {
-    id: 1,
-    username: '用户A',
-    avatar: 'https://api.dicebear.com/7.x/thumbs/svg?seed=user1',
-    lastMessage: '最后一条消息预览...',
-    unread: 2
-  }
-])
-const messages = ref([
-  { id: 1, content: '你好', isSelf: false },
-  { id: 2, content: '你好啊', isSelf: true }
-])
+const conversations = ref([])
+const messages = ref([])
+const chatBodyRef = ref(null)
 
-const currentUser = computed(() => {
-  const conv = conversations.value.find(c => c.id === activeConversation.value)
-  return conv
+const filteredConversations = computed(() => {
+  if (!searchKeyword.value) return conversations.value
+  return conversations.value.filter(conv =>
+    conv.peer?.username?.includes(searchKeyword.value)
+  )
 })
 
-const selectConversation = (id) => {
-  activeConversation.value = id
-}
+const currentUser = computed(() => {
+  return conversations.value.find(c => c.peer?.id === activeConversation.value)?.peer
+})
 
-const sendMessage = () => {
-  if (!messageInput.value.trim()) return
-
-  messages.value.push({
-    id: messages.value.length + 1,
-    content: messageInput.value,
-    isSelf: true
+const scrollToBottom = () => {
+  nextTick(() => {
+    const el = chatBodyRef.value
+    if (el) {
+      el.scrollTop = el.scrollHeight
+    }
   })
-  messageInput.value = ''
 }
+
+const loadConversations = async () => {
+  try {
+    const res = await messageApi.fetchConversations()
+    conversations.value = res.data || []
+    if (!activeConversation.value && conversations.value.length > 0) {
+      selectConversation(conversations.value[0].peer.id)
+    }
+  } catch (error) {
+    ElMessage.error('加载私信失败')
+  }
+}
+
+const selectConversation = async (userId) => {
+  activeConversation.value = userId
+  try {
+    const res = await messageApi.fetchConversationWith(userId)
+    messages.value = res.data || []
+    scrollToBottom()
+  } catch (error) {
+    ElMessage.error('加载对话失败')
+  }
+}
+
+const sendMessage = async () => {
+  if (!messageInput.value.trim() || !activeConversation.value) return
+  try {
+    await messageApi.sendMessage(activeConversation.value, { content: messageInput.value })
+    messageInput.value = ''
+    await selectConversation(activeConversation.value)
+    await loadConversations()
+  } catch (error) {
+    ElMessage.error('发送失败，请稍后再试')
+  }
+}
+
+onMounted(() => {
+  loadConversations()
+})
 </script>
 
 <style scoped>

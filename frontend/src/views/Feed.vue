@@ -23,30 +23,13 @@
       <div v-else-if="posts.length === 0" class="empty">
         <el-empty description="还没有关注的动态" />
       </div>
-      <div v-else class="posts-list">
-        <div
+      <div v-else class="posts-grid">
+        <PostCard
           v-for="post in posts"
           :key="post.id"
-          class="post-card"
-          @click="goToPost(post.id)"
-        >
-          <div class="post-header">
-            <el-avatar :src="post.author.avatarUrl" :size="40" />
-            <div class="post-info">
-              <div class="author-name">{{ post.author.username }}</div>
-              <div class="post-time">{{ formatTime(post.createdAt) }}</div>
-            </div>
-          </div>
-          <div class="post-content">{{ post.content }}</div>
-          <div v-if="post.imageUrls && post.imageUrls.length > 0" class="post-images">
-            <img v-for="(url, idx) in post.imageUrls" :key="idx" :src="url" :alt="`image-${idx}`" />
-          </div>
-          <div class="post-location" v-if="post.location">📍 {{ post.location }}</div>
-          <div class="post-footer">
-            <span>浏览: 0</span>
-            <span>点赞: 0</span>
-          </div>
-        </div>
+          :post="post"
+          @select="goToPost(post.id)"
+        />
       </div>
 
       <!-- 加载更多 -->
@@ -65,12 +48,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { circleApi } from '@/api/circle'
 import { getFollowees } from '@/api/user'
-import dayjs from 'dayjs'
-import relativeTime from 'dayjs/plugin/relativeTime'
-import 'dayjs/locale/zh-cn'
-
-dayjs.extend(relativeTime)
-dayjs.locale('zh-cn')
+import PostCard from '@/components/PostCard.vue'
 
 const router = useRouter()
 
@@ -125,19 +103,6 @@ const goToPost = (postId) => {
 
 const goToUser = (userId) => {
   router.push(`/user/${userId}`)
-}
-
-const formatTime = (time) => {
-  if (!time) return ''
-  const date = dayjs(time)
-  const now = dayjs()
-  const diff = now.diff(date, 'minute')
-
-  if (diff < 1) return '刚刚'
-  if (diff < 60) return `${diff}分钟前`
-  if (diff < 1440) return `${Math.floor(diff / 60)}小时前`
-  if (date.isSame(now, 'year')) return date.format('M月D日')
-  return date.format('YYYY年M月D日')
 }
 
 onMounted(() => {
@@ -208,81 +173,10 @@ onMounted(() => {
   color: #999;
 }
 
-.posts-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.post-card {
-  border: 1px solid #f0f0f0;
-  border-radius: 8px;
-  padding: 16px;
-  background-color: #fff;
-  cursor: pointer;
-  transition: box-shadow 0.3s;
-}
-
-.post-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.post-header {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 12px;
-}
-
-.post-info {
-  flex: 1;
-}
-
-.author-name {
-  font-weight: 500;
-  color: #333;
-  margin-bottom: 4px;
-}
-
-.post-time {
-  font-size: 12px;
-  color: #999;
-}
-
-.post-content {
-  margin-bottom: 12px;
-  line-height: 1.6;
-  color: #555;
-  white-space: pre-wrap;
-  word-break: break-word;
-}
-
-.post-images {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-}
-
-.post-images img {
-  max-width: 200px;
-  max-height: 200px;
-  border-radius: 4px;
-  object-fit: cover;
-}
-
-.post-location {
-  font-size: 12px;
-  color: #999;
-  margin-bottom: 8px;
-}
-
-.post-footer {
-  display: flex;
-  gap: 16px;
-  font-size: 12px;
-  color: #999;
-  padding-top: 8px;
-  border-top: 1px solid #f0f0f0;
+.posts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 18px;
 }
 
 .load-more {

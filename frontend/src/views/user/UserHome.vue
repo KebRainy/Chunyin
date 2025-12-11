@@ -1,32 +1,48 @@
 <template>
   <div class="user-home" v-if="profile">
-    <el-card>
-      <div class="header">
-        <el-avatar :size="80" :src="profile.avatarUrl">
+    <div class="profile-hero">
+      <div class="hero-left">
+        <el-avatar :size="96" :src="profile.avatarUrl">
           <el-icon><User /></el-icon>
         </el-avatar>
         <div>
           <h2>{{ profile.username }}</h2>
-          <p>ID：{{ profile.id }} ｜ {{ profile.role }}</p>
-          <p class="bio">{{ profile.bio }}</p>
+          <p class="uid">UID {{ profile.id }} · {{ profile.role }}</p>
+          <p class="bio">{{ profile.bio || '这位用户很低调，还没有简介' }}</p>
           <div class="stats">
-            <span>关注者 {{ profile.followerCount }}</span>
-            <span>关注中 {{ profile.followingCount }}</span>
-          </div>
-          <div class="actions" v-if="!profile.self">
-            <el-button
-              type="primary"
-              :plain="profile.following"
-              @click="toggleFollow"
-              :loading="followLoading"
-            >
-              {{ profile.following ? '已关注' : '关注' }}
-            </el-button>
-            <el-button @click="openMessage">发私信</el-button>
+            <div>
+              <strong>{{ profile.followerCount }}</strong>
+              <span>粉丝</span>
+            </div>
+            <div>
+              <strong>{{ profile.followingCount }}</strong>
+              <span>关注</span>
+            </div>
           </div>
         </div>
       </div>
+      <div class="hero-right" v-if="!profile.self">
+        <el-button
+          type="primary"
+          :plain="profile.following"
+          :loading="followLoading"
+          @click="toggleFollow"
+        >
+          {{ profile.following ? '已关注' : '关注' }}
+        </el-button>
+        <el-button @click="openMessage">发私信</el-button>
+      </div>
+    </div>
+
+    <el-card>
+      <template #header>
+        <div class="card-header">
+          <span>最近动态</span>
+        </div>
+      </template>
+      <el-empty description="Ta 的公开动态暂未开放，敬请期待" />
     </el-card>
+
     <el-dialog v-model="messageVisible" title="发送私信">
       <el-input
         v-model="messageForm.content"
@@ -52,6 +68,7 @@ import { fetchUserProfile, followUser, unfollowUser } from '@/api/user'
 import { sendMessage } from '@/api/message'
 import { useUserStore } from '@/store/modules/user'
 import { ElMessage } from 'element-plus'
+import { User } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -125,7 +142,8 @@ watch(
     if (newId) {
       loadProfile(newId)
     }
-  }
+  },
+  { immediate: true }
 )
 
 onMounted(() => {
@@ -137,30 +155,64 @@ onMounted(() => {
 .user-home {
   max-width: 900px;
   margin: 0 auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.header {
+.profile-hero {
+  background: #fff;
+  border-radius: 24px;
+  padding: 24px;
+  display: flex;
+  justify-content: space-between;
+  box-shadow: 0 12px 30px rgba(31, 45, 61, 0.08);
+}
+
+.hero-left {
   display: flex;
   gap: 20px;
-  align-items: center;
+}
+
+.uid {
+  color: #909399;
+  margin: 4px 0;
 }
 
 .bio {
   color: #606266;
-  margin: 6px 0;
+  margin: 8px 0;
 }
 
 .stats {
   display: flex;
-  gap: 12px;
-  font-size: 14px;
-  color: #909399;
-  margin: 8px 0;
+  gap: 24px;
 }
 
-.actions {
+.stats div {
+  text-align: center;
+}
+
+.stats strong {
+  font-size: 20px;
+  display: block;
+}
+
+.stats span {
+  font-size: 12px;
+  color: #909399;
+}
+
+.hero-right {
   display: flex;
-  gap: 10px;
-  margin-top: 10px;
+  align-items: center;
+  gap: 12px;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 </style>

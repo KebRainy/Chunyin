@@ -1,10 +1,12 @@
 package com.example.demo1.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
+import com.example.demo1.common.enums.Gender;
 import com.example.demo1.common.enums.UserRole;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 @Data
 @TableName("user")
@@ -22,6 +24,9 @@ public class User {
     private Long avatarImageId;
     private String avatarUrl;
     private String bio;
+    private Gender gender = Gender.SECRET;
+    private LocalDate birthday;
+    private Integer level = 1;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;

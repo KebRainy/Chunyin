@@ -15,6 +15,20 @@ export const fetchWikiPage = (slug) => {
   })
 }
 
+export const fetchWikiHistory = (slug) => {
+  return request({
+    url: `/wiki/pages/${slug}/history`,
+    method: 'get'
+  })
+}
+
+export const fetchWikiStats = () => {
+  return request({
+    url: '/wiki/pages/stats',
+    method: 'get'
+  })
+}
+
 export const createWikiPage = (data) => {
   return request({
     url: '/wiki/pages',
@@ -28,5 +42,12 @@ export const updateWikiPage = (id, data) => {
     url: `/wiki/pages/${id}`,
     method: 'put',
     data
+  })
+}
+
+export const favoriteWikiPage = (id) => {
+  return request({
+    url: `/wiki/pages/${id}/favorite`,
+    method: 'post'
   })
 }

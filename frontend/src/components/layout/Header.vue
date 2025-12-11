@@ -1,29 +1,23 @@
 <template>
   <div class="header-container">
     <div class="header-content">
-      <!-- Logo / 品牌标题 -->
-      <div class="logo" @click="goHome">
-        <el-icon :size="24"><Wine /></el-icon>
-        <span>醇饮</span>
-      </div>
-
-      <!-- 左侧导航菜单 -->
-      <div class="nav-menu">
-        <div
-          v-for="nav in navItems"
-          :key="nav.path"
-          :class="['nav-item', { active: route.path === nav.path }]"
-          @click="goTo(nav.path)"
-        >
-          {{ nav.label }}
+      <div class="header-left">
+        <div class="logo" @click="goHome">醇饮</div>
+        <div class="nav-menu">
+          <div
+            v-for="nav in navItems"
+            :key="nav.path"
+            :class="['nav-item', { active: route.path === nav.path }]"
+            @click="goTo(nav.path)"
+          >
+            {{ nav.label }}
+          </div>
         </div>
       </div>
-
-      <!-- 中间搜索栏 -->
-      <div class="search-area">
+      <div class="header-center">
         <el-input
           v-model="searchKeyword"
-          placeholder="搜索"
+          placeholder="探索动态 / 酒饮 / 用户"
           class="search-input"
           @keyup.enter="goSearch"
           clearable
@@ -33,47 +27,25 @@
           </template>
         </el-input>
       </div>
-
-      <!-- 右侧功能区 -->
       <div class="header-right">
-        <!-- 消息 -->
-        <el-tooltip content="消息">
-          <el-icon class="action-icon" @click="goToMessages"><ChatDotSquare /></el-icon>
-        </el-tooltip>
-
-        <!-- 动态 -->
-        <el-tooltip content="动态">
-          <el-icon class="action-icon" @click="goToFeeds"><DocumentCopy /></el-icon>
-        </el-tooltip>
-
-        <!-- 收藏 -->
-        <el-tooltip content="收藏">
-          <el-icon class="action-icon" @click="goToCollections"><StarFilled /></el-icon>
-        </el-tooltip>
-
-        <!-- 足迹 -->
-        <el-tooltip content="足迹">
-          <el-icon class="action-icon" @click="goToHistory"><Clock /></el-icon>
-        </el-tooltip>
-
-        <!-- 分享此刻按钮 -->
+        <div class="quick-links">
+          <span @click="goToMessages">消息</span>
+          <span @click="goToFeeds">动态</span>
+          <span @click="goToCollections">收藏</span>
+          <span @click="goToHistory">足迹</span>
+        </div>
         <el-button
-          v-if="userStore.isLoggedIn"
           type="primary"
-          size="small"
-          @click="showShareModal = true"
+          class="share-btn"
+          plain
+          @click="triggerShare"
         >
           分享此刻
         </el-button>
-
-        <!-- 用户菜单或登录注册 -->
         <template v-if="userStore.isLoggedIn">
           <el-dropdown @command="handleCommand">
             <span class="user-avatar">
-              <el-avatar
-                :size="32"
-                :src="userStore.userInfo.avatarUrl"
-              >
+              <el-avatar :size="32" :src="userStore.userInfo.avatarUrl">
                 <el-icon><User /></el-icon>
               </el-avatar>
             </span>
@@ -87,15 +59,14 @@
           </el-dropdown>
         </template>
         <template v-else>
-          <el-button type="primary" size="small" @click="goLogin">登录</el-button>
-          <el-button size="small" @click="goRegister">注册</el-button>
+          <el-button text size="small" @click="goLogin">登录</el-button>
+          <el-button text size="small" @click="goRegister">注册</el-button>
         </template>
       </div>
     </div>
   </div>
 
-  <!-- 分享此刻模态框 -->
-  <ShareModal v-model="showShareModal" />
+  <ShareModal v-model="showShareModal" @posted="refreshAfterShare" />
 </template>
 
 <script setup>
@@ -158,6 +129,19 @@ const goSearch = () => {
   router.push({ path: '/search', query: { q: searchKeyword.value } })
 }
 
+const triggerShare = () => {
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录后再分享')
+    router.push('/login')
+    return
+  }
+  showShareModal.value = true
+}
+
+const refreshAfterShare = () => {
+  router.replace({ path: router.currentRoute.value.fullPath })
+}
+
 const handleCommand = async (command) => {
   if (command === 'profile') {
     router.push('/user/profile')
@@ -173,12 +157,13 @@ const handleCommand = async (command) => {
 
 <style scoped>
 .header-container {
-  height: 64px;
-  background-color: #fff;
-  border-bottom: 1px solid #f0f0f0;
+  height: 68px;
+  background: rgba(255, 255, 255, 0.95);
+  border-bottom: 1px solid #f2f2f2;
   position: sticky;
   top: 0;
   z-index: 100;
+  backdrop-filter: blur(10px);
 }
 
 .header-content {
@@ -187,54 +172,56 @@ const handleCommand = async (command) => {
   height: 100%;
   display: flex;
   align-items: center;
-  gap: 16px;
+  justify-content: space-between;
+  gap: 20px;
   padding: 0 24px;
 }
 
-.logo {
+.header-left {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 18px;
-  font-weight: bold;
-  color: #409eff;
+  gap: 32px;
+}
+
+.logo {
+  font-size: 22px;
+  font-weight: 700;
+  color: #303133;
   cursor: pointer;
-  white-space: nowrap;
-  flex-shrink: 0;
 }
 
 .nav-menu {
   display: flex;
-  gap: 24px;
-  flex-shrink: 0;
+  gap: 20px;
 }
 
 .nav-item {
-  padding: 8px 4px;
-  cursor: pointer;
+  font-size: 15px;
   color: #606266;
-  font-size: 14px;
-  transition: all 0.3s;
-  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  padding: 6px 0;
+  position: relative;
 }
 
-.nav-item:hover {
-  color: #409eff;
+.nav-item.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: #303133;
 }
 
-.nav-item.active {
-  color: #409eff;
-  border-bottom-color: #409eff;
-}
-
-.search-area {
+.header-center {
   flex: 1;
-  min-width: 200px;
-  max-width: 300px;
 }
 
-.search-input {
-  width: 100%;
+.search-input :deep(.el-input__wrapper) {
+  border-radius: 999px;
+  background: #f5f6f7;
+  border: none;
+  box-shadow: none;
 }
 
 .search-icon {
@@ -245,26 +232,27 @@ const handleCommand = async (command) => {
   display: flex;
   align-items: center;
   gap: 12px;
-  flex-shrink: 0;
 }
 
-.action-icon {
-  font-size: 18px;
-  cursor: pointer;
+.quick-links {
+  display: flex;
+  gap: 14px;
+  font-size: 14px;
   color: #606266;
-  transition: color 0.3s;
 }
 
-.action-icon:hover {
-  color: #409eff;
+.quick-links span {
+  cursor: pointer;
+}
+
+.share-btn {
+  border-radius: 999px;
+  border-color: #303133;
+  color: #303133;
+  padding: 0 18px;
 }
 
 .user-avatar {
   cursor: pointer;
 }
-
-:deep(.el-input__wrapper) {
-  border-radius: 20px;
-}
 </style>
-

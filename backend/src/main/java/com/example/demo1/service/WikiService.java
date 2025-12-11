@@ -7,43 +7,55 @@ import com.example.demo1.common.exception.BusinessException;
 import com.example.demo1.common.response.PageResult;
 import com.example.demo1.dto.request.WikiPageRequest;
 import com.example.demo1.dto.response.WikiPageVO;
+import com.example.demo1.dto.response.WikiRevisionVO;
+import com.example.demo1.dto.response.WikiStatsVO;
 import com.example.demo1.entity.User;
 import com.example.demo1.entity.WikiPage;
+import com.example.demo1.entity.WikiRevision;
 import com.example.demo1.mapper.WikiPageMapper;
+import com.example.demo1.mapper.WikiRevisionMapper;
 import com.example.demo1.util.SlugUtils;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Locale;
+import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class WikiService {
 
     private final WikiPageMapper wikiPageMapper;
+    private final WikiRevisionMapper wikiRevisionMapper;
     private final UserService userService;
+    private final CollectionService collectionService;
 
     public PageResult<WikiPageVO> listPages(String keyword, int page, int pageSize) {
+        return listPages(keyword, page, pageSize, null);
+    }
+
+    public PageResult<WikiPageVO> listPages(String keyword, int page, int pageSize, Long currentUserId) {
         LambdaQueryWrapper<WikiPage> wrapper = new LambdaQueryWrapper<>();
         if (StringUtils.isNotBlank(keyword)) {
             wrapper.like(WikiPage::getTitle, keyword)
-                    .or()
-                    .like(WikiPage::getSummary, keyword);
+                .or()
+                .like(WikiPage::getSummary, keyword);
         }
         wrapper.orderByDesc(WikiPage::getUpdatedAt);
         Page<WikiPage> mpPage = wikiPageMapper.selectPage(new Page<>(page, pageSize), wrapper);
         return new PageResult<>(mpPage.getTotal(), (int) mpPage.getCurrent(), (int) mpPage.getSize(),
-                mpPage.getRecords().stream().map(this::toVo).toList());
+            mpPage.getRecords().stream().map(pageEntity -> toVo(pageEntity, currentUserId)).toList());
     }
 
-    public WikiPageVO getPage(String slugOrId) {
+    public WikiPageVO getPage(String slugOrId, Long currentUserId) {
         WikiPage page = findPage(slugOrId);
         if (page == null) {
-            throw new BusinessException(404, "未通过的信息时是无");
+            throw new BusinessException(404, "词条不存在");
         }
-        return toVo(page);
+        return toVo(page, currentUserId);
     }
 
     @Transactional
@@ -59,7 +71,8 @@ public class WikiService {
         page.setLastEditorId(editor.getId());
         page.setLastEditorName(editor.getUsername());
         wikiPageMapper.insert(page);
-        return toVo(page);
+        recordRevision(page, editor, "创建词条");
+        return toVo(page, editorId);
     }
 
     @Transactional
@@ -76,7 +89,8 @@ public class WikiService {
         existing.setLastEditorId(editor.getId());
         existing.setLastEditorName(editor.getUsername());
         wikiPageMapper.updateById(existing);
-        return toVo(existing);
+        recordRevision(existing, editor, "更新词条");
+        return toVo(existing, editorId);
     }
 
     public void ensureDefaultPage(String slug, String title, String summary, String content) {
@@ -92,6 +106,50 @@ public class WikiService {
         page.setStatus(WikiStatus.PUBLISHED);
         page.setLastEditorName("系统");
         wikiPageMapper.insert(page);
+        recordRevision(page, null, "系统初始化");
+    }
+
+    public List<WikiRevisionVO> listRevisions(String slugOrId) {
+        WikiPage page = findPage(slugOrId);
+        if (page == null) {
+            throw new BusinessException(404, "词条不存在");
+        }
+        return wikiRevisionMapper.selectList(new LambdaQueryWrapper<WikiRevision>()
+                .eq(WikiRevision::getPageId, page.getId())
+                .orderByDesc(WikiRevision::getCreatedAt))
+            .stream()
+            .map(revision -> WikiRevisionVO.builder()
+                .id(revision.getId())
+                .editorName(StringUtils.defaultIfBlank(revision.getEditorName(), "系统"))
+                .summary(revision.getSummary())
+                .createdAt(revision.getCreatedAt())
+                .build())
+            .toList();
+    }
+
+    public WikiStatsVO getStats() {
+        long entryCount = wikiPageMapper.selectCount(null);
+        long revisionCount = wikiRevisionMapper.selectCount(null);
+        Set<Long> contributorIds = wikiRevisionMapper.selectList(new LambdaQueryWrapper<WikiRevision>()
+                .select(WikiRevision::getEditorId))
+            .stream()
+            .map(WikiRevision::getEditorId)
+            .filter(id -> id != null && id > 0)
+            .collect(Collectors.toSet());
+        return WikiStatsVO.builder()
+            .entryCount(entryCount)
+            .editCount(revisionCount)
+            .contributorCount((long) contributorIds.size())
+            .build();
+    }
+
+    @Transactional
+    public boolean toggleFavorite(Long pageId, Long userId) {
+        WikiPage page = wikiPageMapper.selectById(pageId);
+        if (page == null) {
+            throw new BusinessException(404, "词条不存在");
+        }
+        return collectionService.toggleWikiFavorite(userId, page);
     }
 
     private WikiPage findPage(String slugOrId) {
@@ -117,16 +175,32 @@ public class WikiService {
         return candidate;
     }
 
-    private WikiPageVO toVo(WikiPage page) {
+    private WikiPageVO toVo(WikiPage page, Long currentUserId) {
+        boolean favorited = collectionService.isWikiFavorited(currentUserId, page.getId());
         return WikiPageVO.builder()
-                .id(page.getId())
-                .slug(page.getSlug())
-                .title(page.getTitle())
-                .summary(page.getSummary())
-                .content(page.getContent())
-                .status(page.getStatus())
-                .lastEditorName(page.getLastEditorName())
-                .updatedAt(page.getUpdatedAt())
-                .build();
+            .id(page.getId())
+            .slug(page.getSlug())
+            .title(page.getTitle())
+            .summary(page.getSummary())
+            .content(page.getContent())
+            .status(page.getStatus())
+            .lastEditorName(page.getLastEditorName())
+            .updatedAt(page.getUpdatedAt())
+            .favorited(favorited)
+            .build();
+    }
+
+    private void recordRevision(WikiPage page, User editor, String summary) {
+        WikiRevision revision = new WikiRevision();
+        revision.setPageId(page.getId());
+        if (editor != null) {
+            revision.setEditorId(editor.getId());
+            revision.setEditorName(editor.getUsername());
+        } else {
+            revision.setEditorName("系统");
+        }
+        revision.setSummary(summary);
+        revision.setContent(page.getContent());
+        wikiRevisionMapper.insert(revision);
     }
 }

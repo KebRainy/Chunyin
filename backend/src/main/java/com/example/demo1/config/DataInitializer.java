@@ -1,47 +1,53 @@
 package com.example.demo1.config;
 
-import com.example.demo1.service.WikiService;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.example.demo1.common.enums.UserRole;
+import com.example.demo1.entity.User;
+import com.example.demo1.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+/**
+ * Seeds essential development data (like a demo user) so that the app
+ * can be used immediately after resetting the database.
+ */
 @Component
 @RequiredArgsConstructor
 public class DataInitializer implements CommandLineRunner {
 
-    private final WikiService wikiService;
+    private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);
+
+    private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
+
+    @Value("${app.demo-user.username:demo}")
+    private String demoUsername;
+
+    @Value("${app.demo-user.password:123456}")
+    private String demoPassword;
 
     @Override
     public void run(String... args) {
-        wikiService.ensureDefaultPage(
-            "craft-beer-basics",
-            "精酿啤酒入门",
-            "从麦芽、酒花到品鉴流程，帮你快速掌握精酿啤酒的基础知识。",
-            """
-            ## 经典风格
-            - 认识 IPA、Stout 等经典风格的香气、色泽与适合搭配
-            - 通过原料与酿造工艺判断风味层次与酒体
+        long existing = userMapper.selectCount(
+            new LambdaQueryWrapper<User>().eq(User::getUsername, demoUsername));
+        if (existing > 0) {
+            return;
+        }
 
-            ## 品鉴要点
-            1. 观察酒体颜色、泡沫与挂杯情况
-            2. 分阶段记录香气、入口与回味，形成自己的风味笔记
-            """
-        );
+        User user = new User();
+        user.setUsername(demoUsername);
+        user.setEmail(demoUsername + "@example.com");
+        user.setPassword(passwordEncoder.encode(demoPassword));
+        user.setRole(UserRole.ADMIN);
+        user.setBio("示例账号，方便开发调试。");
+        user.setAvatarUrl(String.format("https://api.dicebear.com/7.x/thumbs/svg?seed=%s", demoUsername));
 
-        wikiService.ensureDefaultPage(
-            "whisky-intro",
-            "威士忌指南",
-            "梳理不同产区、熟成方式与调饮方法，下次碰到任何一瓶威士忌都能从容应对。",
-            """
-            ## 核心知识
-            - 苏格兰、爱尔兰、美洲等产区的原料差异与典型风味
-            - 熟成年份、橡木桶类型对口感的影响，以及哪些酒适合纯饮或加冰
-
-            ## 品饮建议
-            - 记录 Nose、Palate、Finish，建立个人威士忌档案
-            - 分享靠谱的购酒/线下体验渠道，结交同好
-            """
-        );
+        userMapper.insert(user);
+        log.info("Created default demo user '{}' for development login", demoUsername);
     }
 }
-

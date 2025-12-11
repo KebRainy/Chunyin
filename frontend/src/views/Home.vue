@@ -2,14 +2,23 @@
   <div class="home-container">
     <!-- 顶部：发布动态 + 每日一题 -->
     <div class="top-section">
-      <!-- 左侧：发布动态 -->
       <div class="share-section">
-        <el-card v-if="userStore.isLoggedIn" class="share-card">
-          <div class="share-preview" @click="shareModalVisible = true">
-            <el-avatar :src="userStore.userInfo?.avatarUrl" :size="40" />
-            <div class="share-input-preview">在想什么呢？分享一下吧～</div>
+        <template v-if="userStore.isLoggedIn">
+          <div v-if="!shareEditorExpanded" class="share-hint" @click="shareEditorExpanded = true">
+            <el-avatar :src="userStore.userInfo?.avatarUrl" :size="44" />
+            <div class="hint-text">
+              <p>此刻在喝什么？</p>
+              <span>点击打开编辑器，支持图文/标签/IP属地</span>
+            </div>
+            <el-button text type="primary">立即分享</el-button>
           </div>
-        </el-card>
+          <el-card v-else class="share-editor-card">
+            <ShareComposer ref="inlineComposerRef" mode="inline" @submitted="handleInlinePosted" />
+            <div class="share-editor-actions">
+              <el-button text size="small" @click="foldShareEditor">收起</el-button>
+            </div>
+          </el-card>
+        </template>
         <div v-else class="login-prompt">
           <p>登录后可以分享图文、参加活动</p>
           <el-button type="primary" @click="goLogin">登录</el-button>
@@ -61,47 +70,12 @@
         <el-empty description="暂无动态" />
       </div>
       <div v-else class="masonry-grid">
-        <div
+        <PostCard
           v-for="post in posts"
           :key="post.id"
-          class="post-card"
-          @click="goToPost(post.id)"
-        >
-          <!-- 卡片图片 -->
-          <div class="card-image-container" v-if="post.imageUrls && post.imageUrls.length > 0">
-            <img :src="post.imageUrls[0]" :alt="post.content" class="card-image" />
-            <div class="image-count" v-if="post.imageUrls.length > 1">
-              +{{ post.imageUrls.length - 1 }}
-            </div>
-          </div>
-          <div v-else class="card-image-placeholder">
-            <el-icon><Picture /></el-icon>
-          </div>
-
-          <!-- 卡片内容 -->
-          <div class="card-content">
-            <div class="card-author">
-              <el-avatar :src="post.author.avatarUrl" :size="28" />
-              <div class="author-info">
-                <div class="author-name">{{ post.author.username }}</div>
-                <div class="post-time">{{ formatTime(post.createdAt) }}</div>
-              </div>
-            </div>
-
-            <p class="card-text">{{ truncateText(post.content, 80) }}</p>
-
-            <div class="card-footer">
-              <span class="stats-item">
-                <el-icon><View /></el-icon>
-                <span>0</span>
-              </span>
-              <span class="stats-item">
-                <el-icon><Heart /></el-icon>
-                <span>0</span>
-              </span>
-            </div>
-          </div>
-        </div>
+          :post="post"
+          @select="goToPost(post.id)"
+        />
       </div>
 
       <!-- 加载更多 -->
@@ -114,7 +88,6 @@
     </div>
   </div>
 
-  <!-- 分享动态模态框 -->
   <ShareModal v-model="shareModalVisible" @posted="refreshPosts" />
 </template>
 
@@ -128,6 +101,8 @@ import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/zh-cn'
 import ShareModal from '@/components/ShareModal.vue'
+import ShareComposer from '@/components/share/ShareComposer.vue'
+import PostCard from '@/components/PostCard.vue'
 
 dayjs.extend(relativeTime)
 dayjs.locale('zh-cn')
@@ -142,6 +117,8 @@ const currentPage = ref(1)
 const pageSize = ref(12)
 const hasMore = ref(true)
 const shareModalVisible = ref(false)
+const shareEditorExpanded = ref(false)
+const inlineComposerRef = ref(null)
 
 // 每日一题
 const dailyQuestion = ref({
@@ -189,6 +166,16 @@ const refreshPosts = () => {
   currentPage.value = 1
   hasMore.value = true
   loadPosts()
+}
+
+const handleInlinePosted = () => {
+  shareEditorExpanded.value = false
+  refreshPosts()
+}
+
+const foldShareEditor = () => {
+  shareEditorExpanded.value = false
+  inlineComposerRef.value?.resetForm()
 }
 
 const goToPost = (postId) => {
@@ -263,32 +250,38 @@ onMounted(() => {
 }
 
 .share-section {
-  min-height: 80px;
+  min-height: 120px;
 }
 
-.share-card {
-  height: 100%;
-}
-
-.share-preview {
+.share-hint {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background-color: #f5f5f5;
-  border-radius: 20px;
+  gap: 14px;
+  background: linear-gradient(120deg, #fdf2ff, #eef6ff);
+  border-radius: 18px;
+  padding: 18px;
   cursor: pointer;
-  transition: all 0.3s;
+  border: 1px solid #ebeef5;
 }
 
-.share-preview:hover {
-  background-color: #ececec;
+.share-hint .hint-text p {
+  margin: 0;
+  font-weight: 600;
+  color: #303133;
 }
 
-.share-input-preview {
-  flex: 1;
-  color: #999;
-  font-size: 14px;
+.share-hint .hint-text span {
+  font-size: 12px;
+  color: #909399;
+}
+
+.share-editor-card {
+  padding: 18px;
+}
+
+.share-editor-actions {
+  text-align: right;
+  margin-top: 8px;
 }
 
 .login-prompt {
@@ -424,133 +417,8 @@ onMounted(() => {
 
 .masonry-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
-  grid-auto-flow: dense;
-}
-
-.post-card {
-  background-color: #fff;
-  border-radius: 8px;
-  overflow: hidden;
-  border: 1px solid #f0f0f0;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.post-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-4px);
-}
-
-.card-image-container {
-  position: relative;
-  width: 100%;
-  height: 200px;
-  overflow: hidden;
-  background-color: #f5f5f5;
-}
-
-.card-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s;
-}
-
-.post-card:hover .card-image {
-  transform: scale(1.05);
-}
-
-.image-count {
-  position: absolute;
-  bottom: 8px;
-  right: 8px;
-  background-color: rgba(0, 0, 0, 0.7);
-  color: #fff;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.card-image-placeholder {
-  width: 100%;
-  height: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #f5f5f5;
-  color: #ccc;
-  font-size: 48px;
-}
-
-.card-content {
-  padding: 12px;
-}
-
-.card-author {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.author-info {
-  flex: 1;
-  min-width: 0;
-}
-
-.author-name {
-  font-weight: 500;
-  font-size: 13px;
-  color: #333;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.post-time {
-  font-size: 11px;
-  color: #999;
-}
-
-.card-text {
-  font-size: 13px;
-  color: #555;
-  line-height: 1.4;
-  margin: 8px 0;
-  white-space: pre-wrap;
-  word-break: break-word;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.card-footer {
-  display: flex;
-  gap: 12px;
-  padding-top: 8px;
-  border-top: 1px solid #f0f0f0;
-  font-size: 12px;
-  color: #999;
-}
-
-.stats-item {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  cursor: pointer;
-  transition: color 0.3s;
-}
-
-.stats-item:hover {
-  color: #409eff;
-}
-
-.stats-item .el-icon {
-  font-size: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 18px;
 }
 
 /* ============ 加载更多 ============ */
@@ -584,4 +452,3 @@ onMounted(() => {
   }
 }
 </style>
-

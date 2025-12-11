@@ -20,27 +20,12 @@
       <el-empty :description="`${selectedCity}还没有动态`" />
     </div>
     <div v-else class="posts-grid">
-      <div
+      <PostCard
         v-for="post in posts"
         :key="post.id"
-        class="post-card"
-        @click="goToPost(post.id)"
-      >
-        <div v-if="post.imageUrls && post.imageUrls.length > 0" class="post-image">
-          <img :src="post.imageUrls[0]" :alt="post.content" />
-        </div>
-        <div v-else class="post-image-placeholder">
-          <el-icon><Picture /></el-icon>
-        </div>
-        <div class="post-meta">
-          <div class="post-author">
-            <el-avatar :src="post.author.avatarUrl" :size="24" />
-            <span>{{ post.author.username }}</span>
-          </div>
-          <div class="post-location">📍 {{ post.location }}</div>
-          <div class="post-time">{{ formatTime(post.createdAt) }}</div>
-        </div>
-      </div>
+        :post="post"
+        @select="goToPost(post.id)"
+      />
     </div>
 
     <!-- 加载更多 -->
@@ -57,13 +42,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { circleApi } from '@/api/circle'
-import { Picture } from '@element-plus/icons-vue'
-import dayjs from 'dayjs'
-import relativeTime from 'dayjs/plugin/relativeTime'
-import 'dayjs/locale/zh-cn'
-
-dayjs.extend(relativeTime)
-dayjs.locale('zh-cn')
+import PostCard from '@/components/PostCard.vue'
 
 const router = useRouter()
 
@@ -108,19 +87,6 @@ const loadMore = () => {
 const goToPost = (postId) => {
   router.push(`/posts/${postId}`)
 }
-
-const formatTime = (time) => {
-  if (!time) return ''
-  const date = dayjs(time)
-  const now = dayjs()
-  const diff = now.diff(date, 'minute')
-
-  if (diff < 1) return '刚刚'
-  if (diff < 60) return `${diff}分钟前`
-  if (diff < 1440) return `${Math.floor(diff / 60)}小时前`
-  if (date.isSame(now, 'year')) return date.format('M月D日')
-  return date.format('YYYY年M月D日')
-}
 </script>
 
 <style scoped>
@@ -151,73 +117,9 @@ const formatTime = (time) => {
 
 .posts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 18px;
   margin-bottom: 20px;
-}
-
-.post-card {
-  border-radius: 8px;
-  overflow: hidden;
-  background-color: #fff;
-  border: 1px solid #f0f0f0;
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.post-card:hover {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  transform: translateY(-2px);
-}
-
-.post-image {
-  width: 100%;
-  height: 200px;
-  overflow: hidden;
-  background-color: #f5f5f5;
-}
-
-.post-image img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.post-image-placeholder {
-  width: 100%;
-  height: 200px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #f5f5f5;
-  color: #999;
-  font-size: 32px;
-}
-
-.post-meta {
-  padding: 12px;
-}
-
-.post-author {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 8px;
-  font-size: 12px;
-}
-
-.post-location {
-  font-size: 12px;
-  color: #666;
-  margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.post-time {
-  font-size: 11px;
-  color: #999;
 }
 
 .load-more {
@@ -233,4 +135,3 @@ const formatTime = (time) => {
   font-size: 12px;
 }
 </style>
-

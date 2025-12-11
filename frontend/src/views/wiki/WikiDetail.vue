@@ -1,52 +1,77 @@
 <template>
-  <div class="wiki-detail-container">
+  <div class="wiki-detail-page">
     <div v-if="loading" class="loading">
-      <el-skeleton :rows="5" animated />
+      <el-skeleton :rows="6" animated />
     </div>
     <div v-else-if="!wiki" class="not-found">
       <el-empty description="词条不存在或已被删除" />
     </div>
-    <div v-else class="wiki-content">
-      <!-- 页头 -->
-      <div class="wiki-header">
-        <h1>{{ wiki.title }}</h1>
-        <div class="wiki-meta">
-          <el-tag type="success" size="small" v-if="wiki.status === 'PUBLISHED'">已发布</el-tag>
-          <el-tag type="warning" size="small" v-else-if="wiki.status === 'UNDER_REVIEW'">待审核</el-tag>
-          <el-tag size="small" v-else>草稿</el-tag>
-          <span>最后编辑：{{ formatTime(wiki.updatedAt) }}</span>
-          <span v-if="wiki.lastEditorName">编辑者：{{ wiki.lastEditorName }}</span>
+    <div v-else class="wiki-layout">
+      <aside class="wiki-sidebar">
+        <div class="cover">
+          <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600" alt="concept">
         </div>
-      </div>
-
-      <!-- 摘要 -->
-      <div v-if="wiki.summary" class="wiki-summary">
-        {{ wiki.summary }}
-      </div>
-
-      <!-- 内容 -->
-      <div class="wiki-body">
-        <div class="wiki-content-text" v-html="formatContent(wiki.content)"></div>
-      </div>
-
-      <!-- 操作按钮 -->
-      <div class="wiki-actions">
-        <el-button
-          v-if="userStore.isLoggedIn && canEdit"
-          type="primary"
-          @click="editWiki"
-        >
-          ✎ 编辑此页
-        </el-button>
-        <el-button @click="viewHistory">📜 查看历史</el-button>
-      </div>
-
-      <!-- 页脚信息 -->
-      <div class="wiki-footer">
-        <div class="footer-info">
-          <span>此页由 <strong>{{ wiki.author?.username || '系统' }}</strong> 创建于 {{ formatTime(wiki.createdAt) }}</span>
+        <div class="toc">
+          <h4>目录</h4>
+          <ul>
+            <li v-for="(item, index) in tocItems" :key="index">
+              <span>{{ item }}</span>
+            </li>
+          </ul>
         </div>
-      </div>
+        <div class="sidebar-actions">
+          <el-button type="primary" plain size="small" @click="favoritePage">
+            {{ wiki.favorited ? '已收藏' : '收藏词条' }}
+          </el-button>
+          <el-button v-if="userStore.isLoggedIn && canEdit" size="small" @click="editWiki">编辑条目</el-button>
+        </div>
+      </aside>
+
+      <main class="wiki-main">
+        <header class="wiki-header">
+          <div>
+            <p class="eyebrow">词条</p>
+            <h1>{{ wiki.title }}</h1>
+            <p class="meta">
+              最后更新 {{ formatTime(wiki.updatedAt) }} · {{ wiki.lastEditorName || '系统' }}
+            </p>
+          </div>
+          <el-tag type="success" v-if="wiki.status === 'PUBLISHED'">已发布</el-tag>
+        </header>
+
+        <section class="wiki-summary" v-if="wiki.summary">
+          <h4>概要</h4>
+          <p>{{ wiki.summary }}</p>
+        </section>
+
+        <article class="wiki-article" v-html="formatContent(wiki.content)"></article>
+
+        <section class="wiki-discussion">
+          <div class="section-header">
+            <h3>讨论</h3>
+            <el-button text size="small">发起讨论</el-button>
+          </div>
+          <el-empty description="暂时还没有讨论，快来参与吧" />
+        </section>
+
+        <section class="wiki-history">
+          <div class="section-header">
+            <h3>历史版本</h3>
+          </div>
+          <div v-if="history.length === 0" class="history-empty">
+            <el-empty description="暂无历史记录" />
+          </div>
+          <div v-else class="history-list">
+            <div v-for="item in history" :key="item.id" class="history-item">
+              <div>
+                <p class="history-editor">{{ item.editorName }}</p>
+                <p class="history-summary">{{ item.summary }}</p>
+              </div>
+              <span class="history-time">{{ formatTime(item.createdAt) }}</span>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
   </div>
 </template>
@@ -55,20 +80,30 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import dayjs from 'dayjs'
-import { fetchWikiPage } from '@/api/wiki'
+import { fetchWikiPage, fetchWikiHistory, favoriteWikiPage } from '@/api/wiki'
+import { recordFootprint } from '@/api/user'
 import { useUserStore } from '@/store/modules/user'
+import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
 const wiki = ref(null)
+const history = ref([])
 const loading = ref(true)
+
+const tocItems = computed(() => {
+  if (!wiki.value?.content) return []
+  return wiki.value.content.split('\n')
+    .filter(line => line.startsWith('## '))
+    .map(line => line.replace(/#+/, '').trim())
+})
 
 const canEdit = computed(() => {
   if (!userStore.userInfo || !wiki.value) return false
   return userStore.userInfo.role === 'ADMIN' ||
-         wiki.value.author?.id === userStore.userInfo.id
+    wiki.value.author?.id === userStore.userInfo.id
 })
 
 const loadWiki = async () => {
@@ -76,10 +111,35 @@ const loadWiki = async () => {
   try {
     const response = await fetchWikiPage(route.params.slug)
     wiki.value = response.data
+    await loadHistory()
+    recordWikiFootprint()
   } catch (error) {
-    console.error('Failed to load wiki:', error)
+    ElMessage.error('加载词条失败')
   } finally {
     loading.value = false
+  }
+}
+
+const loadHistory = async () => {
+  try {
+    const res = await fetchWikiHistory(route.params.slug)
+    history.value = res.data || []
+  } catch (error) {
+    history.value = []
+  }
+}
+
+const recordWikiFootprint = async () => {
+  if (!userStore.isLoggedIn || !wiki.value) return
+  try {
+    await recordFootprint({
+      targetType: 'WIKI',
+      targetId: wiki.value.id,
+      title: wiki.value.title,
+      summary: wiki.value.summary
+    })
+  } catch (error) {
+    // ignore
   }
 }
 
@@ -89,10 +149,8 @@ const formatTime = (time) => {
 }
 
 const formatContent = (content) => {
-  if (!content) return ''
-  return content
-    .replace(/\n/g, '<br/>')
-    .replace(/```(.*?)```/gs, '<pre><code>$1</code></pre>')
+  if (!content) return '<p class="empty">这个条目暂无内容</p>'
+  return content.replace(/\n/g, '<br/>')
 }
 
 const editWiki = () => {
@@ -101,9 +159,18 @@ const editWiki = () => {
   }
 }
 
-const viewHistory = () => {
-  // TODO: 实现历史版本查看功能
-  console.log('View history for wiki:', wiki.value.id)
+const favoritePage = async () => {
+  if (!userStore.isLoggedIn) {
+    router.push('/login')
+    return
+  }
+  try {
+    const res = await favoriteWikiPage(wiki.value.id)
+    wiki.value.favorited = res.data
+    ElMessage.success(wiki.value.favorited ? '已收藏' : '已取消收藏')
+  } catch (error) {
+    ElMessage.error('操作失败')
+  }
 }
 
 onMounted(() => {
@@ -112,137 +179,154 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.wiki-detail-container {
-  max-width: 900px;
+.wiki-detail-page {
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 24px;
 }
 
-.loading {
-  padding: 60px 20px;
-}
-
+.loading,
 .not-found {
+  padding: 60px 0;
   text-align: center;
-  padding: 60px 20px;
 }
 
-/* 页头 */
+.wiki-layout {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 24px;
+}
+
+.wiki-sidebar {
+  background: #fff;
+  border-radius: 20px;
+  padding: 20px;
+  box-shadow: 0 8px 24px rgba(31, 45, 61, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cover img {
+  width: 100%;
+  border-radius: 16px;
+  object-fit: cover;
+}
+
+.toc h4 {
+  margin-bottom: 10px;
+}
+
+.toc ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  color: #606266;
+}
+
+.sidebar-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.wiki-main {
+  background: #fff;
+  border-radius: 24px;
+  padding: 32px;
+  box-shadow: 0 8px 24px rgba(31, 45, 61, 0.08);
+}
+
 .wiki-header {
-  margin-bottom: 30px;
-  padding-bottom: 24px;
-  border-bottom: 2px solid #f0f0f0;
-}
-
-.wiki-header h1 {
-  margin: 0 0 16px 0;
-  font-size: 32px;
-  color: #333;
-  word-break: break-word;
-}
-
-.wiki-meta {
   display: flex;
-  gap: 16px;
-  font-size: 13px;
-  color: #666;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-/* 摘要 */
-.wiki-summary {
-  padding: 16px;
-  background-color: #f0f4ff;
-  border-left: 4px solid #409eff;
+  justify-content: space-between;
+  align-items: flex-start;
   margin-bottom: 24px;
-  border-radius: 4px;
-  color: #555;
-  line-height: 1.8;
-  font-size: 14px;
 }
 
-/* 内容 */
-.wiki-body {
-  margin-bottom: 30px;
-}
-
-.wiki-content-text {
-  font-size: 15px;
-  line-height: 1.9;
-  color: #333;
-  word-break: break-word;
-}
-
-.wiki-content-text :deep(pre) {
-  background-color: #f5f5f5;
-  padding: 16px;
-  border-radius: 4px;
-  overflow-x: auto;
-  margin: 16px 0;
-  border: 1px solid #e8e8e8;
-}
-
-.wiki-content-text :deep(code) {
-  font-family: 'Monaco', 'Courier New', monospace;
-  font-size: 13px;
-  background-color: transparent;
-}
-
-.wiki-content-text :deep(br) {
-  display: block;
-  content: '';
-}
-
-/* 操作按钮 */
-.wiki-actions {
-  margin-bottom: 30px;
-  padding: 20px 0;
-  border-top: 1px solid #f0f0f0;
-  border-bottom: 1px solid #f0f0f0;
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.wiki-actions :deep(.el-button) {
-  border-radius: 4px;
-}
-
-/* 页脚信息 */
-.wiki-footer {
-  padding: 20px 0;
-  text-align: center;
-  color: #999;
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 2px;
   font-size: 12px;
-  line-height: 1.6;
+  color: #909399;
 }
 
-.footer-info {
+.wiki-summary {
+  background: #f4f6fb;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.wiki-summary h4 {
+  margin: 0 0 8px;
+}
+
+.wiki-article {
+  line-height: 1.8;
+  font-size: 16px;
+  color: #1f2d3d;
+  margin-bottom: 30px;
+}
+
+.wiki-article :deep(br) {
+  content: '';
+  display: block;
   margin-bottom: 8px;
 }
 
-/* 响应式 */
-@media (max-width: 600px) {
-  .wiki-detail-container {
-    padding: 12px;
+.wiki-discussion,
+.wiki-history {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.history-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px;
+  border: 1px solid #f2f2f2;
+  border-radius: 12px;
+}
+
+.history-editor {
+  margin: 0;
+  font-weight: 600;
+}
+
+.history-summary {
+  margin: 4px 0 0;
+  color: #606266;
+}
+
+.history-time {
+  color: #909399;
+}
+
+@media (max-width: 900px) {
+  .wiki-layout {
+    grid-template-columns: 1fr;
   }
 
-  .wiki-header h1 {
-    font-size: 24px;
-  }
-
-  .wiki-meta {
-    gap: 8px;
-  }
-
-  .wiki-actions {
-    flex-direction: column;
-  }
-
-  .wiki-actions :deep(.el-button) {
-    width: 100%;
+  .wiki-main {
+    padding: 20px;
   }
 }
 </style>
-

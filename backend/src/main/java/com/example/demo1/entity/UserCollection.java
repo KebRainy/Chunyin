@@ -5,27 +5,22 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
+import com.example.demo1.common.enums.CollectionTargetType;
 import lombok.Data;
 
 import java.time.LocalDateTime;
 
 @Data
-@TableName(value = "share_post")
-public class SharePost {
+@TableName("user_collection")
+public class UserCollection {
     @TableId(type = IdType.AUTO)
     private Long id;
 
     private Long userId;
-    private String content;
-    private String location;
-    private String ipAddress;
-    private String ipRegion;
-    private String tags;
-    private Integer viewCount;
-    private Integer likeCount;
-    private Integer favoriteCount;
-    private Integer commentCount;
+    private CollectionTargetType targetType;
+    private Long targetId;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 }
+

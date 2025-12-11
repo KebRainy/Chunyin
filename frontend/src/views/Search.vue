@@ -30,7 +30,7 @@
           <div class="post-header">
             <div>
               <strong>{{ post.author.username }}</strong>
-              <span class="meta">{{ post.ipAddressMasked }} ｜ {{ formatTime(post.createdAt) }}</span>
+              <span class="meta">{{ post.ipRegion || post.ipAddressMasked || '未知' }} ｜ {{ formatTime(post.createdAt) }}</span>
             </div>
           </div>
           <p>{{ post.content }}</p>

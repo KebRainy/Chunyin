@@ -19,6 +19,14 @@ export const circleApi = {
     })
   },
 
+  listUserPosts: (userId, page = 1, pageSize = 10) => {
+    return request({
+      url: `/circle/users/${userId}/posts`,
+      method: 'get',
+      params: { page, pageSize }
+    })
+  },
+
   // 发布新动态
   createPost: (data) => {
     return request({
@@ -43,6 +51,34 @@ export const circleApi = {
       url: `/circle/posts/${id}`,
       method: 'get'
     })
+  },
+
+  likePost: (id) => {
+    return request({
+      url: `/circle/posts/${id}/like`,
+      method: 'post'
+    })
+  },
+
+  favoritePost: (id) => {
+    return request({
+      url: `/circle/posts/${id}/favorite`,
+      method: 'post'
+    })
+  },
+
+  getComments: (id) => {
+    return request({
+      url: `/circle/posts/${id}/comments`,
+      method: 'get'
+    })
+  },
+
+  createComment: (id, data) => {
+    return request({
+      url: `/circle/posts/${id}/comments`,
+      method: 'post',
+      data
+    })
   }
 }
-

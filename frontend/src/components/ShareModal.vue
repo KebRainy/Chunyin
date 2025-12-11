@@ -1,75 +1,30 @@
 <template>
   <el-dialog
     v-model="visible"
-    title="分享此刻"
-    width="500px"
-    @close="resetForm"
+    width="540px"
+    :close-on-click-modal="false"
+    :show-close="false"
+    :before-close="handleClose"
   >
-    <div class="share-modal-content">
-      <!-- 分享内容输入框 -->
-      <el-input
-        v-model="form.content"
-        type="textarea"
-        rows="6"
-        placeholder="分享你的所思所想..."
-        maxlength="2000"
-        show-word-limit
-      />
-
-      <!-- 位置选择 -->
-      <div class="form-group">
-        <label>位置</label>
-        <el-input
-          v-model="form.location"
-          placeholder="添加位置（可选）"
-          clearable
-        />
+    <template #header>
+      <div class="modal-header">
+        <h3>分享此刻</h3>
+        <el-button text @click="handleClose">
+          <el-icon><Close /></el-icon>
+        </el-button>
       </div>
-
-      <!-- 图片上传 -->
-      <div class="form-group">
-        <label>图片</label>
-        <div class="image-upload-area">
-          <el-upload
-            v-model:file-list="uploadFileList"
-            action="/api/files/upload"
-            list-type="picture-card"
-            multiple
-            :on-success="handleUploadSuccess"
-            :on-error="handleUploadError"
-            :before-upload="beforeUpload"
-            accept="image/*"
-          >
-            <el-icon class="avatar-uploader-icon"><Plus /></el-icon>
-            <template #tip>
-              <div class="el-upload__tip">
-                单个图片不超过 5MB
-              </div>
-            </template>
-          </el-upload>
-        </div>
-      </div>
-
-      <!-- 已上传图片ID展示 -->
-      <div v-if="form.imageIds.length > 0" class="image-ids">
-        已上传 {{ form.imageIds.length }} 张图片
-      </div>
-    </div>
-
-    <template #footer>
-      <el-button @click="visible = false">取消</el-button>
-      <el-button type="primary" :loading="loading" @click="handleSubmit">
-        分享
-      </el-button>
     </template>
+    <ShareComposer ref="composerRef" mode="modal" @submitted="handlePosted" />
   </el-dialog>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
-import { ElMessage } from 'element-plus'
-import { useUserStore } from '@/store/modules/user'
-import { circleApi } from '@/api/circle'
+import { computed, onMounted, ref, watch } from 'vue'
+import { ElMessageBox, ElMessage } from 'element-plus'
+import ShareComposer from '@/components/share/ShareComposer.vue'
+import { Close } from '@element-plus/icons-vue'
+
+const DRAFT_KEY = 'share_draft'
 
 const props = defineProps({
   modelValue: Boolean
@@ -77,116 +32,94 @@ const props = defineProps({
 
 const emit = defineEmits(['update:modelValue', 'posted'])
 
-const userStore = useUserStore()
-const loading = ref(false)
-const uploadFileList = ref([])
-
 const visible = computed({
   get: () => props.modelValue,
   set: (value) => emit('update:modelValue', value)
 })
 
-const form = ref({
-  content: '',
-  location: '',
-  imageIds: []
-})
+const composerRef = ref(null)
 
-const beforeUpload = (file) => {
-  const isImage = file.type.startsWith('image/')
-  const isLt5M = file.size / 1024 / 1024 < 5
-
-  if (!isImage) {
-    ElMessage.error('只能上传图片文件')
-    return false
-  }
-  if (!isLt5M) {
-    ElMessage.error('图片大小不能超过 5MB')
-    return false
-  }
-  return true
-}
-
-const handleUploadSuccess = (response) => {
-  if (response.code === 0 && response.data && response.data.id) {
-    form.value.imageIds.push(response.data.id)
+const loadDraft = () => {
+  const draft = localStorage.getItem(DRAFT_KEY)
+  if (draft) {
+    try {
+      const parsed = JSON.parse(draft)
+      composerRef.value?.fillForm(parsed)
+      ElMessage.info('已为你恢复上次的草稿')
+    } catch (error) {
+      localStorage.removeItem(DRAFT_KEY)
+    }
   }
 }
 
-const handleUploadError = () => {
-  ElMessage.error('图片上传失败')
+const saveDraft = () => {
+  const snapshot = composerRef.value?.getSnapshot?.()
+  if (!snapshot) return
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(snapshot))
 }
 
-const handleSubmit = async () => {
-  if (!form.value.content.trim()) {
-    ElMessage.warning('请输入分享内容')
+const clearDraft = () => {
+  localStorage.removeItem(DRAFT_KEY)
+}
+
+const handlePosted = () => {
+  clearDraft()
+  visible.value = false
+  emit('posted')
+}
+
+const handleClose = (done) => {
+  const hasUnsaved = composerRef.value?.hasUnsaved?.value
+  if (!hasUnsaved) {
+    composerRef.value?.resetForm()
+    clearDraft()
+    if (typeof done === 'function') done()
+    else visible.value = false
     return
   }
-
-  loading.value = true
-  try {
-    await circleApi.createPost({
-      content: form.value.content,
-      location: form.value.location,
-      imageIds: form.value.imageIds
-    })
-    ElMessage.success('分享成功')
-    visible.value = false
-    emit('posted')
-    resetForm()
-  } catch (error) {
-    ElMessage.error(error.message || '分享失败')
-  } finally {
-    loading.value = false
-  }
+  ElMessageBox.confirm('要保存当前草稿以便稍后继续吗？', '保存草稿', {
+    confirmButtonText: '保存草稿',
+    cancelButtonText: '放弃',
+    type: 'warning',
+    distinguishCancelAndClose: true
+  }).then(() => {
+    saveDraft()
+    composerRef.value?.resetForm()
+    if (typeof done === 'function') done()
+    else visible.value = false
+  }).catch((action) => {
+    if (action === 'cancel') {
+      composerRef.value?.resetForm()
+      clearDraft()
+      if (typeof done === 'function') done()
+      else visible.value = false
+    }
+  })
 }
 
-const resetForm = () => {
-  form.value = {
-    content: '',
-    location: '',
-    imageIds: []
+onMounted(() => {
+  if (visible.value) {
+    loadDraft()
   }
-  uploadFileList.value = []
-}
+})
+
+watch(() => visible.value, (val) => {
+  if (val) {
+    loadDraft()
+  }
+})
 </script>
 
 <style scoped>
-.share-modal-content {
+.modal-header {
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  justify-content: space-between;
+  align-items: center;
 }
 
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.form-group label {
-  font-weight: 500;
-  font-size: 14px;
-  color: #606266;
-}
-
-.image-upload-area {
-  padding: 8px 0;
-}
-
-.image-ids {
-  padding: 8px 12px;
-  background-color: #f5f7fa;
-  border-radius: 4px;
-  font-size: 12px;
-  color: #606266;
-}
-
-:deep(.el-textarea__inner) {
-  font-family: inherit;
-}
-
-:deep(.el-upload-dragger) {
-  border-radius: 4px;
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #303133;
 }
 </style>

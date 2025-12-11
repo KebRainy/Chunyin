@@ -22,7 +22,8 @@
           <div class="post-meta">
             <span class="time">{{ formatTime(post.createdAt) }}</span>
             <span v-if="post.location" class="location">📍 {{ post.location }}</span>
-            <span v-if="post.ipAddressMasked" class="ip">{{ post.ipAddressMasked }}</span>
+            <span v-if="post.ipRegion" class="ip">IP 属地 {{ post.ipRegion }}</span>
+            <span v-else-if="post.ipAddressMasked" class="ip">{{ post.ipAddressMasked }}</span>
           </div>
         </div>
       </div>
@@ -43,8 +44,10 @@
         </div>
 
         <!-- 动态标签 -->
-        <div v-if="post.location" class="post-tags">
-          <el-tag>{{ post.location }}</el-tag>
+        <div v-if="post.tags?.length" class="post-tags">
+          <el-tag v-for="tag in post.tags" :key="tag" effect="dark">
+            # {{ tag }}
+          </el-tag>
         </div>
       </div>
 
@@ -52,19 +55,19 @@
       <div class="post-actions">
         <div class="action-item">
           <el-icon><View /></el-icon>
-          <span>浏览 {{ viewCount }}</span>
+          <span>浏览 {{ post.viewCount || 0 }}</span>
         </div>
-        <div class="action-item" @click="toggleLike">
-          <el-icon :class="{ liked: liked }"><Heart /></el-icon>
-          <span>点赞 {{ likeCount }}</span>
+        <div class="action-item" :class="{ active: liked }" @click="toggleLike">
+          <el-icon><Heart /></el-icon>
+          <span>{{ liked ? '已赞' : '点赞' }} {{ post.likeCount || 0 }}</span>
         </div>
         <div class="action-item">
           <el-icon><ChatDotSquare /></el-icon>
-          <span>评论 {{ commentCount }}</span>
+          <span>评论 {{ post.commentCount || 0 }}</span>
         </div>
-        <div class="action-item" @click="toggleStar">
-          <el-icon :class="{ starred: starred }"><StarFilled /></el-icon>
-          <span>收藏</span>
+        <div class="action-item" :class="{ active: favorited }" @click="toggleFavorite">
+          <el-icon><StarFilled /></el-icon>
+          <span>{{ favorited ? '已收藏' : '收藏' }} {{ post.favoriteCount || 0 }}</span>
         </div>
       </div>
 
@@ -78,6 +81,10 @@
             placeholder="写下你的评论..."
             rows="3"
           />
+          <div v-if="replyTarget" class="reply-target">
+            回复 @{{ replyTarget.author?.username }}
+            <el-button text size="small" @click="replyTarget = null">取消</el-button>
+          </div>
           <el-button type="primary" @click="submitComment" :loading="commentSubmitting">
             发布评论
           </el-button>
@@ -98,6 +105,26 @@
                   <span class="comment-time">{{ formatTime(comment.createdAt) }}</span>
                 </div>
                 <div class="comment-text">{{ comment.content }}</div>
+                <div class="comment-actions">
+                  <el-button text size="small" @click="setReplyTarget(comment)">回复</el-button>
+                </div>
+                <div class="reply-list" v-if="comment.replies?.length">
+                  <div
+                    v-for="reply in comment.replies"
+                    :key="reply.id"
+                    class="reply-item"
+                  >
+                    <el-avatar :src="reply.author?.avatarUrl" :size="24" />
+                    <div>
+                      <div class="comment-header">
+                        <span class="comment-author">{{ reply.author?.username }}</span>
+                        <span class="comment-time">{{ formatTime(reply.createdAt) }}</span>
+                      </div>
+                      <div class="comment-text">{{ reply.content }}</div>
+                      <el-button text size="small" @click="setReplyTarget(reply)">回复</el-button>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -121,6 +148,7 @@ import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/zh-cn'
 import { circleApi } from '@/api/circle'
+import { recordFootprint } from '@/api/user'
 import { useUserStore } from '@/store/modules/user'
 
 dayjs.extend(relativeTime)
@@ -133,26 +161,49 @@ const userStore = useUserStore()
 const post = ref(null)
 const loading = ref(true)
 const liked = ref(false)
-const starred = ref(false)
-const likeCount = ref(0)
-const viewCount = ref(0)
-const commentCount = ref(0)
+const favorited = ref(false)
 const commentText = ref('')
 const commentSubmitting = ref(false)
 const comments = ref([])
+const replyTarget = ref(null)
 
 const loadPost = async () => {
   loading.value = true
   try {
     const response = await circleApi.getPost(route.params.id)
     post.value = response.data
-    viewCount.value = 0
-    commentCount.value = 0
+    liked.value = response.data?.liked || false
+    favorited.value = response.data?.favorited || false
+    await loadComments()
+    recordPostFootprint()
   } catch (error) {
-    console.error('Failed to load post:', error)
     ElMessage.error('加载动态失败')
   } finally {
     loading.value = false
+  }
+}
+
+const loadComments = async () => {
+  try {
+    const res = await circleApi.getComments(route.params.id)
+    comments.value = res.data || []
+  } catch (error) {
+    ElMessage.error('加载评论失败')
+  }
+}
+
+const recordPostFootprint = async () => {
+  if (!userStore.isLoggedIn || !post.value) return
+  try {
+    await recordFootprint({
+      targetType: 'POST',
+      targetId: post.value.id,
+      title: post.value.author?.username || '动态',
+      summary: post.value.content?.slice(0, 80),
+      coverUrl: post.value.imageUrls?.[0]
+    })
+  } catch (error) {
+    // ignore
   }
 }
 
@@ -160,11 +211,10 @@ const formatTime = (time) => {
   if (!time) return ''
   const date = dayjs(time)
   const now = dayjs()
-  const diff = now.diff(date, 'minute')
-
-  if (diff < 1) return '刚刚'
-  if (diff < 60) return `${diff}分钟前`
-  if (diff < 1440) return `${Math.floor(diff / 60)}小时前`
+  const diffMinutes = now.diff(date, 'minute')
+  if (diffMinutes < 60) return `${Math.max(1, diffMinutes)}分钟前`
+  const diffHours = now.diff(date, 'hour')
+  if (diffHours < 24) return `${diffHours}小时前`
   if (date.isSame(now, 'year')) return date.format('M月D日 HH:mm')
   return date.format('YYYY年M月D日 HH:mm')
 }
@@ -173,22 +223,32 @@ const goToUser = (userId) => {
   router.push(`/users/${userId}`)
 }
 
-const toggleLike = () => {
+const toggleLike = async () => {
   if (!userStore.isLoggedIn) {
     ElMessage.warning('请先登录')
     return
   }
-  liked.value = !liked.value
-  if (liked.value) likeCount.value++
-  else likeCount.value--
+  try {
+    const res = await circleApi.likePost(post.value.id)
+    liked.value = res.data
+    post.value.likeCount = Math.max(0, (post.value.likeCount || 0) + (liked.value ? 1 : -1))
+  } catch (error) {
+    ElMessage.error('操作失败，请稍后再试')
+  }
 }
 
-const toggleStar = () => {
+const toggleFavorite = async () => {
   if (!userStore.isLoggedIn) {
     ElMessage.warning('请先登录')
     return
   }
-  starred.value = !starred.value
+  try {
+    const res = await circleApi.favoritePost(post.value.id)
+    favorited.value = res.data
+    post.value.favoriteCount = Math.max(0, (post.value.favoriteCount || 0) + (favorited.value ? 1 : -1))
+  } catch (error) {
+    ElMessage.error('操作失败，请稍后再试')
+  }
 }
 
 const submitComment = async () => {
@@ -196,21 +256,32 @@ const submitComment = async () => {
     ElMessage.warning('评论内容不能为空')
     return
   }
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return
+  }
   commentSubmitting.value = true
   try {
-    // TODO: 实现发布评论 API
-    // await commentApi.createComment({
-    //   postId: post.value.id,
-    //   content: commentText.value
-    // })
-    ElMessage.success('评论发布成功')
+    await circleApi.createComment(post.value.id, {
+      content: commentText.value,
+      parentId: replyTarget.value?.id || null
+    })
     commentText.value = ''
-    // await loadPost()
+    replyTarget.value = null
+    await loadComments()
+    post.value.commentCount += 1
+    ElMessage.success('评论发布成功')
   } catch (error) {
     ElMessage.error('评论发布失败')
   } finally {
     commentSubmitting.value = false
   }
+}
+
+const setReplyTarget = (comment) => {
+  replyTarget.value = comment
+  commentText.value = `@${comment.author?.username} `
 }
 
 onMounted(() => {
@@ -343,20 +414,13 @@ onMounted(() => {
   font-size: 14px;
 }
 
-.action-item:hover {
+.action-item:hover,
+.action-item.active {
   color: #409eff;
 }
 
 .action-item .el-icon {
   font-size: 18px;
-}
-
-.action-item .el-icon.liked {
-  color: #f56c6c;
-}
-
-.action-item .el-icon.starred {
-  color: #ffd666;
 }
 
 /* 评论区 */
@@ -376,6 +440,15 @@ onMounted(() => {
 
 :deep(.comment-input .el-textarea__inner) {
   margin-bottom: 12px;
+}
+
+.reply-target {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #909399;
+  margin-bottom: 8px;
 }
 
 .login-prompt {
@@ -433,6 +506,23 @@ onMounted(() => {
   line-height: 1.6;
 }
 
+.comment-actions {
+  margin-top: 6px;
+}
+
+.reply-list {
+  margin-top: 12px;
+  padding-left: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reply-item {
+  display: flex;
+  gap: 8px;
+}
+
 /* 响应式 */
 @media (max-width: 600px) {
   .post-detail-container {
@@ -452,4 +542,3 @@ onMounted(() => {
   }
 }
 </style>
-

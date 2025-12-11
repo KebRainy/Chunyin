@@ -14,7 +14,14 @@ public class SharePostVO {
     private String content;
     private List<String> imageUrls;
     private String location;
+    private List<String> tags;
     private String ipAddressMasked;
+    private String ipRegion;
+    private Integer viewCount;
+    private Integer likeCount;
+    private Integer favoriteCount;
+    private Integer commentCount;
+    private Boolean liked;
+    private Boolean favorited;
     private LocalDateTime createdAt;
 }
-

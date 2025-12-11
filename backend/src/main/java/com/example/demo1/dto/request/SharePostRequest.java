@@ -14,7 +14,10 @@ public class SharePostRequest {
     private String content;
 
     private List<Long> imageIds = new ArrayList<>();
+
+    @Size(max = 5, message = "标签不要超过 5 个")
+    private List<String> tags = new ArrayList<>();
+
     private String location;
 }
-
 

@@ -133,9 +133,10 @@ const passwordDialogVisible = ref(false)
 const form = ref({
   username: userStore.userInfo?.username || '',
   bio: userStore.userInfo?.bio || '',
-  gender: 'secret',
+  gender: userStore.userInfo?.gender || 'secret',
   email: userStore.userInfo?.email || '',
-  birthday: null
+  birthday: userStore.userInfo?.birthday ? new Date(userStore.userInfo.birthday) : null,
+  avatarImageId: null
 })
 
 const passwordForm = ref({
@@ -160,15 +161,26 @@ const beforeAvatarUpload = (file) => {
 }
 
 const handleAvatarSuccess = (response) => {
-  if (response.code === 0) {
+  if (response.code === 200 && response.data?.id) {
     avatarPreview.value = response.data.url
+    form.value.avatarImageId = response.data.id
     ElMessage.success('头像上传成功')
+  } else {
+    ElMessage.error('上传失败，请重试')
   }
 }
 
 const saveSettings = async () => {
   try {
-    // TODO: 调用API保存设置
+    await updateProfile({
+      username: form.value.username,
+      bio: form.value.bio,
+      gender: form.value.gender,
+      email: form.value.email,
+      birthday: form.value.birthday,
+      avatarImageId: form.value.avatarImageId
+    })
+    await userStore.fetchUserInfo()
     ElMessage.success('设置已保存')
   } catch (error) {
     ElMessage.error('保存失败')
@@ -179,9 +191,10 @@ const resetForm = () => {
   form.value = {
     username: userStore.userInfo?.username || '',
     bio: userStore.userInfo?.bio || '',
-    gender: 'secret',
+    gender: userStore.userInfo?.gender || 'secret',
     email: userStore.userInfo?.email || '',
-    birthday: null
+    birthday: userStore.userInfo?.birthday ? new Date(userStore.userInfo.birthday) : null,
+    avatarImageId: null
   }
 }
 

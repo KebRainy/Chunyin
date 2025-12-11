@@ -1,3 +1,16 @@
+CREATE TABLE IF NOT EXISTS image (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    uuid VARCHAR(36) NOT NULL UNIQUE,
+    image_data LONGBLOB NOT NULL,
+    file_name VARCHAR(255),
+    mime_type VARCHAR(100),
+    file_size INT,
+    uploaded_by BIGINT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_uuid (uuid),
+    INDEX idx_uploaded_by (uploaded_by)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS user (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
     username VARCHAR(50) NOT NULL UNIQUE,
@@ -5,7 +18,11 @@ CREATE TABLE IF NOT EXISTS user (
     email VARCHAR(100) NOT NULL UNIQUE,
     role ENUM('USER', 'SELLER', 'ADMIN') NOT NULL DEFAULT 'USER',
     avatar_image_id BIGINT,
+    avatar_url VARCHAR(255),
     bio TEXT,
+    gender ENUM('MALE', 'FEMALE', 'SECRET') DEFAULT 'SECRET',
+    birthday DATE NULL,
+    level INT DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     is_active BOOLEAN DEFAULT TRUE,
@@ -14,6 +31,111 @@ CREATE TABLE IF NOT EXISTS user (
     INDEX idx_email (email),
     INDEX idx_role (role)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+SET @avatar_url_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'user'
+      AND COLUMN_NAME = 'avatar_url'
+);
+
+SET @add_avatar_url = IF(
+    @avatar_url_exists = 0,
+    'ALTER TABLE user ADD COLUMN avatar_url VARCHAR(255) AFTER avatar_image_id',
+    'SELECT 1'
+);
+
+PREPARE stmt FROM @add_avatar_url;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @level_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'user'
+      AND COLUMN_NAME = 'level'
+);
+
+SET @add_level = IF(
+    @level_exists = 0,
+    'ALTER TABLE user ADD COLUMN level INT DEFAULT 1 AFTER birthday',
+    'SELECT 1'
+);
+
+PREPARE stmt FROM @add_level;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @needs_birthday_conversion = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'user'
+      AND COLUMN_NAME = 'birthday'
+      AND DATA_TYPE <> 'date'
+);
+
+SET @normalize_birthday = IF(
+    @needs_birthday_conversion = 0,
+    'SELECT 1',
+    'UPDATE user SET birthday = NULL WHERE birthday IS NOT NULL AND birthday NOT REGEXP ''^[0-9]{4}-[0-9]{2}-[0-9]{2}$'''
+);
+
+PREPARE stmt FROM @normalize_birthday;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @convert_birthday = IF(
+    @needs_birthday_conversion = 0,
+    'SELECT 1',
+    'ALTER TABLE user MODIFY COLUMN birthday DATE NULL'
+);
+
+PREPARE stmt FROM @convert_birthday;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+UPDATE user SET level = 1 WHERE level IS NULL;
+UPDATE user SET gender = UPPER(gender) WHERE gender IS NOT NULL;
+
+SET @gender_is_enum = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'user'
+      AND COLUMN_NAME = 'gender'
+      AND DATA_TYPE = 'enum'
+);
+
+SET @alter_gender = IF(
+    @gender_is_enum = 1,
+    'SELECT 1',
+    'ALTER TABLE user MODIFY COLUMN gender ENUM(''MALE'',''FEMALE'',''SECRET'') DEFAULT ''SECRET'''
+);
+
+PREPARE stmt FROM @alter_gender;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @fk_image_uploaded_by_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.TABLE_CONSTRAINTS
+    WHERE CONSTRAINT_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'image'
+      AND CONSTRAINT_NAME = 'fk_image_uploaded_by'
+);
+
+SET @add_fk_image_uploaded_by = IF(
+    @fk_image_uploaded_by_exists = 0,
+    'ALTER TABLE image ADD CONSTRAINT fk_image_uploaded_by FOREIGN KEY (uploaded_by) REFERENCES user(id) ON DELETE SET NULL',
+    'SELECT 1'
+);
+
+PREPARE stmt FROM @add_fk_image_uploaded_by;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 CREATE TABLE IF NOT EXISTS beverage (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -163,12 +285,167 @@ CREATE TABLE IF NOT EXISTS share_post (
     user_id BIGINT NOT NULL,
     content TEXT NOT NULL,
     location VARCHAR(255),
+    tags VARCHAR(255),
     ip_address VARCHAR(64),
+    ip_region VARCHAR(128),
+    view_count INT DEFAULT 0,
+    like_count INT DEFAULT 0,
+    favorite_count INT DEFAULT 0,
+    comment_count INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
     INDEX idx_share_post_user (user_id),
     INDEX idx_share_post_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+SET @share_post_ip_region_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'share_post'
+      AND COLUMN_NAME = 'ip_region'
+);
+
+SET @add_share_post_ip_region = IF(
+    @share_post_ip_region_exists = 0,
+    'ALTER TABLE share_post ADD COLUMN ip_region VARCHAR(128) AFTER ip_address',
+    'SELECT 1'
+);
+
+PREPARE stmt FROM @add_share_post_ip_region;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @share_post_tags_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'share_post'
+      AND COLUMN_NAME = 'tags'
+);
+
+SET @add_share_post_tags = IF(
+    @share_post_tags_exists = 0,
+    'ALTER TABLE share_post ADD COLUMN tags VARCHAR(255) AFTER location',
+    'SELECT 1'
+);
+
+PREPARE stmt FROM @add_share_post_tags;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @share_post_view_count_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'share_post'
+      AND COLUMN_NAME = 'view_count'
+);
+
+SET @add_share_post_view_count = IF(
+    @share_post_view_count_exists = 0,
+    'ALTER TABLE share_post ADD COLUMN view_count INT DEFAULT 0 AFTER tags',
+    'SELECT 1'
+);
+
+PREPARE stmt FROM @add_share_post_view_count;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @share_post_like_count_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'share_post'
+      AND COLUMN_NAME = 'like_count'
+);
+
+SET @add_share_post_like_count = IF(
+    @share_post_like_count_exists = 0,
+    'ALTER TABLE share_post ADD COLUMN like_count INT DEFAULT 0 AFTER view_count',
+    'SELECT 1'
+);
+
+PREPARE stmt FROM @add_share_post_like_count;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @share_post_favorite_count_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'share_post'
+      AND COLUMN_NAME = 'favorite_count'
+);
+
+SET @add_share_post_favorite_count = IF(
+    @share_post_favorite_count_exists = 0,
+    'ALTER TABLE share_post ADD COLUMN favorite_count INT DEFAULT 0 AFTER like_count',
+    'SELECT 1'
+);
+
+PREPARE stmt FROM @add_share_post_favorite_count;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @share_post_comment_count_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'share_post'
+      AND COLUMN_NAME = 'comment_count'
+);
+
+SET @add_share_post_comment_count = IF(
+    @share_post_comment_count_exists = 0,
+    'ALTER TABLE share_post ADD COLUMN comment_count INT DEFAULT 0 AFTER favorite_count',
+    'SELECT 1'
+);
+
+PREPARE stmt FROM @add_share_post_comment_count;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @share_post_image_urls_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'share_post'
+      AND COLUMN_NAME = 'image_urls'
+);
+
+SET @drop_share_post_image_urls = IF(
+    @share_post_image_urls_exists = 0,
+    'SELECT 1',
+    'ALTER TABLE share_post DROP COLUMN image_urls'
+);
+
+PREPARE stmt FROM @drop_share_post_image_urls;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @share_post_image_ids_exists = (
+    SELECT COUNT(*)
+    FROM information_schema.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+      AND TABLE_NAME = 'share_post'
+      AND COLUMN_NAME = 'image_ids'
+);
+
+SET @drop_share_post_image_ids = IF(
+    @share_post_image_ids_exists = 0,
+    'SELECT 1',
+    'ALTER TABLE share_post DROP COLUMN image_ids'
+);
+
+PREPARE stmt FROM @drop_share_post_image_ids;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+UPDATE share_post SET view_count = 0 WHERE view_count IS NULL;
+UPDATE share_post SET like_count = 0 WHERE like_count IS NULL;
+UPDATE share_post SET favorite_count = 0 WHERE favorite_count IS NULL;
+UPDATE share_post SET comment_count = 0 WHERE comment_count IS NULL;
 
 CREATE TABLE IF NOT EXISTS share_post_image (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -179,6 +456,31 @@ CREATE TABLE IF NOT EXISTS share_post_image (
     FOREIGN KEY (share_post_id) REFERENCES share_post(id) ON DELETE CASCADE,
     FOREIGN KEY (image_id) REFERENCES image(id) ON DELETE CASCADE,
     INDEX idx_share_post_id (share_post_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS share_post_comment (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    post_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    parent_id BIGINT NULL,
+    content TEXT NOT NULL,
+    like_count INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES share_post(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    FOREIGN KEY (parent_id) REFERENCES share_post_comment(id) ON DELETE CASCADE,
+    INDEX idx_post_id (post_id),
+    INDEX idx_parent_id (parent_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS share_post_like (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    post_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (post_id) REFERENCES share_post(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_post_like (post_id, user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS wiki_page (
@@ -194,6 +496,19 @@ CREATE TABLE IF NOT EXISTS wiki_page (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_wiki_title (title),
     FOREIGN KEY (last_editor_id) REFERENCES user(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS wiki_revision (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    page_id BIGINT NOT NULL,
+    editor_id BIGINT,
+    editor_name VARCHAR(100),
+    summary VARCHAR(500),
+    content LONGTEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (page_id) REFERENCES wiki_page(id) ON DELETE CASCADE,
+    FOREIGN KEY (editor_id) REFERENCES user(id) ON DELETE SET NULL,
+    INDEX idx_revision_page (page_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS user_follow (
@@ -222,16 +537,27 @@ CREATE TABLE IF NOT EXISTS private_message (
     INDEX idx_message_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS image (
+CREATE TABLE IF NOT EXISTS user_collection (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    uuid VARCHAR(36) NOT NULL UNIQUE,
-    image_data LONGBLOB NOT NULL,
-    file_name VARCHAR(255),
-    mime_type VARCHAR(100),
-    file_size INT,
-    uploaded_by BIGINT,
+    user_id BIGINT NOT NULL,
+    target_type ENUM('POST','WIKI') NOT NULL,
+    target_id BIGINT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (uploaded_by) REFERENCES user(id) ON DELETE SET NULL,
-    INDEX idx_uuid (uuid),
-    INDEX idx_uploaded_by (uploaded_by)
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_collection (user_id, target_type, target_id),
+    INDEX idx_collection_type (target_type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS user_footprint (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    user_id BIGINT NOT NULL,
+    target_type ENUM('POST','WIKI') NOT NULL,
+    target_id BIGINT NOT NULL,
+    title VARCHAR(255),
+    summary VARCHAR(500),
+    cover_url VARCHAR(255),
+    visited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_footprint (user_id, target_type, target_id),
+    INDEX idx_footprint_visited (visited_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

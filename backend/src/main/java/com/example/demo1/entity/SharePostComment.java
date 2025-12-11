@@ -10,22 +10,18 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName(value = "share_post")
-public class SharePost {
+@TableName("share_post_comment")
+public class SharePostComment {
     @TableId(type = IdType.AUTO)
     private Long id;
 
+    private Long postId;
     private Long userId;
+    private Long parentId;
     private String content;
-    private String location;
-    private String ipAddress;
-    private String ipRegion;
-    private String tags;
-    private Integer viewCount;
     private Integer likeCount;
-    private Integer favoriteCount;
-    private Integer commentCount;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createdAt;
 }
+

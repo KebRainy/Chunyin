@@ -5,27 +5,28 @@
         :src="post.imageUrls[0]"
         :alt="post.content || `${post.author?.username || '用户'}的分享图片`"
       >
+      <div class="image-overlay">
+        <span class="overlay-item"><el-icon><View /></el-icon>{{ post.viewCount || 0 }}</span>
+        <span class="overlay-item"><el-icon><Heart /></el-icon>{{ post.likeCount || 0 }}</span>
+      </div>
       <span v-if="post.imageUrls.length > 1" class="count">+{{ post.imageUrls.length - 1 }}</span>
     </div>
     <div class="card-media no-image" v-else>
       <p class="no-image-text">{{ coverText(post.content) }}</p>
+      <div class="image-overlay">
+        <span class="overlay-item"><el-icon><View /></el-icon>{{ post.viewCount || 0 }}</span>
+        <span class="overlay-item"><el-icon><Heart /></el-icon>{{ post.likeCount || 0 }}</span>
+      </div>
     </div>
     <div class="card-body">
-      <div class="author">
-        <el-avatar
-          :src="post.author?.avatarUrl"
-          :size="32"
-          :alt="`${post.author?.username || '用户'}的头像`"
-        />
-        <div>
-          <p class="name">{{ post.author?.username }}</p>
-          <p class="time">{{ formatTime(post.createdAt) }}</p>
-        </div>
+      <div class="location">
+        <el-icon><Location /></el-icon>
+        <span>{{ post.location || '未知地点' }}</span>
       </div>
       <p class="content">{{ snippet(post.content) }}</p>
       <div class="tags" v-if="post.tags?.length">
         <el-tag
-          v-for="tag in post.tags.slice(0, 3)"
+          v-for="tag in post.tags.slice(0, 2)"
           :key="tag"
           size="small"
           effect="light"
@@ -34,10 +35,16 @@
         </el-tag>
       </div>
     </div>
-    <div class="card-footer">
-      <span><el-icon><Location /></el-icon>{{ post.location || '未知地点' }}</span>
-      <span><el-icon><View /></el-icon>{{ post.viewCount || 0 }}</span>
-      <span><el-icon><Heart /></el-icon>{{ post.likeCount || 0 }}</span>
+    <div class="card-meta">
+      <div class="author">
+        <el-avatar
+          :src="post.author?.avatarUrl"
+          :size="28"
+          :alt="`${post.author?.username || '用户'}的头像`"
+        />
+        <p class="name">{{ post.author?.username }}</p>
+      </div>
+      <span class="time">{{ formatTime(post.createdAt) }}</span>
     </div>
   </div>
 </template>
@@ -64,12 +71,12 @@ defineEmits(['select'])
 
 const snippet = (text) => {
   if (!text) return ''
-  return text.length > 120 ? `${text.slice(0, 120)}...` : text
+  return text.length > 29 ? `${text.slice(0, 29)}...` : text
 }
 
 const coverText = (text) => {
   if (!text) return '分享此刻的灵感'
-  return text.length > 80 ? `${text.slice(0, 80)}...` : text
+  return text.length > 60 ? `${text.slice(0, 60)}...` : text
 }
 
 const formatTime = (value) => {
@@ -120,30 +127,49 @@ const formatTime = (value) => {
 }
 
 .card-media.no-image {
-  min-height: 180px;
+  min-height: 220px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 32px 24px 64px;
   background: #f8fafc;
 }
 
 .no-image-text {
-  font-size: 16px;
+  font-size: 18px;
   color: #1f2d3d;
   margin: 0;
   text-align: center;
-  line-height: 1.6;
+  line-height: 1.8;
   display: -webkit-box;
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
 
+.image-overlay {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.45) 100%);
+  color: #fff;
+  font-size: 12px;
+}
+
+.overlay-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .card-media .count {
   position: absolute;
-  bottom: 8px;
-  right: 8px;
+  top: 12px;
+  right: 12px;
   background: rgba(0, 0, 0, 0.55);
   color: #fff;
   padding: 2px 8px;
@@ -152,54 +178,58 @@ const formatTime = (value) => {
 }
 
 .card-body {
-  padding: 12px;
+  padding: 14px 16px 8px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
+}
+
+.location {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.content {
+  margin: 0;
+  color: #1f2d3d;
+  line-height: 1.6;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.tags {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.card-meta {
+  padding: 10px 16px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #909399;
 }
 
 .author {
   display: flex;
-  gap: 10px;
   align-items: center;
+  gap: 8px;
 }
 
 .author .name {
   margin: 0;
   font-weight: 600;
+  font-size: 13px;
+  color: #1f2d3d;
 }
 
-.author .time {
-  margin: 0;
-  color: #909399;
+.card-meta .time {
   font-size: 12px;
-}
-
-.content {
-  margin: 0;
-  color: #444;
-  line-height: 1.5;
-  font-size: 14px;
-}
-
-.tags {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.card-footer {
-  padding: 12px 16px 16px;
-  border-top: 1px solid #f0f0f0;
-  display: flex;
-  justify-content: space-between;
-  font-size: 12px;
-  color: #606266;
-}
-
-.card-footer span {
-  display: flex;
-  align-items: center;
-  gap: 4px;
+  color: #a0a3ad;
 }
 </style>

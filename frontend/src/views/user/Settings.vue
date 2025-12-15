@@ -32,7 +32,7 @@
             <el-input v-model="form.email" type="email" placeholder="输入邮箱" />
           </el-form-item>
           <el-form-item label="性别">
-            <el-radio-group v-model="form.gender">
+            <el-radio-group v-model="form.gender" style="display: flex; flex-direction: column;">
               <el-radio value="MALE">男</el-radio>
               <el-radio value="FEMALE">女</el-radio>
               <el-radio value="SECRET">保密</el-radio>
@@ -53,7 +53,7 @@
             type="textarea"
             placeholder="输入个性签名"
             rows="3"
-            maxlength="500"
+            maxlength="200"
             show-word-limit
           />
         </el-form-item>

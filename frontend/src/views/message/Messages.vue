@@ -32,47 +32,52 @@
       </div>
 
       <!-- 右侧聊天窗口 -->
-      <div class="chat-panel">
-        <div v-if="!activeConversation" class="no-conversation">
-          <el-empty description="选择一个会话开始聊天" />
-        </div>
-        <div v-else>
-          <!-- 聊天头部 -->
-          <div class="chat-header">
-            <h3>{{ currentUser?.username }}</h3>
+      <div class="chat-section">
+        <div class="chat-panel">
+          <div v-if="!activeConversation" class="no-conversation">
+            <el-empty description="选择一个会话开始聊天" />
           </div>
+          <div v-else class="chat-body">
+            <!-- 聊天头部 -->
+            <div class="chat-header">
+              <h3>{{ currentUser?.username }}</h3>
+            </div>
 
-          <!-- 消息列表 -->
-          <div class="messages-list" ref="chatBodyRef">
-            <div
-              v-for="msg in messages"
-              :key="msg.id"
-              :class="['message-item', msg.mine ? 'self' : 'other']"
-            >
-              <el-avatar
-                v-if="!msg.mine"
-                :src="currentUser?.avatarUrl"
-                :size="32"
-                :alt="`${currentUser?.username || '用户'}的头像`"
-              />
-              <div class="message-bubble">
-                <p>{{ msg.content }}</p>
-                <span>{{ msg.createdAt }}</span>
+            <!-- 消息列表 -->
+            <div class="messages-list" ref="chatBodyRef">
+              <div
+                v-for="msg in messages"
+                :key="msg.id"
+                :class="['message-item', msg.mine ? 'self' : 'other']"
+              >
+                <el-avatar
+                  v-if="!msg.mine"
+                  :src="currentUser?.avatarUrl"
+                  :size="32"
+                  :alt="`${currentUser?.username || '用户'}的头像`"
+                />
+                <div class="message-content">
+                  <div class="message-bubble">
+                    <p>{{ msg.content }}</p>
+                  </div>
+                  <span class="message-time">{{ formatMessageTime(msg.createdAt) }}</span>
+                </div>
               </div>
             </div>
           </div>
+        </div>
 
-          <!-- 输入框 -->
-          <div class="chat-footer">
-            <el-input
-              v-model="messageInput"
-              type="textarea"
-              :autosize="{ minRows: 3, maxRows: 5 }"
-              placeholder="输入消息..."
-              @keydown.enter.exact.prevent="sendMessage"
-            />
-            <el-button type="primary" @click="sendMessage">发送</el-button>
-          </div>
+        <!-- 输入框 -->
+        <div class="chat-footer" :class="{ disabled: !activeConversation }">
+          <el-input
+            v-model="messageInput"
+            type="textarea"
+            :autosize="{ minRows: 3, maxRows: 5 }"
+            :placeholder="activeConversation ? '输入消息...' : '选择一个会话以发送消息'"
+            :disabled="!activeConversation"
+            @keydown.enter.exact.prevent="sendMessage"
+          />
+          <el-button type="primary" :disabled="!activeConversation" @click="sendMessage">发送</el-button>
         </div>
       </div>
     </div>
@@ -83,6 +88,7 @@
 import { ref, computed, onMounted, nextTick } from 'vue'
 import { messageApi } from '@/api/message'
 import { ElMessage } from 'element-plus'
+import dayjs from 'dayjs'
 
 const searchKeyword = ref('')
 const activeConversation = ref(null)
@@ -101,6 +107,11 @@ const filteredConversations = computed(() => {
 const currentUser = computed(() => {
   return conversations.value.find(c => c.peer?.id === activeConversation.value)?.peer
 })
+
+const formatMessageTime = (time) => {
+  if (!time) return ''
+  return dayjs(time).format('YYYY.MM.DD HH:mm')
+}
 
 const scrollToBottom = () => {
   nextTick(() => {
@@ -153,15 +164,17 @@ onMounted(() => {
 
 <style scoped>
 .messages-container {
-  min-height: calc(100vh - 68px);
+  height: calc(100vh - 68px);
   padding: 24px;
   background: #fff;
+  box-sizing: border-box;
+  display: flex;
 }
 
 .messages-layout {
   display: flex;
   width: 100%;
-  min-height: calc(100vh - 116px);
+  height: 100%;
   border: 1px solid #eceff5;
   border-radius: 32px;
   overflow: hidden;
@@ -179,6 +192,13 @@ onMounted(() => {
 
 .conversations-panel h3 {
   margin: 0 0 16px 0;
+}
+
+.chat-section {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
 }
 
 .conversations-list {
@@ -248,6 +268,14 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   background: #fff;
+  min-height: 0;
+}
+
+.chat-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .no-conversation {
@@ -274,42 +302,78 @@ onMounted(() => {
   flex-direction: column;
   gap: 12px;
   background: #fafafa;
+  min-height: 0;
 }
 
 .message-item {
   display: flex;
   gap: 8px;
   align-items: flex-end;
+  max-width: 70%;
 }
 
 .message-item.self {
   justify-content: flex-end;
+  margin-left: auto;
+  max-width: 70%;
+}
+
+.message-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.message-item.self .message-content {
+  align-items: flex-end;
 }
 
 .message-bubble {
   background-color: #fff;
   padding: 12px 16px;
-  border-radius: 16px;
-  max-width: 60%;
+  border-radius: 16px 16px 16px 4px;
+  min-width: 60px;
+  max-width: 100%;
   word-break: break-word;
+  white-space: pre-wrap;
   line-height: 1.5;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+.message-bubble p {
+  margin: 0;
 }
 
 .message-item.self .message-bubble {
   background-color: #2f54eb;
   color: #fff;
+  border-radius: 16px 16px 4px 16px;
   box-shadow: none;
+  min-width: 60px;
+  max-width: 100%;
+}
+
+.message-time {
+  font-size: 11px;
+  color: #a0a3ad;
+}
+
+.message-item.self .message-time {
+  text-align: right;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .chat-footer {
-  position: sticky;
-  bottom: 0;
   background: #fff;
   padding: 20px 24px;
   border-top: 1px solid #f0f0f0;
   display: flex;
   gap: 12px;
+  flex-shrink: 0;
+}
+
+.chat-footer.disabled {
+  opacity: 0.6;
 }
 
 :deep(.chat-footer .el-textarea) {

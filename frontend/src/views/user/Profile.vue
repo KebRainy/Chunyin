@@ -4,13 +4,14 @@
       <div class="cover-panel">
         <div class="hero-layout">
           <div class="avatar-column">
-            <el-avatar
-              :size="104"
-              :src="userStore.userInfo.avatarUrl"
-              :alt="`${userStore.userInfo.username || '用户'}的头像`"
-              @click="goSettings"
-            />
-            <el-button text size="small" @click="goSettings">管理资料</el-button>
+            <div class="avatar-wrapper" @click="goSettings">
+              <el-avatar
+                :size="104"
+                :src="userStore.userInfo.avatarUrl"
+                :alt="`${userStore.userInfo.username || '用户'}的头像`"
+              />
+              <div class="avatar-overlay">编辑信息</div>
+            </div>
           </div>
           <div class="meta-column">
             <div class="user-title">
@@ -18,23 +19,30 @@
               <el-tag size="small" effect="dark">Lv.{{ userStore.userInfo.level || 1 }}</el-tag>
             </div>
             <p class="uid">UID {{ userStore.userInfo.id }}</p>
-            <div class="signature">
+            <div
+              class="signature"
+              :class="{ editing: editingSignature }"
+              @click="!editingSignature && startEditSignature()"
+              :style="{ backgroundColor: 'inherit' }"
+            >
               <template v-if="editingSignature">
                 <el-input
+                  ref="signatureInputRef"
                   v-model="signature"
                   size="small"
                   maxlength="200"
                   show-word-limit
                   @keyup.enter="saveSignature"
+                  @keydown.esc.prevent="cancelSignature"
+                  @blur="saveSignature"
                 />
-                <div class="signature-actions">
+                <!-- <div class="signature-actions">
                   <el-button size="small" type="primary" @click="saveSignature">保存</el-button>
                   <el-button size="small" text @click="cancelSignature">取消</el-button>
-                </div>
+                </div> -->
               </template>
               <template v-else>
-                <span>{{ signature || '这个人很酷，什么都没有写' }}</span>
-                <el-button text size="small" @click="editingSignature = true">编辑签名</el-button>
+                <span class="signature-text">{{ signature || '这个人很酷，什么都没有写' }}</span>
               </template>
             </div>
           </div>
@@ -85,8 +93,16 @@
         </div>
         <div v-else class="post-list">
           <div v-for="post in posts.items" :key="post.id" class="post-row">
+            <div class="post-thumbnail">
+              <img
+                v-if="getPostCover(post)"
+                :src="getPostCover(post)"
+                :alt="`${post.author?.username || '用户'}的动态配图`"
+              >
+              <span v-else>文字</span>
+            </div>
             <div class="post-content">
-              <p class="post-text">{{ post.content }}</p>
+              <p class="post-text">{{ truncatePostText(post.content) }}</p>
               <div class="post-meta">
                 <span>{{ formatTime(post.createdAt) }}</span>
                 <span>浏览 {{ post.viewCount || 0 }}</span>
@@ -192,7 +208,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted, watch } from 'vue'
+import { ref, reactive, computed, onMounted, watch, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import dayjs from 'dayjs'
 import { useUserStore } from '@/store/modules/user'
@@ -213,7 +229,15 @@ const tabs = [
 
 const activeTab = ref('posts')
 const signature = ref('')
+const signatureInputRef = ref(null)
 const editingSignature = ref(false)
+
+const startEditSignature = () => {
+  editingSignature.value = true
+  nextTick(() => {
+    signatureInputRef.value?.focus()
+  })
+}
 
 const posts = reactive({
   loading: false,
@@ -256,6 +280,16 @@ const indicatorStyle = computed(() => {
     transform: `translateX(${activeIndex * 100}%)`
   }
 })
+
+const truncatePostText = (text) => {
+  if (!text) return ''
+  return text.length > 29 ? `${text.slice(0, 29)}...` : text
+}
+
+const getPostCover = (post) => {
+  if (!post || !post.imageUrls || post.imageUrls.length === 0) return null
+  return post.imageUrls[0]
+}
 
 const formatTime = (time) => dayjs(time).format('YYYY.MM.DD HH:mm')
 
@@ -418,9 +452,37 @@ watch(
 
 .avatar-column {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  justify-content: center;
+}
+
+.avatar-wrapper {
+  position: relative;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.avatar-wrapper:hover {
+  transform: scale(1.02);
+}
+
+.avatar-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  border-radius: 50%;
+  color: #fff;
+  font-size: 14px;
+  letter-spacing: 2px;
+  display: flex;
   align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.avatar-wrapper:hover .avatar-overlay {
+  opacity: 1;
 }
 
 .meta-column {
@@ -450,10 +512,35 @@ watch(
   flex-direction: column;
   gap: 8px;
   color: #606266;
+  padding: 14px 18px;
+  border-radius: 18px;
+  border: 1px solid transparent;
+  background: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.signature:hover {
+  border-color: #dcdfe6;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.signature.editing {
+  cursor: default;
+  /* border-color: #2f54eb; */
+  /* box-shadow: 0 12px 30px rgba(47, 84, 235, 0.2); */
+  background: #fff;
+}
+
+.signature-text {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #1f2d3d;
 }
 
 .signature-actions {
   display: flex;
+  justify-content: flex-end;
   gap: 8px;
 }
 
@@ -555,16 +642,42 @@ watch(
 
 .post-row {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
   gap: 16px;
-  padding: 16px;
+  padding: 12px 16px;
   border-radius: 18px;
   border: 1px solid #f0f0f0;
+}
+
+.post-thumbnail {
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 12px;
+  color: #a0a3ad;
+}
+
+.post-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .post-text {
   margin: 0 0 8px;
   color: #1f2d3d;
+  font-weight: 500;
+}
+
+.post-content {
+  flex: 1;
 }
 
 .post-meta {

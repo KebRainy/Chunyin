@@ -11,7 +11,7 @@
               <span>支持图文、标签、地点，一次完成</span>
             </div>
           </div>
-          <ShareComposer mode="inline" @submitted="handleInlinePosted" />
+          <ShareComposer ref="composerRef" mode="inline" @submitted="handleInlinePosted" />
         </el-card>
         <div v-else class="login-prompt equal-card">
           <p>登录后即可分享图文、参加活动</p>
@@ -24,7 +24,7 @@
         <el-card class="question-card equal-card">
           <template #header>
             <div class="question-header">
-              <span>🎯 每日一题</span>
+              <span>每日一题</span>
               <span class="question-date">{{ todayDate }}</span>
             </div>
           </template>
@@ -104,12 +104,12 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
 import { circleApi } from '@/api/circle'
 import { fetchTodayQuestion, answerDailyQuestion } from '@/api/dailyQuestion'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
 import 'dayjs/locale/zh-cn'
 import ShareComposer from '@/components/share/ShareComposer.vue'
@@ -119,6 +119,7 @@ dayjs.locale('zh-cn')
 
 const router = useRouter()
 const userStore = useUserStore()
+const composerRef = ref(null)
 
 // 动态列表
 const posts = ref([])
@@ -238,9 +239,42 @@ const goWiki = (link) => {
   router.push(normalized)
 }
 
+const hasInlineUnsaved = () => {
+  return !!composerRef.value?.hasUnsaved?.value
+}
+
+const beforeUnloadHandler = (event) => {
+  if (!hasInlineUnsaved()) return
+  const warning = '是否离开网站 你所做的更改可能未保存'
+  event.preventDefault()
+  event.returnValue = warning
+  return warning
+}
+
+onBeforeRouteLeave((to, from, next) => {
+  if (!hasInlineUnsaved()) {
+    next()
+    return
+  }
+  ElMessageBox.confirm(
+    '是否离开网站 你所做的更改可能未保存',
+    '离开确认',
+    {
+      confirmButtonText: '仍要离开',
+      cancelButtonText: '继续编辑',
+      type: 'warning'
+    }
+  ).then(() => next()).catch(() => next(false))
+})
+
 onMounted(() => {
+  window.addEventListener('beforeunload', beforeUnloadHandler)
   loadPosts()
   loadDailyQuestion()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('beforeunload', beforeUnloadHandler)
 })
 </script>
 

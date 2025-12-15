@@ -12,5 +12,5 @@ public class WikiRevisionVO {
     private String editorName;
     private String summary;
     private LocalDateTime createdAt;
+    private String content;
 }
-

@@ -59,8 +59,7 @@ public class FileController {
         if (!image.getUploadedBy().equals(principal.getId())) {
             throw new BusinessException(403, "无权删除此图片");
         }
-        fileStorageService.deleteImage(image.getId());
+        fileStorageService.deleteImage(image);
         return Result.success();
     }
 }
-

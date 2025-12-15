@@ -22,6 +22,20 @@ export const fetchWikiHistory = (slug) => {
   })
 }
 
+export const fetchWikiRevisionDetail = (slug, revisionId) => {
+  return request({
+    url: `/wiki/pages/${slug}/history/${revisionId}`,
+    method: 'get'
+  })
+}
+
+export const restoreWikiRevision = (slug, revisionId) => {
+  return request({
+    url: `/wiki/pages/${slug}/history/${revisionId}/restore`,
+    method: 'post'
+  })
+}
+
 export const fetchWikiDiscussions = (slug) => {
   return request({
     url: `/wiki/pages/${slug}/discussions`,

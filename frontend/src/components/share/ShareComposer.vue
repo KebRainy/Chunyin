@@ -30,15 +30,38 @@
             :multiple-limit="5"
             placeholder="添加话题标签，如 上海、精酿、金酒"
           />
-          <el-input
-            v-model="form.location"
-            placeholder="添加地点（可选）"
-            clearable
-          >
-            <template #prefix>
-              <el-icon><Location /></el-icon>
-            </template>
-          </el-input>
+          <div class="location-field">
+            <el-select
+              v-model="selectedCity"
+              filterable
+              clearable
+              :loading="regionsLoading"
+              :placeholder="regionsLoading ? '地区加载中…' : '选择地点（可选）'"
+              @change="handleCityChange"
+            >
+              <el-option-group
+                v-for="province in provinces"
+                :key="province.value"
+                :label="province.label"
+              >
+                <el-option
+                  v-for="city in province.cities"
+                  :key="city.value"
+                  :label="city.label"
+                  :value="city.value"
+                />
+              </el-option-group>
+            </el-select>
+            <el-button
+              class="locate-btn"
+              text
+              size="small"
+              :loading="locating"
+              @click="handleAutoLocate(true)"
+            >
+              {{ locating ? '定位中…' : '自动定位' }}
+            </el-button>
+          </div>
         </div>
 
         <div class="composer-upload">
@@ -99,11 +122,13 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
+import { computed, reactive, ref, onMounted } from 'vue'
 import { useUserStore } from '@/store/modules/user'
 import { circleApi } from '@/api/circle'
 import { ElMessage } from 'element-plus'
-import { Location, Picture, Plus, Close } from '@element-plus/icons-vue'
+import { Plus, Close } from '@element-plus/icons-vue'
+import { useChinaRegions } from '@/composables/useChinaRegions'
+import { useCityDetection } from '@/composables/useCityDetection'
 
 const props = defineProps({
   mode: {
@@ -126,6 +151,10 @@ const form = reactive({
   location: '',
   imageIds: []
 })
+
+const selectedCity = ref('')
+const { provinces, loading: regionsLoading, ensureLoaded, findCityByName } = useChinaRegions()
+const { detecting: locating, detectCity } = useCityDetection()
 
 const beforeUpload = (file) => {
   const isImage = file.type.startsWith('image/')
@@ -204,6 +233,47 @@ const removeThumbnail = (uid) => {
   }
 }
 
+const applyCitySelection = (city) => {
+  selectedCity.value = city || ''
+  form.location = city || ''
+}
+
+const syncLocationWithOptions = async (locationValue) => {
+  if (!locationValue) {
+    applyCitySelection('')
+    return
+  }
+  await ensureLoaded()
+  const match = findCityByName(locationValue)
+  applyCitySelection(match?.city || locationValue)
+}
+
+const handleCityChange = (value) => {
+  form.location = value || ''
+}
+
+const handleAutoLocate = async (showToast = false) => {
+  await ensureLoaded()
+  const detected = await detectCity()
+  if (!detected) {
+    if (showToast) {
+      ElMessage.warning('无法自动定位，请手动选择')
+    }
+    return
+  }
+  const match = findCityByName(detected)
+  if (match?.city) {
+    applyCitySelection(match.city)
+    if (showToast) {
+      ElMessage.success(`已定位到 ${match.city}`)
+    }
+    return
+  }
+  if (showToast) {
+    ElMessage.warning('未找到匹配城市，请手动选择')
+  }
+}
+
 const handleSubmit = async () => {
   if (!form.content.trim()) {
     ElMessage.warning('请输入分享内容')
@@ -234,6 +304,7 @@ const resetForm = () => {
   form.imageIds = []
   uploadFileList.value = []
   thumbnails.value = []
+  selectedCity.value = ''
 }
 
 const fillForm = (data = {}) => {
@@ -241,6 +312,7 @@ const fillForm = (data = {}) => {
   form.tags = data.tags ? [...data.tags] : []
   form.location = data.location || ''
   form.imageIds = data.imageIds ? [...data.imageIds] : []
+  syncLocationWithOptions(form.location)
 }
 
 const hasUnsaved = computed(() => {
@@ -252,6 +324,15 @@ const getSnapshot = () => ({
   tags: form.tags,
   location: form.location,
   imageIds: form.imageIds
+})
+
+onMounted(async () => {
+  await ensureLoaded()
+  if (form.location) {
+    await syncLocationWithOptions(form.location)
+  } else {
+    await handleAutoLocate(false)
+  }
 })
 
 defineExpose({
@@ -287,6 +368,20 @@ defineExpose({
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
+}
+
+.location-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.location-field :deep(.el-select) {
+  flex: 1;
+}
+
+.locate-btn {
+  padding: 0 8px;
 }
 
 .composer-upload {

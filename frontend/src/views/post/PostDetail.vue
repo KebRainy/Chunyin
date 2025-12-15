@@ -59,7 +59,7 @@
           <span>浏览 {{ post.viewCount || 0 }}</span>
         </div>
         <div class="action-item" :class="{ active: liked }" @click="toggleLike">
-          <el-icon><Heart /></el-icon>
+          <el-icon><GobletFull /></el-icon>
           <span>{{ liked ? '已赞' : '点赞' }} {{ post.likeCount || 0 }}</span>
         </div>
         <div class="action-item">
@@ -67,7 +67,7 @@
           <span>评论 {{ post.commentCount || 0 }}</span>
         </div>
         <div class="action-item" :class="{ active: favorited }" @click="toggleFavorite">
-          <el-icon><StarFilled /></el-icon>
+          <el-icon><Star /></el-icon>
           <span>{{ favorited ? '已收藏' : '收藏' }} {{ post.favoriteCount || 0 }}</span>
         </div>
       </div>
@@ -149,9 +149,10 @@ import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
   View,
+  GobletFull,
   Heart,
   ChatDotSquare,
-  StarFilled
+  Star
 } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'

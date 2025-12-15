@@ -53,6 +53,22 @@ public class WikiController {
         return Result.success(wikiService.listRevisions(slug));
     }
 
+    @GetMapping("/{slug}/history/{revisionId}")
+    public Result<WikiRevisionVO> revisionDetail(@PathVariable String slug,
+                                                 @PathVariable Long revisionId) {
+        return Result.success(wikiService.getRevisionDetail(slug, revisionId));
+    }
+
+    @PostMapping("/{slug}/history/{revisionId}/restore")
+    public Result<WikiPageVO> restoreRevision(@PathVariable String slug,
+                                              @PathVariable Long revisionId,
+                                              @AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) {
+            throw new BusinessException(401, "请先登录");
+        }
+        return Result.success(wikiService.restoreRevision(slug, revisionId, principal.getId()));
+    }
+
     @GetMapping("/{slug}/discussions")
     public Result<List<WikiDiscussionVO>> discussions(@PathVariable String slug) {
         return Result.success(wikiService.listDiscussions(slug));

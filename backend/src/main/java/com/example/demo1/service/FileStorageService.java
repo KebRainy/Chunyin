@@ -101,7 +101,20 @@ public class FileStorageService {
     }
 
     public void deleteImage(Long imageId) {
-        imageMapper.deleteById(imageId);
+        if (imageId == null) {
+            return;
+        }
+        Image image = imageMapper.selectById(imageId);
+        deleteImage(image);
+    }
+
+    public void deleteImage(Image image) {
+        if (image == null || image.getId() == null) {
+            return;
+        }
+        FileCategory category = FileCategory.fromNullable(image.getCategory());
+        imageDataRepository.delete(image.getId(), category);
+        imageMapper.deleteById(image.getId());
     }
 
     private void validateFile(MultipartFile file) {

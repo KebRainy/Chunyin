@@ -86,7 +86,7 @@
             <el-button
               size="small"
               type="primary"
-              v-if="userStore.isLoggedIn && canEdit"
+              v-if="canEdit && currentPage"
               @click="editCurrent"
             >
               编辑
@@ -108,6 +108,8 @@ import { Search } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
 import { fetchWikiPages, fetchWikiStats } from '@/api/wiki'
 import { useUserStore } from '@/store/modules/user'
+import MarkdownIt from 'markdown-it'
+import DOMPurify from 'dompurify'
 
 const router = useRouter()
 const userStore = useUserStore()
@@ -124,11 +126,14 @@ const wikiStats = ref({
   editCount: 0,
   contributorCount: 0
 })
+const md = new MarkdownIt({
+  html: true,
+  linkify: true,
+  breaks: true
+})
 
 const canEdit = computed(() => {
-  if (!userStore.userInfo || !currentPage.value) return false
-  return userStore.userInfo.role === 'ADMIN' ||
-    currentPage.value.author?.id === userStore.userInfo.id
+  return userStore.isLoggedIn
 })
 
 const loadPages = async () => {
@@ -184,7 +189,8 @@ const viewDetail = (item) => {
 
 const formatContent = (content) => {
   if (!content) return '<p class="empty">这个条目暂时没有正文</p>'
-  return content.replace(/\n/g, '<br/>')
+  const snippet = content.split('\n').slice(0, 8).join('\n')
+  return DOMPurify.sanitize(md.render(snippet))
 }
 
 const formatTime = (time) => dayjs(time).format('YYYY.MM.DD')

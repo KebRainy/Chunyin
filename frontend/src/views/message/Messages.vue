@@ -50,17 +50,26 @@
                 :key="msg.id"
                 :class="['message-item', msg.mine ? 'self' : 'other']"
               >
-                <el-avatar
-                  v-if="!msg.mine"
-                  :src="currentUser?.avatarUrl"
-                  :size="32"
-                  :alt="`${currentUser?.username || '用户'}的头像`"
-                />
+                <div v-if="!msg.mine" class="message-avatar">
+                  <el-avatar
+                    :src="currentUser?.avatarUrl"
+                    :size="32"
+                    :alt="`${currentUser?.username || '用户'}的头像`"
+                  />
+                </div>
                 <div class="message-content">
                   <div class="message-bubble">
                     <p>{{ msg.content }}</p>
                   </div>
                   <span class="message-time">{{ formatMessageTime(msg.createdAt) }}</span>
+                </div>
+
+                <div v-if="msg.mine" class="message-avatar">
+                  <el-avatar
+                    :src="userStore.userInfo?.avatarUrl"
+                    :size="32"
+                    :alt="`${userStore.userInfo?.username || '我的'}的头像`"
+                  />
                 </div>
               </div>
             </div>
@@ -89,6 +98,7 @@ import { ref, computed, onMounted, nextTick } from 'vue'
 import { messageApi } from '@/api/message'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
+import { useUserStore } from '@/store/modules/user'
 
 const searchKeyword = ref('')
 const activeConversation = ref(null)
@@ -96,6 +106,7 @@ const messageInput = ref('')
 const conversations = ref([])
 const messages = ref([])
 const chatBodyRef = ref(null)
+const userStore = useUserStore()
 
 const filteredConversations = computed(() => {
   if (!searchKeyword.value) return conversations.value
@@ -110,7 +121,8 @@ const currentUser = computed(() => {
 
 const formatMessageTime = (time) => {
   if (!time) return ''
-  return dayjs(time).format('YYYY.MM.DD HH:mm')
+  // return dayjs(time).format('YYYY.MM.DD HH:mm')
+  return dayjs(time).format('MM-DD HH:mm')
 }
 
 const scrollToBottom = () => {
@@ -309,19 +321,26 @@ onMounted(() => {
   display: flex;
   gap: 8px;
   align-items: flex-end;
-  max-width: 70%;
+  width: 100%;
 }
 
 .message-item.self {
   justify-content: flex-end;
   margin-left: auto;
-  max-width: 70%;
+}
+
+.message-avatar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-end;
 }
 
 .message-content {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  max-width: 70%;
+  min-width: 0;
 }
 
 .message-item.self .message-content {
@@ -360,7 +379,7 @@ onMounted(() => {
 
 .message-item.self .message-time {
   text-align: right;
-  color: rgba(255, 255, 255, 0.85);
+  color: #a0a3ad;
 }
 
 .chat-footer {

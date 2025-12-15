@@ -19,12 +19,10 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from 'vue'
-import { ElMessageBox, ElMessage } from 'element-plus'
+import { computed, ref } from 'vue'
+import { ElMessageBox } from 'element-plus'
 import ShareComposer from '@/components/share/ShareComposer.vue'
 import { Close } from '@element-plus/icons-vue'
-
-const DRAFT_KEY = 'share_draft'
 
 const props = defineProps({
   modelValue: Boolean
@@ -39,31 +37,13 @@ const visible = computed({
 
 const composerRef = ref(null)
 
-const loadDraft = () => {
-  const draft = localStorage.getItem(DRAFT_KEY)
-  if (draft) {
-    try {
-      const parsed = JSON.parse(draft)
-      composerRef.value?.fillForm(parsed)
-      ElMessage.info('已为你恢复上次的草稿')
-    } catch (error) {
-      localStorage.removeItem(DRAFT_KEY)
-    }
-  }
-}
-
-const saveDraft = () => {
-  const snapshot = composerRef.value?.getSnapshot?.()
-  if (!snapshot) return
-  localStorage.setItem(DRAFT_KEY, JSON.stringify(snapshot))
-}
-
-const clearDraft = () => {
-  localStorage.removeItem(DRAFT_KEY)
+const closeModal = (done) => {
+  composerRef.value?.resetForm()
+  if (typeof done === 'function') done()
+  else visible.value = false
 }
 
 const handlePosted = () => {
-  clearDraft()
   visible.value = false
   emit('posted')
 }
@@ -71,43 +51,20 @@ const handlePosted = () => {
 const handleClose = (done) => {
   const hasUnsaved = composerRef.value?.hasUnsaved?.value
   if (!hasUnsaved) {
-    composerRef.value?.resetForm()
-    clearDraft()
-    if (typeof done === 'function') done()
-    else visible.value = false
+    closeModal(done)
     return
   }
-  ElMessageBox.confirm('要保存当前草稿以便稍后继续吗？', '保存草稿', {
-    confirmButtonText: '保存草稿',
-    cancelButtonText: '放弃',
+  ElMessageBox.confirm('草稿将不会保存，确定要关闭吗？', '提示', {
+    confirmButtonText: '仍要关闭',
+    cancelButtonText: '继续编辑',
     type: 'warning',
     distinguishCancelAndClose: true
   }).then(() => {
-    saveDraft()
-    composerRef.value?.resetForm()
-    if (typeof done === 'function') done()
-    else visible.value = false
-  }).catch((action) => {
-    if (action === 'cancel') {
-      composerRef.value?.resetForm()
-      clearDraft()
-      if (typeof done === 'function') done()
-      else visible.value = false
-    }
+    closeModal(done)
+  }).catch(() => {
+    // keep editing
   })
 }
-
-onMounted(() => {
-  if (visible.value) {
-    loadDraft()
-  }
-})
-
-watch(() => visible.value, (val) => {
-  if (val) {
-    loadDraft()
-  }
-})
 </script>
 
 <style scoped>

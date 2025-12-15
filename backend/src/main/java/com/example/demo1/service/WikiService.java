@@ -133,6 +133,44 @@ public class WikiService {
             .toList();
     }
 
+    public WikiRevisionVO getRevisionDetail(String slugOrId, Long revisionId) {
+        WikiPage page = findPage(slugOrId);
+        if (page == null) {
+            throw new BusinessException(404, "词条不存在");
+        }
+        WikiRevision revision = wikiRevisionMapper.selectById(revisionId);
+        if (revision == null || !revision.getPageId().equals(page.getId())) {
+            throw new BusinessException(404, "历史版本不存在");
+        }
+        return WikiRevisionVO.builder()
+            .id(revision.getId())
+            .editorName(StringUtils.defaultIfBlank(revision.getEditorName(), "系统"))
+            .summary(revision.getSummary())
+            .createdAt(revision.getCreatedAt())
+            .content(revision.getContent())
+            .build();
+    }
+
+    @Transactional
+    public WikiPageVO restoreRevision(String slugOrId, Long revisionId, Long editorId) {
+        WikiPage page = findPage(slugOrId);
+        if (page == null) {
+            throw new BusinessException(404, "词条不存在");
+        }
+        WikiRevision revision = wikiRevisionMapper.selectById(revisionId);
+        if (revision == null || !revision.getPageId().equals(page.getId())) {
+            throw new BusinessException(404, "历史版本不存在");
+        }
+        User editor = userService.getRequiredUser(editorId);
+        page.setContent(revision.getContent());
+        page.setStatus(WikiStatus.UNDER_REVIEW);
+        page.setLastEditorId(editor.getId());
+        page.setLastEditorName(editor.getUsername());
+        wikiPageMapper.updateById(page);
+        recordRevision(page, editor, String.format("恢复至 %s 的版本", revision.getCreatedAt()));
+        return toVo(page, editorId);
+    }
+
     public WikiStatsVO getStats() {
         long entryCount = wikiPageMapper.selectCount(null);
         long revisionCount = wikiRevisionMapper.selectCount(null);

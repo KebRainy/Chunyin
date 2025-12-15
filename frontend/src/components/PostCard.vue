@@ -7,7 +7,7 @@
       >
       <div class="image-overlay">
         <span class="overlay-item"><el-icon><View /></el-icon>{{ post.viewCount || 0 }}</span>
-        <span class="overlay-item"><el-icon><Heart /></el-icon>{{ post.likeCount || 0 }}</span>
+        <span class="overlay-item"><el-icon><GobletFull /></el-icon>{{ post.likeCount || 0 }}</span>
       </div>
       <span v-if="post.imageUrls.length > 1" class="count">+{{ post.imageUrls.length - 1 }}</span>
     </div>
@@ -15,14 +15,14 @@
       <p class="no-image-text">{{ coverText(post.content) }}</p>
       <div class="image-overlay">
         <span class="overlay-item"><el-icon><View /></el-icon>{{ post.viewCount || 0 }}</span>
-        <span class="overlay-item"><el-icon><Heart /></el-icon>{{ post.likeCount || 0 }}</span>
+        <span class="overlay-item"><el-icon><GobletFull /></el-icon>{{ post.likeCount || 0 }}</span>
       </div>
     </div>
     <div class="card-body">
-      <div class="location">
+      <!-- <div class="location">
         <el-icon><Location /></el-icon>
         <span>{{ post.location || '未知地点' }}</span>
-      </div>
+      </div> -->
       <p class="content">{{ snippet(post.content) }}</p>
       <div class="tags" v-if="post.tags?.length">
         <el-tag
@@ -52,7 +52,7 @@
 <script setup>
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
-import { Picture, View, Heart, Location } from '@element-plus/icons-vue'
+import { Picture, View, GobletFull, Heart, Location } from '@element-plus/icons-vue'
 
 dayjs.extend(relativeTime)
 

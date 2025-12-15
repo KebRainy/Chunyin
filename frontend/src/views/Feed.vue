@@ -27,7 +27,7 @@
       <div v-else-if="posts.length === 0" class="empty">
         <el-empty description="还没有关注的动态" />
       </div>
-      <div v-else class="posts-grid">
+      <div v-else class="masonry-grid">
         <PostCard
           v-for="post in posts"
           :key="post.id"
@@ -117,16 +117,21 @@ onMounted(() => {
 
 <style scoped>
 .feed-container {
-  max-width: 1200px;
+  max-width: 1300px;
   margin: 0 auto;
   padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
 /* 关注用户列表 */
 .followees-section {
-  margin-bottom: 30px;
-  padding-bottom: 20px;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 18px 24px;
+  border-radius: 24px;
+  border: 1px solid #eceff5;
+  background: #fff;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
 }
 
 .followees-loading {
@@ -169,6 +174,11 @@ onMounted(() => {
 /* 动态列表 */
 .feed-posts {
   min-height: 400px;
+  background: #fff;
+  border-radius: 28px;
+  border: 1px solid #eceff5;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.04);
+  padding: 24px;
 }
 
 .loading, .empty {
@@ -177,10 +187,33 @@ onMounted(() => {
   color: #999;
 }
 
-.posts-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 18px;
+.masonry-grid {
+  column-count: 4;
+  column-gap: 20px;
+}
+
+.masonry-grid > * {
+  break-inside: avoid;
+  margin-bottom: 20px;
+  display: block;
+}
+
+@media (max-width: 1200px) {
+  .masonry-grid {
+    column-count: 3;
+  }
+}
+
+@media (max-width: 900px) {
+  .masonry-grid {
+    column-count: 2;
+  }
+}
+
+@media (max-width: 600px) {
+  .masonry-grid {
+    column-count: 1;
+  }
 }
 
 .load-more {

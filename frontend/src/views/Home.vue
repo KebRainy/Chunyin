@@ -3,35 +3,25 @@
     <!-- 顶部：发布动态 + 每日一题 -->
     <div class="top-section">
       <div class="share-section">
-        <template v-if="userStore.isLoggedIn">
-          <div v-if="!shareEditorExpanded" class="share-hint" @click="shareEditorExpanded = true">
-            <el-avatar
-              :src="userStore.userInfo?.avatarUrl"
-              :size="44"
-              :alt="`${userStore.userInfo?.username || '用户'}的头像`"
-            />
-            <div class="hint-text">
-              <p>此刻在喝什么？</p>
-              <span>点击打开编辑器，支持图文/标签/IP属地</span>
+        <el-card v-if="userStore.isLoggedIn" class="share-editor-card equal-card">
+          <div class="share-editor-header">
+            <div>
+              <p class="eyebrow">此刻发布</p>
+              <h3>分享你的灵感</h3>
+              <span>支持图文、标签、地点，一次完成</span>
             </div>
-            <el-button text type="primary">立即分享</el-button>
           </div>
-          <el-card v-else class="share-editor-card">
-            <ShareComposer ref="inlineComposerRef" mode="inline" @submitted="handleInlinePosted" />
-            <div class="share-editor-actions">
-              <el-button text size="small" @click="foldShareEditor">收起</el-button>
-            </div>
-          </el-card>
-        </template>
-        <div v-else class="login-prompt">
-          <p>登录后可以分享图文、参加活动</p>
+          <ShareComposer mode="inline" @submitted="handleInlinePosted" />
+        </el-card>
+        <div v-else class="login-prompt equal-card">
+          <p>登录后即可分享图文、参加活动</p>
           <el-button type="primary" @click="goLogin">登录</el-button>
         </div>
       </div>
 
       <!-- 右侧：每日一题 -->
       <div class="daily-question-section">
-        <el-card class="question-card">
+        <el-card class="question-card equal-card">
           <template #header>
             <div class="question-header">
               <span>🎯 每日一题</span>
@@ -111,8 +101,6 @@
       </div>
     </div>
   </div>
-
-  <ShareModal v-model="shareModalVisible" @posted="refreshPosts" />
 </template>
 
 <script setup>
@@ -123,13 +111,10 @@ import { circleApi } from '@/api/circle'
 import { fetchTodayQuestion, answerDailyQuestion } from '@/api/dailyQuestion'
 import { ElMessage } from 'element-plus'
 import dayjs from 'dayjs'
-import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/zh-cn'
-import ShareModal from '@/components/ShareModal.vue'
 import ShareComposer from '@/components/share/ShareComposer.vue'
 import PostCard from '@/components/PostCard.vue'
 
-dayjs.extend(relativeTime)
 dayjs.locale('zh-cn')
 
 const router = useRouter()
@@ -141,9 +126,6 @@ const loading = ref(false)
 const currentPage = ref(1)
 const pageSize = ref(12)
 const hasMore = ref(true)
-const shareModalVisible = ref(false)
-const shareEditorExpanded = ref(false)
-const inlineComposerRef = ref(null)
 
 // 每日一题
 const dailyQuestion = ref(null)
@@ -186,13 +168,7 @@ const refreshPosts = () => {
 }
 
 const handleInlinePosted = () => {
-  shareEditorExpanded.value = false
   refreshPosts()
-}
-
-const foldShareEditor = () => {
-  shareEditorExpanded.value = false
-  inlineComposerRef.value?.resetForm()
 }
 
 const loadDailyQuestion = async () => {
@@ -252,23 +228,6 @@ const formatCount = (count) => {
   return count.toString()
 }
 
-const formatTime = (time) => {
-  if (!time) return ''
-  const date = dayjs(time)
-  const now = dayjs()
-  const diff = now.diff(date, 'minute')
-
-  if (diff < 1) return '刚刚'
-  if (diff < 60) return `${diff}分钟前`
-  if (diff < 1440) return `${Math.floor(diff / 60)}小时前`
-  if (date.isSame(now, 'year')) return date.format('M月D日')
-  return date.format('YYYY年M月D日')
-}
-
-const truncateText = (text, length) => {
-  return text && text.length > length ? text.substring(0, length) + '...' : text
-}
-
 const goWiki = (link) => {
   if (!link) return
   if (link.startsWith('http')) {
@@ -295,54 +254,73 @@ onMounted(() => {
 /* ============ 顶部区域 ============ */
 .top-section {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-  margin-bottom: 30px;
+  grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.65fr);
+  gap: 24px;
+  margin-bottom: 32px;
+  align-items: stretch;
 }
 
-.share-section {
-  min-height: 120px;
-}
-
-.share-hint {
+.equal-card {
+  height: 100%;
   display: flex;
-  align-items: center;
-  gap: 14px;
-  background: linear-gradient(120deg, #fdf2ff, #eef6ff);
-  border-radius: 18px;
-  padding: 18px;
-  cursor: pointer;
-  border: 1px solid #ebeef5;
-}
-
-.share-hint .hint-text p {
-  margin: 0;
-  font-weight: 600;
-  color: #303133;
-}
-
-.share-hint .hint-text span {
-  font-size: 12px;
-  color: #909399;
+  flex-direction: column;
 }
 
 .share-editor-card {
-  padding: 18px;
+  border-radius: 24px;
+  border: 1px solid #eceff5;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
 }
 
-.share-editor-actions {
-  text-align: right;
-  margin-top: 8px;
+.share-editor-card :deep(.el-card__body),
+.question-card :deep(.el-card__body) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+
+.share-editor-header {
+  margin-bottom: 16px;
+}
+
+.share-editor-header .eyebrow {
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: #909399;
+  text-transform: uppercase;
+  margin: 0 0 4px;
+}
+
+.share-editor-header h3 {
+  margin: 0;
+  font-size: 20px;
+  color: #1f2d3d;
+}
+
+.share-editor-header span {
+  color: #909399;
+  font-size: 13px;
 }
 
 .login-prompt {
+  border-radius: 24px;
+  border: 1px solid #eceff5;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  padding: 24px;
   text-align: center;
-  padding: 20px;
+  justify-content: center;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
 }
 
 .login-prompt p {
-  color: #606266;
-  margin-bottom: 12px;
+  color: #303133;
+  margin-bottom: 16px;
+  font-size: 16px;
 }
 
 .daily-question-section {
@@ -350,7 +328,9 @@ onMounted(() => {
 }
 
 .question-card {
-  height: 100%;
+  border-radius: 24px;
+  border: 1px solid #eceff5;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
 }
 
 .question-header {
@@ -379,34 +359,35 @@ onMounted(() => {
 }
 
 .option {
-  padding: 10px 12px;
-  background-color: #f5f5f5;
-  border-radius: 6px;
+  padding: 12px 14px;
+  background-color: #f8f9fb;
+  border-radius: 14px;
   cursor: pointer;
   transition: all 0.3s;
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 13px;
+  border: 1px solid transparent;
 }
 
 .option.clickable:hover {
-  background-color: #e8e8e8;
+  border-color: #e0e7ff;
 }
 
 .option.correct {
   background-color: #f0f9ff;
-  border: 1px solid #85ce61;
+  border-color: #85ce61;
 }
 
 .option.wrong {
   background-color: #fef0f0;
-  border: 1px solid #f56c6c;
+  border-color: #f56c6c;
 }
 
 .option.other {
-  background-color: #f5f5f5;
-  opacity: 0.6;
+  background-color: #f8f9fb;
+  color: #c0c4cc;
 }
 
 .option.disabled {
@@ -469,6 +450,11 @@ onMounted(() => {
 /* ============ 主体区域 ============ */
 .posts-container {
   min-height: 400px;
+  background: #fff;
+  border-radius: 28px;
+  border: 1px solid #eceff5;
+  padding: 24px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.04);
 }
 
 .loading {
@@ -484,9 +470,14 @@ onMounted(() => {
 }
 
 .masonry-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 18px;
+  column-count: 4;
+  column-gap: 20px;
+}
+
+.masonry-grid > * {
+  break-inside: avoid;
+  display: block;
+  margin-bottom: 20px;
 }
 
 /* ============ 加载更多 ============ */
@@ -510,13 +501,19 @@ onMounted(() => {
   }
 
   .masonry-grid {
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    column-count: 3;
   }
 }
 
 @media (max-width: 768px) {
   .masonry-grid {
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    column-count: 2;
+  }
+}
+
+@media (max-width: 520px) {
+  .masonry-grid {
+    column-count: 1;
   }
 }
 </style>

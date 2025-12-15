@@ -57,9 +57,15 @@
             <el-icon><Plus /></el-icon>
           </el-upload>
           <div v-else class="inline-upload">
-            <el-button type="primary" link @click="triggerInlineUpload">
-              <el-icon><Picture /></el-icon> 添加图片
-            </el-button>
+            <button
+              type="button"
+              class="inline-plus"
+              aria-label="添加图片"
+              title="添加图片"
+              @click="triggerInlineUpload"
+            >
+              <el-icon><Plus /></el-icon>
+            </button>
             <input
               ref="inlineInputRef"
               type="file"
@@ -284,17 +290,39 @@ defineExpose({
 }
 
 .composer-upload {
-  border: 1px dashed #dcdfe6;
-  border-radius: 8px;
-  padding: 12px;
-  background: #fafafa;
+  border: 1px solid #eceff5;
+  border-radius: 12px;
+  padding: 12px 16px;
+  background: #fff;
 }
 
 .inline-upload {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
+
+.inline-plus {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1px solid #d8dee9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  background: #fff;
+  color: #1f2d3d;
+  transition: border-color 0.2s, color 0.2s;
+  padding: 0;
+  font-size: 16px;
+}
+
+.inline-plus:hover {
+  border-color: #1f2d3d;
+  color: #1f2d3d;
+}
+
 
 .hidden-input {
   display: none;

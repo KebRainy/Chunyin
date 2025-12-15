@@ -1,94 +1,100 @@
 <template>
-  <div class="settings-container">
-    <h2>个人设置</h2>
-
-    <el-form :model="form" label-width="100px" @submit.prevent="saveSettings">
-      <!-- 头像上传 -->
-      <el-form-item label="头像">
-        <div class="avatar-section">
-          <el-avatar :src="avatarPreview" :size="80" :alt="`${form.username || '用户'}的头像预览`" />
-          <el-upload
-            class="avatar-upload"
-            action="/api/files/upload?category=AVATAR"
-            :show-file-list="false"
-            :on-success="handleAvatarSuccess"
-            :before-upload="beforeAvatarUpload"
-            accept="image/*"
-          >
-            <el-button>更改头像</el-button>
-          </el-upload>
+  <div class="settings-page">
+    <div class="settings-card">
+      <div class="card-header">
+        <div>
+          <p class="eyebrow">Profile</p>
+          <h2>个人资料</h2>
         </div>
-      </el-form-item>
-
-      <!-- 用户名 -->
-      <el-form-item label="用户名">
-        <el-input v-model="form.username" placeholder="输入用户名" />
-      </el-form-item>
-
-      <!-- 个性签名 -->
-      <el-form-item label="个性签名">
-        <el-input
-          v-model="form.bio"
-          type="textarea"
-          placeholder="输入个性签名"
-          rows="3"
-          maxlength="500"
-          show-word-limit
-        />
-      </el-form-item>
-
-      <!-- 性别 -->
-      <el-form-item label="性别">
-        <el-radio-group v-model="form.gender">
-          <el-radio value="MALE">男</el-radio>
-          <el-radio value="FEMALE">女</el-radio>
-          <el-radio value="SECRET">保密</el-radio>
-        </el-radio-group>
-      </el-form-item>
-
-      <!-- 邮箱 -->
-      <el-form-item label="邮箱">
-        <el-input v-model="form.email" type="email" placeholder="输入邮箱" />
-      </el-form-item>
-
-      <!-- 生日 -->
-      <el-form-item label="生日">
-        <el-date-picker
-          v-model="form.birthday"
-          type="date"
-          placeholder="选择生日"
-        />
-      </el-form-item>
-
-      <!-- 提交按钮 -->
-      <el-form-item>
-        <el-button type="primary" @click="saveSettings">保存设置</el-button>
-        <el-button @click="resetForm">取消</el-button>
-      </el-form-item>
-    </el-form>
-
-    <!-- 其他设置 -->
-    <el-divider />
-
-    <div class="other-settings">
-      <h3>账户安全</h3>
-      <div class="setting-item">
-        <span>修改密码</span>
-        <el-button type="text" @click="showPasswordChange">修改</el-button>
       </div>
+      <el-form :model="form" label-width="100px" class="settings-form" @submit.prevent="saveSettings">
+        <el-form-item label="头像">
+          <div class="avatar-section">
+            <el-avatar :src="avatarPreview" :size="96" :alt="`${form.username || '用户'}的头像预览`" />
+            <el-upload
+              class="avatar-upload"
+              action="/api/files/upload?category=AVATAR"
+              :show-file-list="false"
+              :on-success="handleAvatarSuccess"
+              :before-upload="beforeAvatarUpload"
+              accept="image/*"
+            >
+              <el-button>更改头像</el-button>
+            </el-upload>
+          </div>
+        </el-form-item>
 
-      <h3>数据管理</h3>
-      <div class="setting-item">
-        <span>导出我的数据</span>
-        <el-button type="text" @click="exportData">导出</el-button>
+        <div class="form-grid">
+          <el-form-item label="用户名">
+            <el-input v-model="form.username" placeholder="输入用户名" />
+          </el-form-item>
+          <el-form-item label="邮箱">
+            <el-input v-model="form.email" type="email" placeholder="输入邮箱" />
+          </el-form-item>
+          <el-form-item label="性别">
+            <el-radio-group v-model="form.gender">
+              <el-radio value="MALE">男</el-radio>
+              <el-radio value="FEMALE">女</el-radio>
+              <el-radio value="SECRET">保密</el-radio>
+            </el-radio-group>
+          </el-form-item>
+          <el-form-item label="生日">
+            <el-date-picker
+              v-model="form.birthday"
+              type="date"
+              placeholder="选择生日"
+            />
+          </el-form-item>
+        </div>
+
+        <el-form-item label="个性签名">
+          <el-input
+            v-model="form.bio"
+            type="textarea"
+            placeholder="输入个性签名"
+            rows="3"
+            maxlength="500"
+            show-word-limit
+          />
+        </el-form-item>
+
+        <div class="form-actions">
+          <el-button @click="resetForm">取消</el-button>
+          <el-button type="primary" @click="saveSettings">保存设置</el-button>
+        </div>
+      </el-form>
+    </div>
+
+    <div class="settings-card">
+      <div class="card-header">
+        <div>
+          <p class="eyebrow">Security</p>
+          <h3>账户安全</h3>
+        </div>
       </div>
       <div class="setting-item">
-        <span>删除账户</span>
-        <el-button type="text" @click="deleteAccount">删除</el-button>
+        <div>
+          <p class="item-title">修改密码</p>
+          <p class="item-desc">为保障账户安全，建议定期更新密码</p>
+        </div>
+        <el-button text type="primary" @click="showPasswordChange">修改</el-button>
+      </div>
+      <div class="setting-item">
+        <div>
+          <p class="item-title">导出我的数据</p>
+          <p class="item-desc">下载近 30 天的所有内容记录</p>
+        </div>
+        <el-button text @click="exportData">导出</el-button>
+      </div>
+      <div class="setting-item danger">
+        <div>
+          <p class="item-title">删除账户</p>
+          <p class="item-desc">删除后将无法恢复所有数据</p>
+        </div>
+        <el-button text type="danger" @click="deleteAccount">删除</el-button>
       </div>
     </div>
 
-    <!-- 修改密码对话框 -->
     <el-dialog title="修改密码" v-model="passwordDialogVisible" width="400px">
       <el-form :model="passwordForm" label-width="80px">
         <el-form-item label="原密码">
@@ -264,22 +270,41 @@ const deleteAccount = () => {
 </script>
 
 <style scoped>
-.settings-container {
-  max-width: 700px;
+.settings-page {
+  max-width: 900px;
   margin: 0 auto;
-  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
-h2 {
-  margin-bottom: 24px;
-  color: #333;
+.settings-card {
+  background: #fff;
+  border-radius: 28px;
+  border: 1px solid #eceff5;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.05);
+  padding: 24px 28px;
 }
 
-h3 {
-  margin: 24px 0 16px 0;
-  color: #333;
-  font-size: 14px;
-  font-weight: 600;
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 12px;
+  color: #909399;
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .avatar-section {
@@ -288,35 +313,57 @@ h3 {
   gap: 20px;
 }
 
-.avatar-upload {
-  margin: 0;
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
 }
 
-.other-settings {
-  margin-top: 20px;
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 12px;
 }
 
 .setting-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 0;
-  border-bottom: 1px solid #f0f0f0;
+  padding: 16px 0;
+  border-top: 1px solid #f0f2f5;
 }
 
-.setting-item span {
-  color: #333;
+.setting-item.danger .item-title {
+  color: #e53935;
 }
 
-:deep(.el-form) {
-  max-width: 600px;
+.item-title {
+  margin: 0;
+  font-weight: 600;
+  color: #1f2d3d;
 }
 
-:deep(.el-form-item__label) {
-  color: #606266;
+.item-desc {
+  margin: 4px 0 0;
+  color: #909399;
+  font-size: 13px;
 }
 
-:deep(.el-divider) {
-  margin: 24px 0;
+@media (max-width: 600px) {
+  .settings-card {
+    padding: 20px;
+  }
+
+  .setting-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .form-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 </style>

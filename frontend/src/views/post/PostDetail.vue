@@ -302,7 +302,7 @@ onMounted(() => {
 .post-detail-container {
   max-width: 800px;
   margin: 0 auto;
-  padding: 20px;
+  padding: 20px 0 60px;
 }
 
 .loading, .not-found {
@@ -313,18 +313,18 @@ onMounted(() => {
 
 .post-detail {
   background-color: #fff;
-  border-radius: 8px;
-  padding: 24px;
-  border: 1px solid #f0f0f0;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  border-radius: 32px;
+  padding: 32px;
+  border: 1px solid #eceff5;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
 }
 
 /* 头部 */
 .post-header {
   display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-  padding-bottom: 16px;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
   border-bottom: 1px solid #f0f0f0;
 }
 
@@ -363,14 +363,14 @@ onMounted(() => {
 
 /* 内容 */
 .post-body {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .post-content {
-  font-size: 16px;
+  font-size: 18px;
   line-height: 1.8;
-  color: #333;
-  margin-bottom: 16px;
+  color: #1f2d3d;
+  margin-bottom: 20px;
   white-space: pre-wrap;
   word-break: break-word;
 }
@@ -378,14 +378,14 @@ onMounted(() => {
 .post-images {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
+  gap: 16px;
+  margin-bottom: 20px;
 }
 
 .post-image {
   width: 100%;
   height: auto;
-  border-radius: 8px;
+  border-radius: 20px;
   max-height: 500px;
   object-fit: cover;
   cursor: pointer;
@@ -407,10 +407,10 @@ onMounted(() => {
 .post-actions {
   display: flex;
   gap: 24px;
-  padding: 16px 0;
+  padding: 18px 0;
   border-top: 1px solid #f0f0f0;
   border-bottom: 1px solid #f0f0f0;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
 }
 
 .action-item {
@@ -439,8 +439,8 @@ onMounted(() => {
 
 .comments-section h3 {
   margin-bottom: 16px;
-  color: #333;
-  font-size: 16px;
+  color: #1f2d3d;
+  font-size: 18px;
 }
 
 .comment-input {
@@ -478,7 +478,7 @@ onMounted(() => {
 .comment-item {
   display: flex;
   gap: 12px;
-  padding: 12px 0;
+  padding: 16px 0;
   border-bottom: 1px solid #f0f0f0;
 }
 

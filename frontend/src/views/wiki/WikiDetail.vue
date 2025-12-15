@@ -277,7 +277,7 @@ onMounted(() => {
 .wiki-detail-page {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 24px 0 60px;
 }
 
 .loading,
@@ -294,9 +294,10 @@ onMounted(() => {
 
 .wiki-sidebar {
   background: #fff;
-  border-radius: 20px;
+  border-radius: 26px;
   padding: 20px;
-  box-shadow: 0 8px 24px rgba(31, 45, 61, 0.08);
+  border: 1px solid #eceff5;
+  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.06);
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -330,9 +331,10 @@ onMounted(() => {
 
 .wiki-main {
   background: #fff;
-  border-radius: 24px;
+  border-radius: 32px;
   padding: 32px;
-  box-shadow: 0 8px 24px rgba(31, 45, 61, 0.08);
+  border: 1px solid #eceff5;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.07);
 }
 
 .wiki-header {
@@ -350,8 +352,8 @@ onMounted(() => {
 }
 
 .wiki-summary {
-  background: #f4f6fb;
-  border-radius: 16px;
+  background: #f9fafc;
+  border-radius: 18px;
   padding: 16px;
   margin-bottom: 24px;
 }
@@ -407,10 +409,10 @@ onMounted(() => {
 .discussion-item {
   display: flex;
   gap: 12px;
-  padding: 12px;
+  padding: 14px;
   border: 1px solid #f0f2f5;
-  border-radius: 12px;
-  background-color: #fafbfc;
+  border-radius: 18px;
+  background-color: #fafafa;
 }
 
 .discussion-body {
@@ -446,9 +448,9 @@ onMounted(() => {
 .history-item {
   display: flex;
   justify-content: space-between;
-  padding: 12px;
-  border: 1px solid #f2f2f2;
-  border-radius: 12px;
+  padding: 14px;
+  border: 1px solid #f0f2f5;
+  border-radius: 18px;
 }
 
 .history-editor {

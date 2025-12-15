@@ -66,8 +66,10 @@
           <div class="chat-footer">
             <el-input
               v-model="messageInput"
+              type="textarea"
+              :autosize="{ minRows: 3, maxRows: 5 }"
               placeholder="输入消息..."
-              @keyup.enter="sendMessage"
+              @keydown.enter.exact.prevent="sendMessage"
             />
             <el-button type="primary" @click="sendMessage">发送</el-button>
           </div>
@@ -151,21 +153,28 @@ onMounted(() => {
 
 <style scoped>
 .messages-container {
-  height: calc(100vh - 64px);
-  display: flex;
+  min-height: calc(100vh - 68px);
+  padding: 24px;
+  background: #fff;
 }
 
 .messages-layout {
   display: flex;
   width: 100%;
-  background-color: #fff;
+  min-height: calc(100vh - 116px);
+  border: 1px solid #eceff5;
+  border-radius: 32px;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.07);
 }
 
 .conversations-panel {
-  width: 280px;
+  width: 300px;
   border-right: 1px solid #f0f0f0;
-  padding: 16px;
-  overflow-y: auto;
+  padding: 24px 20px;
+  background: #f9fafc;
+  display: flex;
+  flex-direction: column;
 }
 
 .conversations-panel h3 {
@@ -173,9 +182,12 @@ onMounted(() => {
 }
 
 .conversations-list {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow-y: auto;
+  padding-right: 6px;
 }
 
 .conversation-item {
@@ -183,18 +195,18 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   padding: 12px;
-  border-radius: 8px;
+  border-radius: 14px;
   cursor: pointer;
   transition: background-color 0.3s;
   position: relative;
 }
 
 .conversation-item:hover {
-  background-color: #f5f5f5;
+  background-color: #eef2ff;
 }
 
 .conversation-item.active {
-  background-color: #e6f7ff;
+  background-color: #e5edff;
 }
 
 .conv-info {
@@ -204,7 +216,7 @@ onMounted(() => {
 
 .conv-user {
   font-weight: 500;
-  color: #333;
+  color: #1f2d3d;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -212,7 +224,7 @@ onMounted(() => {
 
 .conv-preview {
   font-size: 12px;
-  color: #999;
+  color: #909399;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -222,12 +234,12 @@ onMounted(() => {
   background-color: #f56c6c;
   color: #fff;
   border-radius: 50%;
-  width: 24px;
-  height: 24px;
+  width: 22px;
+  height: 22px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: bold;
 }
 
@@ -235,6 +247,7 @@ onMounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
+  background: #fff;
 }
 
 .no-conversation {
@@ -245,7 +258,7 @@ onMounted(() => {
 }
 
 .chat-header {
-  padding: 16px;
+  padding: 24px;
   border-bottom: 1px solid #f0f0f0;
 }
 
@@ -255,11 +268,12 @@ onMounted(() => {
 
 .messages-list {
   flex: 1;
-  padding: 16px;
+  padding: 24px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 12px;
+  background: #fafafa;
 }
 
 .message-item {
@@ -273,27 +287,32 @@ onMounted(() => {
 }
 
 .message-bubble {
-  background-color: #f0f0f0;
+  background-color: #fff;
   padding: 12px 16px;
-  border-radius: 12px;
+  border-radius: 16px;
   max-width: 60%;
   word-break: break-word;
   line-height: 1.5;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
 .message-item.self .message-bubble {
-  background-color: #409eff;
+  background-color: #2f54eb;
   color: #fff;
+  box-shadow: none;
 }
 
 .chat-footer {
-  padding: 16px;
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  padding: 20px 24px;
   border-top: 1px solid #f0f0f0;
   display: flex;
-  gap: 8px;
+  gap: 12px;
 }
 
-:deep(.el-input) {
+:deep(.chat-footer .el-textarea) {
   flex: 1;
 }
 </style>

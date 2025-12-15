@@ -28,6 +28,32 @@
         </el-input>
       </div>
       <div class="header-right">
+        <div class="user-entry">
+          <template v-if="userStore.isLoggedIn">
+            <el-dropdown @command="handleCommand">
+              <span class="user-avatar">
+                <el-avatar
+                  :size="36"
+                  :src="userStore.userInfo.avatarUrl"
+                  :alt="`${userStore.userInfo?.username || '用户'}的头像`"
+                >
+                  <el-icon><User /></el-icon>
+                </el-avatar>
+              </span>
+              <template #dropdown>
+                <el-dropdown-menu>
+                  <el-dropdown-item command="profile">个人中心</el-dropdown-item>
+                  <el-dropdown-item command="settings">设置</el-dropdown-item>
+                  <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
+                </el-dropdown-menu>
+              </template>
+            </el-dropdown>
+          </template>
+          <template v-else>
+            <el-button text size="small" @click="goLogin">登录</el-button>
+            <el-button text size="small" @click="goRegister">注册</el-button>
+          </template>
+        </div>
         <div class="quick-links">
           <span @click="goToMessages">消息</span>
           <span @click="goToFeeds">动态</span>
@@ -42,30 +68,6 @@
         >
           分享此刻
         </el-button>
-        <template v-if="userStore.isLoggedIn">
-          <el-dropdown @command="handleCommand">
-            <span class="user-avatar">
-              <el-avatar
-                :size="32"
-                :src="userStore.userInfo.avatarUrl"
-                :alt="`${userStore.userInfo?.username || '用户'}的头像`"
-              >
-                <el-icon><User /></el-icon>
-              </el-avatar>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item command="profile">个人中心</el-dropdown-item>
-                <el-dropdown-item command="settings">设置</el-dropdown-item>
-                <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </template>
-        <template v-else>
-          <el-button text size="small" @click="goLogin">登录</el-button>
-          <el-button text size="small" @click="goRegister">注册</el-button>
-        </template>
       </div>
     </div>
   </div>
@@ -191,8 +193,9 @@ const handleCommand = async (command) => {
 .logo {
   font-size: 22px;
   font-weight: 700;
-  color: #303133;
+  color: #2f54eb;
   cursor: pointer;
+  letter-spacing: 2px;
 }
 
 .nav-menu {
@@ -236,14 +239,22 @@ const handleCommand = async (command) => {
 .header-right {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 16px;
+}
+
+.user-entry {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-right: 1px solid #f0f0f0;
+  padding-right: 12px;
 }
 
 .quick-links {
   display: flex;
   gap: 14px;
   font-size: 14px;
-  color: #606266;
+  color: #303133;
 }
 
 .quick-links span {
@@ -252,9 +263,10 @@ const handleCommand = async (command) => {
 
 .share-btn {
   border-radius: 999px;
-  border-color: #303133;
-  color: #303133;
+  border-color: #111;
+  color: #111;
   padding: 0 18px;
+  font-weight: 600;
 }
 
 .user-avatar {

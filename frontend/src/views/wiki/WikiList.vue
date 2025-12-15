@@ -206,10 +206,11 @@ onMounted(() => {
 }
 
 .wiki-hero {
-  background: linear-gradient(135deg, #eef2ff 0%, #fef6fb 100%);
+  background: #fff;
   padding: 32px;
-  border-radius: 24px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  border-radius: 32px;
+  border: 1px solid #eceff5;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.07);
 }
 
 .hero-content h1 {
@@ -244,11 +245,11 @@ onMounted(() => {
 }
 
 .stat-card {
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 16px;
+  background: #fafafa;
+  border-radius: 18px;
   padding: 16px;
   text-align: center;
-  border: 1px solid rgba(0, 0, 0, 0.04);
+  border: 1px solid #f0f2f5;
 }
 
 .stat-card .value {
@@ -273,9 +274,10 @@ onMounted(() => {
 .list-panel,
 .preview-panel {
   background: #fff;
-  border-radius: 20px;
+  border-radius: 28px;
   padding: 24px;
-  box-shadow: 0 8px 30px rgba(31, 45, 61, 0.06);
+  border: 1px solid #eceff5;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.05);
 }
 
 .section-header {
@@ -301,17 +303,18 @@ onMounted(() => {
 }
 
 .wiki-item {
-  padding: 16px;
-  border: 1px solid #f2f2f2;
-  border-radius: 14px;
+  padding: 16px 18px;
+  border: 1px solid #f0f2f5;
+  border-radius: 18px;
   cursor: pointer;
-  transition: border-color 0.2s, background 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  background: #fafafa;
 }
 
 .wiki-item.active,
 .wiki-item:hover {
-  border-color: #6366f1;
-  background: #f8f7ff;
+  border-color: #2f54eb;
+  box-shadow: 0 10px 22px rgba(47, 84, 235, 0.12);
 }
 
 .wiki-item h4 {

@@ -1,71 +1,80 @@
 <template>
-  <div v-if="userStore.userInfo" class="space-page">
-    <section class="space-hero">
-      <div class="hero-left">
-        <el-avatar
-          :size="96"
-          :src="userStore.userInfo.avatarUrl"
-          :alt="`${userStore.userInfo.username || '用户'}的头像`"
-          @click="goSettings"
-        />
-        <div>
-          <div class="user-line">
-            <h1>{{ userStore.userInfo.username }}</h1>
-            <el-tag size="small">Lv.{{ userStore.userInfo.level || 1 }}</el-tag>
+  <div v-if="userStore.userInfo" class="profile-page">
+    <section class="profile-hero">
+      <div class="cover-panel">
+        <div class="hero-layout">
+          <div class="avatar-column">
+            <el-avatar
+              :size="104"
+              :src="userStore.userInfo.avatarUrl"
+              :alt="`${userStore.userInfo.username || '用户'}的头像`"
+              @click="goSettings"
+            />
+            <el-button text size="small" @click="goSettings">管理资料</el-button>
           </div>
-          <p class="uid">UID {{ userStore.userInfo.id }}</p>
-          <div class="signature">
-            <template v-if="editingSignature">
-              <el-input
-                v-model="signature"
-                size="small"
-                maxlength="200"
-                show-word-limit
-                @keyup.enter="saveSignature"
-              />
-              <div class="signature-actions">
-                <el-button size="small" type="primary" @click="saveSignature">保存</el-button>
-                <el-button size="small" text @click="cancelSignature">取消</el-button>
-              </div>
-            </template>
-            <template v-else>
-              <span>{{ signature || '这个人很酷，什么都没有写' }}</span>
-              <el-button text size="small" @click="editingSignature = true">编辑</el-button>
-            </template>
+          <div class="meta-column">
+            <div class="user-title">
+              <h1>{{ userStore.userInfo.username }}</h1>
+              <el-tag size="small" effect="dark">Lv.{{ userStore.userInfo.level || 1 }}</el-tag>
+            </div>
+            <p class="uid">UID {{ userStore.userInfo.id }}</p>
+            <div class="signature">
+              <template v-if="editingSignature">
+                <el-input
+                  v-model="signature"
+                  size="small"
+                  maxlength="200"
+                  show-word-limit
+                  @keyup.enter="saveSignature"
+                />
+                <div class="signature-actions">
+                  <el-button size="small" type="primary" @click="saveSignature">保存</el-button>
+                  <el-button size="small" text @click="cancelSignature">取消</el-button>
+                </div>
+              </template>
+              <template v-else>
+                <span>{{ signature || '这个人很酷，什么都没有写' }}</span>
+                <el-button text size="small" @click="editingSignature = true">编辑签名</el-button>
+              </template>
+            </div>
           </div>
-        </div>
-      </div>
-      <div class="hero-right">
-        <div class="stat">
-          <p>{{ userStore.userInfo.followingCount }}</p>
-          <span>关注</span>
-        </div>
-        <div class="stat">
-          <p>{{ userStore.userInfo.followerCount }}</p>
-          <span>粉丝</span>
-        </div>
-        <div class="stat">
-          <p>{{ userStore.userInfo.likeReceived }}</p>
-          <span>获赞</span>
+          <div class="stats-column">
+            <div class="stat">
+              <p>{{ userStore.userInfo.followingCount }}</p>
+              <span>关注</span>
+            </div>
+            <div class="stat">
+              <p>{{ userStore.userInfo.followerCount }}</p>
+              <span>粉丝</span>
+            </div>
+            <div class="stat">
+              <p>{{ userStore.userInfo.likeReceived }}</p>
+              <span>获赞</span>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
-    <nav class="space-tabs">
-      <div
+    <nav class="profile-tabs">
+      <button
         v-for="tab in tabs"
         :key="tab.key"
-        :class="['tab-item', { active: activeTab === tab.key }]"
+        :class="['tab', { active: activeTab === tab.key }]"
         @click="switchTab(tab.key)"
       >
         {{ tab.label }}
-      </div>
+      </button>
+      <div class="tab-indicator" :style="indicatorStyle"></div>
     </nav>
 
-    <section class="tab-content">
-      <div v-if="activeTab === 'posts'">
+    <section class="profile-content">
+      <div v-if="activeTab === 'posts'" class="content-card">
         <div class="section-header">
-          <h3>我的动态</h3>
+          <div>
+            <p class="eyebrow">Recent</p>
+            <h3>我的动态</h3>
+          </div>
           <el-button text size="small" @click="refreshPosts">刷新</el-button>
         </div>
         <div v-if="posts.loading" class="loading">
@@ -89,20 +98,26 @@
         </div>
       </div>
 
-      <div v-else-if="activeTab === 'collections'">
-        <div class="filter-bar">
-          <el-select v-model="collectionFilter.type" size="small">
-            <el-option label="全部内容" value="ALL" />
-            <el-option label="动态" value="POST" />
-            <el-option label="维基" value="WIKI" />
-          </el-select>
-          <el-input
-            v-model="collectionFilter.keyword"
-            placeholder="搜索收藏内容"
-            size="small"
-            clearable
-          />
-          <el-button size="small" @click="loadCollections">筛选</el-button>
+      <div v-else-if="activeTab === 'collections'" class="content-card">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Saved</p>
+            <h3>收藏夹</h3>
+          </div>
+          <div class="filter-bar">
+            <el-select v-model="collectionFilter.type" size="small">
+              <el-option label="全部内容" value="ALL" />
+              <el-option label="动态" value="POST" />
+              <el-option label="维基" value="WIKI" />
+            </el-select>
+            <el-input
+              v-model="collectionFilter.keyword"
+              placeholder="搜索收藏内容"
+              size="small"
+              clearable
+            />
+            <el-button size="small" @click="loadCollections">筛选</el-button>
+          </div>
         </div>
         <div v-if="collections.loading" class="loading">
           <el-skeleton :rows="3" animated />
@@ -130,18 +145,24 @@
         </div>
       </div>
 
-      <div v-else-if="activeTab === 'history'">
-        <div class="filter-bar">
-          <el-select v-model="footprintFilter.days" size="small">
-            <el-option label="3 天以内" :value="3" />
-            <el-option label="7 天以内" :value="7" />
-          </el-select>
-          <el-select v-model="footprintFilter.type" size="small">
-            <el-option label="全部" value="ALL" />
-            <el-option label="动态" value="POST" />
-            <el-option label="维基" value="WIKI" />
-          </el-select>
-          <el-button size="small" @click="loadFootprints">应用</el-button>
+      <div v-else-if="activeTab === 'history'" class="content-card">
+        <div class="section-header">
+          <div>
+            <p class="eyebrow">Footprint</p>
+            <h3>我的足迹</h3>
+          </div>
+          <div class="filter-bar">
+            <el-select v-model="footprintFilter.days" size="small">
+              <el-option label="3 天以内" :value="3" />
+              <el-option label="7 天以内" :value="7" />
+            </el-select>
+            <el-select v-model="footprintFilter.type" size="small">
+              <el-option label="全部" value="ALL" />
+              <el-option label="动态" value="POST" />
+              <el-option label="维基" value="WIKI" />
+            </el-select>
+            <el-button size="small" @click="loadFootprints">应用</el-button>
+          </div>
         </div>
         <div v-if="footprints.loading" class="loading">
           <el-skeleton :rows="3" animated />
@@ -161,7 +182,7 @@
         </div>
       </div>
 
-      <div v-else-if="activeTab === 'messages'" class="message-entry">
+      <div v-else-if="activeTab === 'messages'" class="content-card message-entry">
         <el-empty description="私信已独立为单独页面" />
         <el-button type="primary" @click="goMessages">进入消息中心</el-button>
       </div>
@@ -225,6 +246,15 @@ const filteredCollections = computed(() => {
     item.title?.includes(collectionFilter.keyword) ||
     item.summary?.includes(collectionFilter.keyword)
   )
+})
+
+const indicatorStyle = computed(() => {
+  const activeIndex = Math.max(0, tabs.findIndex(item => item.key === activeTab.value))
+  const width = 100 / tabs.length
+  return {
+    width: `${width}%`,
+    transform: `translateX(${activeIndex * 100}%)`
+  }
 })
 
 const formatTime = (time) => dayjs(time).format('YYYY.MM.DD HH:mm')
@@ -356,51 +386,81 @@ watch(
 )
 </script>
 
-<style scoped>
-.space-page {
+<style>
+.profile-page {
   max-width: 1100px;
   margin: 0 auto;
-  padding: 24px;
+  padding-bottom: 60px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
 }
 
-.space-hero {
+.profile-hero {
+  position: relative;
+}
+
+.cover-panel {
+  border-radius: 32px;
+  border: 1px solid #eceff5;
+  background: #f5f7fb;
+  overflow: hidden;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+}
+
+.hero-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr 260px;
+  gap: 32px;
+  padding: 32px;
+  align-items: center;
+}
+
+.avatar-column {
   display: flex;
-  justify-content: space-between;
-  background: linear-gradient(135deg, #fef6fb, #f3f7ff);
-  border-radius: 24px;
-  padding: 24px;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
 }
 
-.hero-left {
+.meta-column {
   display: flex;
-  gap: 16px;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.user-line {
+.user-title {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+
+.user-title h1 {
+  margin: 0;
 }
 
 .uid {
   color: #909399;
-  margin: 4px 0;
+  margin: 0;
+  font-size: 14px;
 }
 
 .signature {
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 8px;
   color: #606266;
 }
 
-.hero-right {
+.signature-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.stats-column {
   display: flex;
   gap: 32px;
-  align-items: center;
+  justify-content: flex-end;
 }
 
 .stat {
@@ -408,45 +468,83 @@ watch(
 }
 
 .stat p {
-  font-size: 24px;
-  font-weight: bold;
+  font-size: 28px;
+  font-weight: 600;
   margin: 0;
 }
 
 .stat span {
   color: #909399;
-  font-size: 13px;
+  font-size: 12px;
 }
 
-.space-tabs {
-  display: flex;
-  gap: 24px;
-  border-bottom: 1px solid #f0f0f0;
-}
-
-.tab-item {
-  padding-bottom: 12px;
-  color: #909399;
-  cursor: pointer;
-}
-
-.tab-item.active {
-  color: #303133;
-  border-bottom: 2px solid #303133;
-}
-
-.tab-content {
+.profile-tabs {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  border: 1px solid #eceff5;
+  border-radius: 999px;
   background: #fff;
-  border-radius: 18px;
-  padding: 20px;
-  box-shadow: 0 12px 30px rgba(31, 45, 61, 0.06);
+  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+  overflow: hidden;
+}
+
+.profile-tabs .tab {
+  padding: 12px 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 14px;
+  color: #555;
+  transition: color 0.2s;
+  position: relative;
+  z-index: 1;
+}
+
+.profile-tabs .tab.active {
+  color: #111;
+  font-weight: 600;
+}
+
+.tab-indicator {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 100%;
+  background: rgba(47, 84, 235, 0.1);
+  border-radius: 999px;
+  transition: transform 0.3s, width 0.3s;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.profile-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.content-card {
+  background: #fff;
+  border-radius: 26px;
+  border: 1px solid #eceff5;
+  padding: 24px;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.05);
 }
 
 .section-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.eyebrow {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 12px;
+  color: #909399;
 }
 
 .post-list {
@@ -458,14 +556,15 @@ watch(
 .post-row {
   display: flex;
   justify-content: space-between;
-  border: 1px solid #f5f5f5;
-  border-radius: 12px;
-  padding: 12px;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid #f0f0f0;
 }
 
 .post-text {
   margin: 0 0 8px;
-  color: #303133;
+  color: #1f2d3d;
 }
 
 .post-meta {
@@ -478,20 +577,23 @@ watch(
 .filter-bar {
   display: flex;
   gap: 12px;
-  margin-bottom: 16px;
   flex-wrap: wrap;
 }
 
 .card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 16px;
 }
 
 .card {
   border: 1px solid #f2f2f2;
-  border-radius: 12px;
+  border-radius: 18px;
   padding: 16px;
+  background: #fafafa;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .card-meta {
@@ -499,7 +601,6 @@ watch(
   justify-content: space-between;
   font-size: 12px;
   color: #909399;
-  margin-top: 12px;
 }
 
 .timeline {
@@ -512,17 +613,17 @@ watch(
   display: flex;
   gap: 12px;
   position: relative;
-  padding-left: 16px;
+  padding-left: 20px;
 }
 
 .timeline-item .dot {
   width: 8px;
   height: 8px;
-  background: #409eff;
+  background: #2f54eb;
   border-radius: 50%;
   position: absolute;
   left: 0;
-  top: 6px;
+  top: 8px;
 }
 
 .loading {
@@ -530,17 +631,28 @@ watch(
 }
 
 .empty {
-  padding: 40px 0;
+  padding: 20px 0;
 }
 
-@media (max-width: 768px) {
-  .space-hero {
-    flex-direction: column;
-    gap: 16px;
+.message-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+@media (max-width: 900px) {
+  .hero-layout {
+    grid-template-columns: 1fr;
+    text-align: center;
   }
 
-  .hero-right {
-    justify-content: space-around;
+  .stats-column {
+    justify-content: center;
+  }
+
+  .profile-tabs {
+    border-radius: 16px;
   }
 }
 </style>

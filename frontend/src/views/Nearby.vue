@@ -19,7 +19,7 @@
     <div v-else-if="posts.length === 0" class="empty">
       <el-empty :description="`${selectedCity}还没有动态`" />
     </div>
-    <div v-else class="posts-grid">
+    <div v-else class="masonry-grid">
       <PostCard
         v-for="post in posts"
         :key="post.id"
@@ -91,35 +91,73 @@ const goToPost = (postId) => {
 
 <style scoped>
 .nearby-container {
-  max-width: 1200px;
+  max-width: 1300px;
   margin: 0 auto;
   padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .city-selector {
   display: flex;
   align-items: center;
   gap: 12px;
-  margin-bottom: 24px;
   font-size: 14px;
   color: #333;
+  border: 1px solid #eceff5;
+  padding: 14px 20px;
+  border-radius: 20px;
+  background: #fff;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
 }
 
 :deep(.el-select) {
-  width: 200px;
+  width: 220px;
 }
 
 .loading, .empty {
   text-align: center;
   padding: 60px 20px;
   color: #999;
+  background: #fff;
+  border-radius: 28px;
+  border: 1px solid #eceff5;
 }
 
-.posts-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 18px;
+.masonry-grid {
+  column-count: 4;
+  column-gap: 20px;
+  background: #fff;
+  border-radius: 28px;
+  border: 1px solid #eceff5;
+  padding: 24px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.04);
   margin-bottom: 20px;
+}
+
+.masonry-grid > * {
+  break-inside: avoid;
+  margin-bottom: 20px;
+  display: block;
+}
+
+@media (max-width: 1200px) {
+  .masonry-grid {
+    column-count: 3;
+  }
+}
+
+@media (max-width: 900px) {
+  .masonry-grid {
+    column-count: 2;
+  }
+}
+
+@media (max-width: 600px) {
+  .masonry-grid {
+    column-count: 1;
+  }
 }
 
 .load-more {

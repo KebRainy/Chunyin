@@ -1,14 +1,14 @@
 <template>
   <div :class="['post-card', layout]" @click="$emit('select', post)">
-    <div class="card-image" v-if="post.imageUrls?.length">
+    <div class="card-media" v-if="post.imageUrls?.length">
       <img
         :src="post.imageUrls[0]"
         :alt="post.content || `${post.author?.username || '用户'}的分享图片`"
       >
       <span v-if="post.imageUrls.length > 1" class="count">+{{ post.imageUrls.length - 1 }}</span>
     </div>
-    <div class="card-image placeholder" v-else>
-      <el-icon><Picture /></el-icon>
+    <div class="card-media no-image" v-else>
+      <p class="no-image-text">{{ coverText(post.content) }}</p>
     </div>
     <div class="card-body">
       <div class="author">
@@ -67,6 +67,11 @@ const snippet = (text) => {
   return text.length > 120 ? `${text.slice(0, 120)}...` : text
 }
 
+const coverText = (text) => {
+  if (!text) return '分享此刻的灵感'
+  return text.length > 80 ? `${text.slice(0, 80)}...` : text
+}
+
 const formatTime = (value) => {
   if (!value) return ''
   const date = dayjs(value)
@@ -85,52 +90,64 @@ const formatTime = (value) => {
 <style scoped>
 .post-card {
   background: #fff;
-  border-radius: 12px;
+  border-radius: 18px;
   overflow: hidden;
   border: 1px solid #f1f1f1;
   cursor: pointer;
   display: flex;
   flex-direction: column;
   transition: transform 0.2s, box-shadow 0.2s;
+  break-inside: avoid;
 }
 
 .post-card:hover {
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-  transform: translateY(-4px);
+  box-shadow: 0 18px 28px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
 }
 
-.card-image {
+.card-media {
   position: relative;
   width: 100%;
-  padding-top: 60%;
   overflow: hidden;
+  border-bottom: 1px solid #f5f5f5;
 }
 
-.card-image img {
-  position: absolute;
-  top: 0;
-  left: 0;
+.card-media img {
   width: 100%;
-  height: 100%;
+  display: block;
   object-fit: cover;
+  max-height: 520px;
 }
 
-.card-image.placeholder {
+.card-media.no-image {
+  min-height: 180px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f5f5f5;
-  color: #bbb;
+  padding: 24px;
+  background: #f8fafc;
 }
 
-.card-image .count {
+.no-image-text {
+  font-size: 16px;
+  color: #1f2d3d;
+  margin: 0;
+  text-align: center;
+  line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.card-media .count {
   position: absolute;
   bottom: 8px;
   right: 8px;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.55);
   color: #fff;
   padding: 2px 8px;
-  border-radius: 12px;
+  border-radius: 999px;
   font-size: 12px;
 }
 
@@ -172,7 +189,7 @@ const formatTime = (value) => {
 }
 
 .card-footer {
-  padding: 12px;
+  padding: 12px 16px 16px;
   border-top: 1px solid #f0f0f0;
   display: flex;
   justify-content: space-between;

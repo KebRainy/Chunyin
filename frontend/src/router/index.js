@@ -20,6 +20,12 @@ const routes = [
     component: () => import('@/views/Nearby.vue')
   },
   {
+    path: '/ranking',
+    name: 'Ranking',
+    component: () => import('@/views/Ranking.vue'),
+    meta: { title: '热门排行' }
+  },
+  {
     path: '/beverages',
     name: 'BeverageList',
     component: () => import('@/views/beverage/BeverageList.vue')

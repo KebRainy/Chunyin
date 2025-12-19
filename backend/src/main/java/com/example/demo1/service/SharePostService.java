@@ -3,6 +3,7 @@ package com.example.demo1.service;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.demo1.common.enums.CollectionTargetType;
+import com.example.demo1.common.enums.TimeDimension;
 import com.example.demo1.common.exception.BusinessException;
 import com.example.demo1.common.response.PageResult;
 import com.example.demo1.dto.request.SharePostCommentRequest;
@@ -28,8 +29,11 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -246,6 +250,112 @@ public class SharePostService {
         return posts.stream()
             .map(post -> toVo(post, userMap.get(post.getUserId()), Collections.emptySet(), Collections.emptySet()))
             .collect(Collectors.toList());
+    }
+
+    /**
+     * 获取热门动态排行榜
+     * 
+     * @param timeDimension 时间维度（DAY/WEEK/MONTH/ALL）
+     * @param page 页码
+     * @param pageSize 每页大小
+     * @param currentUserId 当前用户ID
+     * @return 热门动态分页结果
+     */
+    public PageResult<SharePostVO> getHotPosts(TimeDimension timeDimension, int page, int pageSize, Long currentUserId) {
+        // 1. 根据时间维度筛选动态
+        LambdaQueryWrapper<SharePost> wrapper = new LambdaQueryWrapper<>();
+        
+        if (timeDimension != TimeDimension.ALL) {
+            LocalDateTime cutoffTime = LocalDateTime.now().minusDays(timeDimension.getDays());
+            wrapper.ge(SharePost::getCreatedAt, cutoffTime);
+        }
+        
+        List<SharePost> posts = sharePostMapper.selectList(wrapper);
+        
+        if (posts.isEmpty()) {
+            return new PageResult<>(0L, page, pageSize, Collections.emptyList());
+        }
+        
+        // 2. 计算每个动态的热度分数
+        LocalDateTime now = LocalDateTime.now();
+        List<PostWithScore> postsWithScores = posts.stream()
+            .map(post -> {
+                double hotScore = calculateHotScore(post, now);
+                return new PostWithScore(post, hotScore);
+            })
+            .sorted(Comparator.comparingDouble(PostWithScore::getScore).reversed())
+            .collect(Collectors.toList());
+        
+        // 3. 手动分页
+        int start = (page - 1) * pageSize;
+        int end = Math.min(start + pageSize, postsWithScores.size());
+        
+        if (start >= postsWithScores.size()) {
+            return new PageResult<>((long) postsWithScores.size(), page, pageSize, Collections.emptyList());
+        }
+        
+        List<PostWithScore> pagedPosts = postsWithScores.subList(start, end);
+        
+        // 4. 转换为VO
+        List<SharePost> pagedPostEntities = pagedPosts.stream()
+            .map(PostWithScore::getPost)
+            .collect(Collectors.toList());
+        
+        List<Long> userIds = pagedPostEntities.stream().map(SharePost::getUserId).collect(Collectors.toList());
+        Map<Long, User> userMap = userService.mapByIds(userIds);
+        
+        List<Long> postIds = pagedPostEntities.stream().map(SharePost::getId).collect(Collectors.toList());
+        Set<Long> likedIds = resolveLikedIds(currentUserId, postIds);
+        Set<Long> favoritedIds = collectionService.findFavoritedIds(currentUserId, postIds, CollectionTargetType.POST);
+        
+        List<SharePostVO> items = pagedPostEntities.stream()
+            .map(post -> toVo(post, userMap.get(post.getUserId()), likedIds, favoritedIds))
+            .collect(Collectors.toList());
+        
+        return new PageResult<>((long) postsWithScores.size(), page, pageSize, items);
+    }
+    
+    /**
+     * 计算动态的热度分数
+     * 热度分 = (浏览量 × 0.1) + (点赞数 × 2) + (收藏数 × 3) + (评论数 × 1.5)
+     * 最终得分 = 热度分 × 时间衰减系数
+     * 时间衰减系数 = 1 / (1 + 小时差 / 24)
+     */
+    private double calculateHotScore(SharePost post, LocalDateTime now) {
+        // 基础热度分数
+        double viewScore = (post.getViewCount() != null ? post.getViewCount() : 0) * 0.1;
+        double likeScore = (post.getLikeCount() != null ? post.getLikeCount() : 0) * 2.0;
+        double favoriteScore = (post.getFavoriteCount() != null ? post.getFavoriteCount() : 0) * 3.0;
+        double commentScore = (post.getCommentCount() != null ? post.getCommentCount() : 0) * 1.5;
+        
+        double baseScore = viewScore + likeScore + favoriteScore + commentScore;
+        
+        // 时间衰减系数
+        long hoursSinceCreated = Duration.between(post.getCreatedAt(), now).toHours();
+        double timeDecay = 1.0 / (1.0 + hoursSinceCreated / 24.0);
+        
+        return baseScore * timeDecay;
+    }
+    
+    /**
+     * 内部类：动态及其热度分数
+     */
+    private static class PostWithScore {
+        private final SharePost post;
+        private final double score;
+        
+        public PostWithScore(SharePost post, double score) {
+            this.post = post;
+            this.score = score;
+        }
+        
+        public SharePost getPost() {
+            return post;
+        }
+        
+        public double getScore() {
+            return score;
+        }
     }
 
     private PageResult<SharePostVO> buildPageResult(Page<SharePost> mpPage, Long currentUserId) {

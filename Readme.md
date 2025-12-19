@@ -1,18 +1,83 @@
 ## 启动程序
 
-1. 确保你的本地 MySQL 数据库在 3306 端口开放，MySQL 版本为 8，JDK 版本是 21，NodeJS 版本是 22
+### 环境要求
+- MySQL 8.0+ (端口 3306)
+- JDK 21
+- Node.js 22
+- Maven 3.6+
 
-2. 安装依赖并启动
+### 1. 初始化数据库
+
+**重要**：后端启动前必须先手动初始化数据库！
+
+#### 方式一：使用初始化脚本（推荐）
+
+**Windows:**
+```bash
+database\init-database.bat
+```
+
+**Linux/Mac:**
+```bash
+chmod +x database/init-database.sh
+./database/init-database.sh
+```
+
+#### 方式二：手动执行SQL
+
+```bash
+# 登录MySQL
+mysql -u root -p
+
+# 创建数据库
+CREATE DATABASE beverage_platform CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+# 执行表结构脚本
+mysql -u root -p beverage_platform < database/schema.sql
+
+# (可选) 导入测试数据
+mysql -u root -p beverage_platform < database/test-data.sql
+```
+
+### 2. 配置数据库连接
+
+编辑 `backend/src/main/resources/application.properties`：
+
+```properties
+spring.datasource.url=jdbc:mysql://localhost:3306/beverage_platform
+spring.datasource.username=root
+spring.datasource.password=your_password
+```
+
+### 3. 启动后端
+
 ```bash
 cd backend
 mvn install
 mvn spring-boot:run
 ```
+
+### 4. 启动前端
+
 ```bash
 cd frontend
 npm install
 npm run serve
 ```
+
+访问：http://localhost:8080
+
+---
+
+## 数据库管理
+
+数据库文件位于 `database/` 目录，与后端代码完全解耦：
+
+- `database/schema.sql` - 表结构定义
+- `database/test-data.sql` - 测试数据
+- `database/README.md` - 详细说明文档
+
+详见 [database/README.md](database/README.md)
 
 ## 实现情况
 
@@ -22,6 +87,7 @@ npm run serve
 - SF-3
 - SF-4
 - SF-5
+- SF-10
 - SF-13
 
 **仍需优化**:
@@ -31,7 +97,6 @@ npm run serve
 
 **未实现**:
 - SF-9
-- SF-10
 - SF-11
 - SF-12
 - SF-16

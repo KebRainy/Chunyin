@@ -80,5 +80,14 @@ export const circleApi = {
       method: 'post',
       data
     })
+  },
+
+  // 获取热门动态排行榜
+  getHotPosts: (timeDimension = 'WEEK', page = 1, pageSize = 12) => {
+    return request({
+      url: '/ranking/hot',
+      method: 'get',
+      params: { timeDimension, page, pageSize }
+    })
   }
 }

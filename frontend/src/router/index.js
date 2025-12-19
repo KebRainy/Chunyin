@@ -30,6 +30,22 @@ const routes = [
     component: () => import('@/views/beverage/BeverageDetail.vue')
   },
   {
+    path: '/bars',
+    name: 'BarList',
+    component: () => import('@/views/bar/BarList.vue')
+  },
+  {
+    path: '/bars/register',
+    name: 'BarRegister',
+    component: () => import('@/views/bar/BarRegister.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/bars/:id',
+    name: 'BarDetail',
+    component: () => import('@/views/bar/BarDetail.vue')
+  },
+  {
     path: '/announcements',
     name: 'AnnouncementList',
     component: () => import('@/views/announcement/AnnouncementList.vue')

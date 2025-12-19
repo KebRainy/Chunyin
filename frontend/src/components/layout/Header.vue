@@ -92,6 +92,7 @@ const navItems = [
   { path: '/', label: '广场' },
   { path: '/feed', label: '关注' },
   { path: '/nearby', label: '附近' },
+  { path: '/bars', label: '酒吧' },
   { path: '/wiki', label: '维基' }
 ]
 

@@ -785,3 +785,104 @@ CREATE TABLE IF NOT EXISTS daily_question_answer (
     FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
     UNIQUE KEY uk_daily_answer (question_id, user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 检查并删除旧的 bar 相关表，重新创建正确的表结构
+-- 删除顺序：bar_review -> bar -> bar_application（因为外键依赖）
+DROP TABLE IF EXISTS bar_review;
+DROP TABLE IF EXISTS bar;
+DROP TABLE IF EXISTS bar_application;
+
+-- 创建酒吧申请表（新表）
+CREATE TABLE IF NOT EXISTS bar_application (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    name VARCHAR(100) NOT NULL,
+    address VARCHAR(200) NOT NULL,
+    province VARCHAR(50) NOT NULL,
+    city VARCHAR(50) NOT NULL,
+    district VARCHAR(50),
+    opening_time TIME,
+    closing_time TIME,
+    contact_phone VARCHAR(20) NOT NULL,
+    description TEXT,
+    main_beverages VARCHAR(200),
+    applicant_id BIGINT NOT NULL,
+    status ENUM('PENDING', 'APPROVED', 'REJECTED') DEFAULT 'PENDING',
+    review_note TEXT,
+    reviewed_by BIGINT,
+    reviewed_at TIMESTAMP NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (applicant_id) REFERENCES user(id) ON DELETE CASCADE,
+    FOREIGN KEY (reviewed_by) REFERENCES user(id) ON DELETE SET NULL,
+    INDEX idx_application_status (status),
+    INDEX idx_application_applicant (applicant_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 创建正式酒吧表（只包含审核通过的酒吧）
+CREATE TABLE IF NOT EXISTS bar (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    application_id BIGINT UNIQUE,
+    name VARCHAR(100) NOT NULL,
+    address VARCHAR(200) NOT NULL,
+    province VARCHAR(50) NOT NULL,
+    city VARCHAR(50) NOT NULL,
+    district VARCHAR(50),
+    latitude DECIMAL(10,7),
+    longitude DECIMAL(10,7),
+    opening_time TIME,
+    closing_time TIME,
+    contact_phone VARCHAR(20) NOT NULL,
+    description TEXT,
+    main_beverages VARCHAR(200),
+    owner_id BIGINT NOT NULL,
+    avg_rating DECIMAL(3,2) DEFAULT 0.00,
+    review_count INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (application_id) REFERENCES bar_application(id) ON DELETE SET NULL,
+    FOREIGN KEY (owner_id) REFERENCES user(id) ON DELETE CASCADE,
+    INDEX idx_bar_city (city),
+    INDEX idx_bar_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE IF NOT EXISTS bar_review (
+    id BIGINT PRIMARY KEY AUTO_INCREMENT,
+    bar_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    rating INT NOT NULL COMMENT '评分 1-5',
+    content TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (bar_id) REFERENCES bar(id) ON DELETE CASCADE,
+    FOREIGN KEY (user_id) REFERENCES user(id) ON DELETE CASCADE,
+    UNIQUE KEY uk_bar_user_review (bar_id, user_id, is_active),
+    INDEX idx_bar_review_bar (bar_id),
+    INDEX idx_bar_review_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 插入测试数据：酒吧（仅在表为空时插入）
+INSERT IGNORE INTO bar (id, name, address, province, city, district, latitude, longitude, opening_time, closing_time, contact_phone, description, main_beverages, owner_id, avg_rating, review_count, created_at)
+VALUES 
+-- 上海酒吧
+(1, 'Speak Low 秘密客', '上海市黄浦区复兴中路579号', '上海市', '上海市', '黄浦区', 31.2231, 121.4737, '18:00:00', '02:00:00', '021-64012399', '隐藏在理发店后的秘密酒吧，以经典鸡尾酒和创意调酒闻名。', '鸡尾酒、威士忌', 1, 4.5, 0, NOW()),
+(2, 'Union Trading Company', '上海市黄浦区圆明园路169号协进大楼', '上海市', '上海市', '黄浦区', 31.2425, 121.4897, '17:00:00', '02:00:00', '021-60723428', '上海经典鸡尾酒吧，氛围优雅，适合商务聚会。', '鸡尾酒、金酒', 1, 4.3, 0, NOW()),
+(3, 'The Nest 巢', '上海市静安区铜仁路90弄4号', '上海市', '上海市', '静安区', 31.2304, 121.4520, '19:00:00', '03:00:00', '021-52376677', '位于老洋房的屋顶酒吧，视野开阔，调酒师技艺精湛。', '鸡尾酒、朗姆酒', 1, 4.6, 0, NOW()),
+
+-- 北京酒吧
+(4, 'Janes & Hooch', '北京市朝阳区工人体育场北路4号', '北京市', '北京市', '朝阳区', 39.9289, 116.4473, '18:00:00', '02:00:00', '010-64159871', '工体附近的时尚酒吧，经常有DJ表演。', '鸡尾酒、伏特加', 1, 4.2, 0, NOW()),
+(5, 'Modo Urban Deli', '北京市东城区五道营胡同19号', '北京市', '北京市', '东城区', 39.9456, 116.4106, '11:00:00', '23:00:00', '010-64025805', '胡同里的创意餐酒吧，白天是咖啡馆，晚上是酒吧。', '精酿啤酒、葡萄酒', 1, 4.4, 0, NOW()),
+
+-- 广州酒吧
+(6, 'Hope & Sesame 希望与芝麻', '广州市天河区天河路228号正佳广场', '广东省', '广州市', '天河区', 23.1367, 113.3230, '17:00:00', '02:00:00', '020-38732288', '屡获殊荣的鸡尾酒吧，以中式元素融合西方调酒技艺著称。', '鸡尾酒、白酒', 1, 4.7, 0, NOW()),
+(7, 'The Happy Monk', '广州市天河区天河北路都市华庭天怡阁', '广东省', '广州市', '天河区', 23.1486, 113.3267, '12:00:00', '02:00:00', '020-38731535', '比利时风格酒吧，提供丰富的精酿啤酒选择。', '精酿啤酒、比利时啤酒', 1, 4.1, 0, NOW()),
+
+-- 成都酒吧
+(8, 'Jing Bar 廊桥', '成都市锦江区下东大街段166号', '四川省', '成都市', '锦江区', 30.6598, 104.0861, '18:00:00', '02:00:00', '028-86259999', '现代中式风格的鸡尾酒吧，环境优雅。', '鸡尾酒、中国烈酒', 1, 4.3, 0, NOW()),
+(9, 'Tipsy 微醺', '成都市武侯区玉林西路', '四川省', '成都市', '武侯区', 30.6409, 104.0431, '19:00:00', '03:00:00', '028-85555678', '玉林路上的小酒馆，氛围轻松，价格亲民。', '精酿啤酒、鸡尾酒', 1, 4.0, 0, NOW()),
+
+-- 杭州酒吧
+(10, 'Chez Pop', '杭州市上城区南山路200号', '浙江省', '杭州市', '上城区', 30.2489, 120.1363, '17:00:00', '01:00:00', '0571-87065890', '西湖边的小资酒吧，适合约会和聚会。', '葡萄酒、鸡尾酒', 1, 4.2, 0, NOW());

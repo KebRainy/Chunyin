@@ -1,5 +1,6 @@
 package com.example.demo1.controller;
 
+import com.example.demo1.common.enums.UserRole;
 import com.example.demo1.common.exception.BusinessException;
 import com.example.demo1.common.response.PageResult;
 import com.example.demo1.common.response.Result;
@@ -15,6 +16,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -118,5 +120,33 @@ public class CircleController {
             throw new BusinessException(401, "请先登录");
         }
         return Result.success(sharePostService.createComment(id, principal.getId(), request));
+    }
+
+    /**
+     * 删除动态
+     */
+    @DeleteMapping("/posts/{id}")
+    public Result<Void> deletePost(@PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) {
+            throw new BusinessException(401, "请先登录");
+        }
+        boolean isAdmin = UserRole.ADMIN.equals(principal.getRole());
+        sharePostService.deletePost(id, principal.getId(), isAdmin);
+        return Result.success();
+    }
+
+    /**
+     * 删除评论
+     */
+    @DeleteMapping("/comments/{id}")
+    public Result<Void> deleteComment(@PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) {
+            throw new BusinessException(401, "请先登录");
+        }
+        boolean isAdmin = UserRole.ADMIN.equals(principal.getRole());
+        sharePostService.deleteComment(id, principal.getId(), isAdmin);
+        return Result.success();
     }
 }

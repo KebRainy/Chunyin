@@ -17,6 +17,7 @@ export const useUserStore = defineStore('user', {
   actions: {
     setUserInfo(userInfo) {
       this.userInfo = userInfo
+      this.initialized = true  // 标记已初始化
     },
 
     async fetchUserInfo() {

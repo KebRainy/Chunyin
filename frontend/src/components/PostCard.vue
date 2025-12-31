@@ -1,5 +1,10 @@
 <template>
-  <div :class="['post-card', layout]" @click="$emit('select', post)">
+  <div :class="['post-card', layout, { 'is-recommended': post.isRecommended }]" @click="$emit('select', post)">
+    <!-- 推荐标识 -->
+    <div v-if="post.isRecommended" class="recommend-badge">
+      <el-icon><MagicStick /></el-icon>
+      <span>猜你喜欢</span>
+    </div>
     <div class="card-media" v-if="post.imageUrls?.length">
       <img
         :src="post.imageUrls[0]"
@@ -52,7 +57,7 @@
 <script setup>
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
-import { Picture, View, GobletFull, Heart, Location } from '@element-plus/icons-vue'
+import { Picture, View, GobletFull, Heart, Location, MagicStick } from '@element-plus/icons-vue'
 
 dayjs.extend(relativeTime)
 
@@ -105,11 +110,43 @@ const formatTime = (value) => {
   flex-direction: column;
   transition: transform 0.2s, box-shadow 0.2s;
   break-inside: avoid;
+  position: relative;
 }
 
 .post-card:hover {
   box-shadow: 0 18px 28px rgba(15, 23, 42, 0.08);
   transform: translateY(-2px);
+}
+
+/* 推荐卡片样式 */
+.post-card.is-recommended {
+  border: 1px solid #e6d9f7;
+  background: linear-gradient(135deg, #fdfbff 0%, #fff 100%);
+}
+
+.post-card.is-recommended:hover {
+  box-shadow: 0 18px 28px rgba(139, 92, 246, 0.12);
+}
+
+.recommend-badge {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  background: linear-gradient(135deg, #8b5cf6 0%, #a78bfa 100%);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 999px;
+  box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+}
+
+.recommend-badge .el-icon {
+  font-size: 12px;
 }
 
 .card-media {

@@ -63,6 +63,10 @@ const submitForm = () => {
       userStore.setUserInfo(res.data.profile)
       ElMessage.success('注册成功，欢迎加入！')
       router.push('/')
+    } catch (error) {
+      // 错误已在 request 拦截器中通过 ElMessage 显示
+      // 这里只需要捕获错误防止页面崩溃
+      console.error('注册失败:', error)
     } finally {
       loading.value = false
     }

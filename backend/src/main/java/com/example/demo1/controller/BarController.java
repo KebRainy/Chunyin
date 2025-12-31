@@ -1,5 +1,6 @@
 package com.example.demo1.controller;
 
+import com.example.demo1.common.enums.BarSortStrategy;
 import com.example.demo1.common.enums.BarStatus;
 import com.example.demo1.common.exception.BusinessException;
 import com.example.demo1.common.response.Result;
@@ -47,28 +48,27 @@ public class BarController {
     }
 
     /**
-     * 搜索附近的酒吧
+     * 搜索附近的酒吧（SF-11: 附近最佳酒吧排序）
+     * 
      * @param latitude 纬度
      * @param longitude 经度
      * @param radiusKm 搜索半径（公里），默认10公里
+     * @param sortStrategy 排序策略：COMPREHENSIVE(综合), DISTANCE_FIRST(距离优先), 
+     *                     RATING_FIRST(评分优先), DISTANCE_ONLY(仅距离), RATING_ONLY(仅评分)
      */
     @GetMapping("/nearby")
-    public Result<List<BarVO>> searchNearbyBars(@RequestParam Double latitude,
-                                                @RequestParam Double longitude,
-                                                @RequestParam(defaultValue = "10.0") Double radiusKm) {
-        // #region agent log
-        try {java.nio.file.Files.write(java.nio.file.Paths.get("e:\\学习\\大三\\软件工程\\期末项目\\Chunyin\\.cursor\\debug.log"),("{\"location\":\"BarController.searchNearbyBars\",\"message\":\"nearby search called\",\"data\":{\"latitude\":"+latitude+",\"longitude\":"+longitude+",\"radiusKm\":"+radiusKm+"},\"timestamp\":"+System.currentTimeMillis()+",\"sessionId\":\"debug-session\",\"runId\":\"nearby\",\"hypothesisId\":\"A\"}\n").getBytes(),java.nio.file.StandardOpenOption.CREATE,java.nio.file.StandardOpenOption.APPEND);} catch(Exception e){}
-        // #endregion
+    public Result<List<BarVO>> searchNearbyBars(
+            @RequestParam Double latitude,
+            @RequestParam Double longitude,
+            @RequestParam(defaultValue = "10.0") Double radiusKm,
+            @RequestParam(defaultValue = "COMPREHENSIVE") BarSortStrategy sortStrategy) {
         if (latitude == null || longitude == null) {
             throw new BusinessException("请提供有效的经纬度坐标");
         }
         if (radiusKm <= 0 || radiusKm > 100) {
             throw new BusinessException("搜索半径必须在0-100公里之间");
         }
-        List<BarVO> bars = barService.searchNearbyBars(latitude, longitude, radiusKm);
-        // #region agent log
-        try {java.nio.file.Files.write(java.nio.file.Paths.get("e:\\学习\\大三\\软件工程\\期末项目\\Chunyin\\.cursor\\debug.log"),("{\"location\":\"BarController.searchNearbyBars:result\",\"message\":\"nearby search result\",\"data\":{\"count\":"+bars.size()+"},\"timestamp\":"+System.currentTimeMillis()+",\"sessionId\":\"debug-session\",\"runId\":\"nearby\",\"hypothesisId\":\"B\"}\n").getBytes(),java.nio.file.StandardOpenOption.CREATE,java.nio.file.StandardOpenOption.APPEND);} catch(Exception e){}
-        // #endregion
+        List<BarVO> bars = barService.searchNearbyBars(latitude, longitude, radiusKm, sortStrategy);
         return Result.success(bars);
     }
 

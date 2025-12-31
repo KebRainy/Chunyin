@@ -108,6 +108,7 @@ import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import { useRouter, onBeforeRouteLeave } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
 import { circleApi } from '@/api/circle'
+import { recommendApi } from '@/api/recommend'
 import { fetchTodayQuestion, answerDailyQuestion } from '@/api/dailyQuestion'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import dayjs from 'dayjs'
@@ -128,6 +129,10 @@ const currentPage = ref(1)
 const pageSize = ref(12)
 const hasMore = ref(true)
 
+// 推荐动态
+const recommendedPosts = ref([])
+const RECOMMEND_INSERT_INTERVAL = 4 // 每隔4条普通动态插入1条推荐
+
 // 每日一题
 const dailyQuestion = ref(null)
 const questionLoading = ref(false)
@@ -135,6 +140,49 @@ const submittingAnswer = ref(false)
 const todayDate = computed(() => dayjs().format('M月D日'))
 const answered = computed(() => dailyQuestion.value?.answered || false)
 const selectedOption = computed(() => dailyQuestion.value?.selectedOption ?? null)
+
+// 加载推荐动态
+const loadRecommendedPosts = async () => {
+  try {
+    const response = await recommendApi.getRecommendedPosts(1, 10)
+    const items = response.data?.items || []
+    recommendedPosts.value = items
+  } catch (error) {
+    console.error('Failed to load recommended posts:', error)
+  }
+}
+
+// 混合普通动态和推荐动态
+const mixPostsWithRecommendations = (normalPosts, recommendations) => {
+  if (!recommendations || recommendations.length === 0) {
+    return normalPosts
+  }
+
+  const result = []
+  let recIndex = 0
+  const usedRecIds = new Set()
+
+  for (let i = 0; i < normalPosts.length; i++) {
+    result.push(normalPosts[i])
+
+    // 每隔 RECOMMEND_INSERT_INTERVAL 条插入一条推荐
+    if ((i + 1) % RECOMMEND_INSERT_INTERVAL === 0 && recIndex < recommendations.length) {
+      // 找到一条未被使用且不在普通列表中的推荐
+      while (recIndex < recommendations.length) {
+        const rec = recommendations[recIndex]
+        const isDuplicate = normalPosts.some(p => p.id === rec.id) || usedRecIds.has(rec.id)
+        recIndex++
+        if (!isDuplicate) {
+          usedRecIds.add(rec.id)
+          result.push({ ...rec, isRecommended: true })
+          break
+        }
+      }
+    }
+  }
+
+  return result
+}
 
 const loadPosts = async () => {
   loading.value = true
@@ -144,8 +192,10 @@ const loadPosts = async () => {
     const items = pageData.items || []
 
     if (currentPage.value === 1) {
-      posts.value = items
+      // 首次加载时混入推荐内容
+      posts.value = mixPostsWithRecommendations(items, recommendedPosts.value)
     } else {
+      // 加载更多时直接追加
       posts.value.push(...items)
     }
     hasMore.value = items.length >= pageSize.value
@@ -267,8 +317,10 @@ onBeforeRouteLeave((to, from, next) => {
   ).then(() => next()).catch(() => next(false))
 })
 
-onMounted(() => {
+onMounted(async () => {
   window.addEventListener('beforeunload', beforeUnloadHandler)
+  // 先加载推荐内容，再加载普通动态
+  await loadRecommendedPosts()
   loadPosts()
   loadDailyQuestion()
 })

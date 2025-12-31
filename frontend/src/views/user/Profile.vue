@@ -168,16 +168,16 @@
             <h3>我的足迹</h3>
           </div>
           <div class="filter-bar">
-            <el-select v-model="footprintFilter.days" size="small">
+            <el-select v-model="footprintFilter.days" size="small" @change="loadFootprints">
               <el-option label="3 天以内" :value="3" />
               <el-option label="7 天以内" :value="7" />
+              <el-option label="30 天以内" :value="30" />
             </el-select>
-            <el-select v-model="footprintFilter.type" size="small">
+            <el-select v-model="footprintFilter.type" size="small" @change="loadFootprints">
               <el-option label="全部" value="ALL" />
               <el-option label="动态" value="POST" />
               <el-option label="维基" value="WIKI" />
             </el-select>
-            <el-button size="small" @click="loadFootprints">应用</el-button>
           </div>
         </div>
         <div v-if="footprints.loading" class="loading">
@@ -186,13 +186,52 @@
         <div v-else-if="footprints.items.length === 0" class="empty">
           <el-empty description="最近没有足迹记录" />
         </div>
-        <div v-else class="timeline">
-          <div v-for="item in footprints.items" :key="item.id" class="timeline-item">
-            <div class="dot"></div>
-            <div>
-              <h4>{{ item.title }}</h4>
-              <p>{{ item.summary }}</p>
-              <small>{{ formatTime(item.visitedAt) }}</small>
+        <div v-else class="footprint-list">
+          <div 
+            v-for="(group, date) in groupedFootprints" 
+            :key="date" 
+            class="footprint-group"
+          >
+            <div class="group-date">{{ date }}</div>
+            <div class="group-items">
+              <div 
+                v-for="item in group" 
+                :key="item.id" 
+                class="footprint-item"
+                @click="openFootprint(item)"
+              >
+                <div class="footprint-cover">
+                  <img 
+                    v-if="item.coverUrl" 
+                    :src="item.coverUrl" 
+                    :alt="item.title"
+                  />
+                  <div v-else class="cover-placeholder">
+                    <el-icon v-if="item.targetType === 'POST'"><Document /></el-icon>
+                    <el-icon v-else><Notebook /></el-icon>
+                  </div>
+                </div>
+                <div class="footprint-info">
+                  <div class="footprint-title">
+                    <el-tag 
+                      :type="item.targetType === 'POST' ? 'primary' : 'success'" 
+                      size="small"
+                      effect="plain"
+                    >
+                      {{ item.targetType === 'POST' ? '动态' : '维基' }}
+                    </el-tag>
+                    <span class="title-text">{{ item.title || '无标题' }}</span>
+                  </div>
+                  <p class="footprint-summary">{{ item.summary || '暂无描述' }}</p>
+                  <div class="footprint-meta">
+                    <span class="visit-time">
+                      <el-icon><Clock /></el-icon>
+                      {{ formatDetailTime(item.visitedAt) }}
+                    </span>
+                  </div>
+                </div>
+                <el-icon class="arrow-icon"><ArrowRight /></el-icon>
+              </div>
             </div>
           </div>
         </div>
@@ -215,6 +254,7 @@ import { useUserStore } from '@/store/modules/user'
 import { circleApi } from '@/api/circle'
 import { getCollections, getFootprints, updateProfile } from '@/api/user'
 import { ElMessage } from 'element-plus'
+import { Document, Notebook, Clock, ArrowRight } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -272,6 +312,19 @@ const filteredCollections = computed(() => {
   )
 })
 
+// 按日期分组足迹
+const groupedFootprints = computed(() => {
+  const groups = {}
+  for (const item of footprints.items) {
+    const date = dayjs(item.visitedAt).format('YYYY年MM月DD日')
+    if (!groups[date]) {
+      groups[date] = []
+    }
+    groups[date].push(item)
+  }
+  return groups
+})
+
 const indicatorStyle = computed(() => {
   const activeIndex = Math.max(0, tabs.findIndex(item => item.key === activeTab.value))
   const width = 100 / tabs.length
@@ -292,6 +345,30 @@ const getPostCover = (post) => {
 }
 
 const formatTime = (time) => dayjs(time).format('YYYY.MM.DD HH:mm')
+
+const formatDetailTime = (time) => {
+  const date = dayjs(time)
+  const now = dayjs()
+  if (date.isSame(now, 'day')) {
+    return `今天 ${date.format('HH:mm')}`
+  }
+  if (date.isSame(now.subtract(1, 'day'), 'day')) {
+    return `昨天 ${date.format('HH:mm')}`
+  }
+  return date.format('MM-DD HH:mm')
+}
+
+const openFootprint = (item) => {
+  if (item.targetType === 'POST') {
+    router.push(`/posts/${item.targetId}`)
+  } else if (item.targetType === 'WIKI') {
+    if (item.slug) {
+      router.push(`/wiki/${item.slug}`)
+    } else {
+      router.push(`/wiki/${item.targetId}`)
+    }
+  }
+}
 
 const loadPosts = async () => {
   posts.loading = true
@@ -716,6 +793,129 @@ watch(
   color: #909399;
 }
 
+/* 足迹列表样式 */
+.footprint-list {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.footprint-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.group-date {
+  font-size: 14px;
+  font-weight: 600;
+  color: #606266;
+  padding-left: 4px;
+  border-left: 3px solid #2f54eb;
+  padding-left: 12px;
+}
+
+.group-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.footprint-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 16px;
+  background: #fafbfc;
+  border: 1px solid #f0f2f5;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.footprint-item:hover {
+  background: #f5f7fa;
+  border-color: #e4e7ed;
+  transform: translateX(4px);
+}
+
+.footprint-cover {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: #e8eaed;
+}
+
+.footprint-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.cover-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #909399;
+  font-size: 24px;
+}
+
+.footprint-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.footprint-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.title-text {
+  font-weight: 500;
+  color: #1f2d3d;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.footprint-summary {
+  margin: 0;
+  font-size: 13px;
+  color: #909399;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.footprint-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  font-size: 12px;
+  color: #a0a3ad;
+}
+
+.visit-time {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.arrow-icon {
+  color: #c0c4cc;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+/* 旧的时间线样式（保留兼容） */
 .timeline {
   display: flex;
   flex-direction: column;

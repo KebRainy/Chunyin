@@ -210,6 +210,9 @@ const handleSubmit = async () => {
       ElMessage.success('已提交，等待审核')
     }
     router.push('/wiki')
+  } catch (error) {
+    console.error('提交失败:', error)
+    ElMessage.error(error.response?.data?.message || '提交失败，请稍后再试')
   } finally {
     loading.value = false
   }

@@ -114,6 +114,12 @@ const routes = [
     path: '/users/:id',
     name: 'UserHome',
     component: () => import('@/views/user/UserHome.vue')
+  },
+  {
+    path: '/admin/moderation',
+    name: 'AdminModeration',
+    component: () => import('@/views/admin/AdminModeration.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
   }
 ]
 
@@ -130,6 +136,8 @@ router.beforeEach(async (to, from, next) => {
 
   if (to.meta.requiresAuth && !userStore.isLoggedIn) {
     next('/login')
+  } else if (to.meta.requiresAdmin && !userStore.isAdmin) {
+    next('/')
   } else {
     next()
   }

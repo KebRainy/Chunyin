@@ -29,5 +29,7 @@ public class BarVO {
     
     // 距离（公里），仅在附近搜索时返回
     private Double distance;
+    
+    // 综合评分（用于排序），仅在附近搜索时返回
+    private Double score;
 }
-

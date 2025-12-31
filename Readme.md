@@ -1,6 +1,6 @@
 ## 启动程序
 
-### 环境要求
+#### 环境要求
 - MySQL 8.0+ (端口 3306)
 - JDK 21
 - Node.js 22
@@ -10,34 +10,7 @@
 
 **重要**：后端启动前必须先手动初始化数据库！
 
-#### 方式一：使用初始化脚本（推荐）
-
-**Windows:**
-```bash
-database\init-database.bat
-```
-
-**Linux/Mac:**
-```bash
-chmod +x database/init-database.sh
-./database/init-database.sh
-```
-
-#### 方式二：手动执行SQL
-
-```bash
-# 登录MySQL
-mysql -u root -p
-
-# 创建数据库
-CREATE DATABASE beverage_platform CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
-# 执行表结构脚本
-mysql -u root -p beverage_platform < database/schema.sql
-
-# (可选) 导入测试数据
-mysql -u root -p beverage_platform < database/test-data.sql
-```
+在Navicat中导入beverage_platform.sql_
 
 ### 2. 配置数据库连接
 
@@ -67,17 +40,6 @@ npm run serve
 
 访问：http://localhost:8080
 
----
-
-## 数据库管理
-
-数据库文件位于 `database/` 目录，与后端代码完全解耦：
-
-- `database/schema.sql` - 表结构定义
-- `database/test-data.sql` - 测试数据
-- `database/README.md` - 详细说明文档
-
-详见 [database/README.md](database/README.md)
 
 ## 实现情况
 
@@ -88,17 +50,17 @@ npm run serve
 - SF-4
 - SF-5
 - SF-10
+- SF-11
 - SF-13
 
 **仍需优化**:
 - SF-6: 缺少私信控制
 - SF-8: 缺少编辑控制，编辑器界面仍需优化
 - SF-7：缺少认证流程
-
+- SF-9：推荐系统不完善
+- SF-12：缺少模型与API接入
+-
 **未实现**:
-- SF-9
-- SF-11
-- SF-12
 - SF-16
 
 在有限的时间内**可能无需实现**:

@@ -82,6 +82,22 @@ export const circleApi = {
     })
   },
 
+  // 删除动态
+  deletePost: (id) => {
+    return request({
+      url: `/circle/posts/${id}`,
+      method: 'delete'
+    })
+  },
+
+  // 删除评论
+  deleteComment: (id) => {
+    return request({
+      url: `/circle/comments/${id}`,
+      method: 'delete'
+    })
+  },
+
   // 获取热门动态排行榜
   getHotPosts: (timeDimension = 'WEEK', page = 1, pageSize = 12) => {
     return request({

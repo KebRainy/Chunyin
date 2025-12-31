@@ -2,7 +2,9 @@ package com.example.demo1.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.example.demo1.common.enums.BehaviorType;
 import com.example.demo1.common.enums.CollectionTargetType;
+import com.example.demo1.common.enums.TargetType;
 import com.example.demo1.common.enums.TimeDimension;
 import com.example.demo1.common.exception.BusinessException;
 import com.example.demo1.common.response.PageResult;
@@ -53,6 +55,9 @@ public class SharePostService {
     private final CollectionService collectionService;
     private final UserService userService;
     private final FileUrlResolver fileUrlResolver;
+    private final TagExtractionService tagExtractionService;
+    private final UserBehaviorService userBehaviorService;
+    private final ContentModerationService contentModerationService;
 
     public SharePostVO createPost(Long userId, SharePostRequest request, String ipAddress) {
         SharePost post = new SharePost();
@@ -77,6 +82,9 @@ public class SharePostService {
                 sharePostImageMapper.insert(image);
             }
         }
+
+        // 自动提取标签并保存
+        tagExtractionService.extractAndSaveTags(post.getId(), request.getContent(), request.getTags());
 
         User author = userService.getUserById(userId);
         return toVo(post, author, Collections.emptySet(), Collections.emptySet());
@@ -126,6 +134,8 @@ public class SharePostService {
             int viewCount = post.getViewCount() == null ? 0 : post.getViewCount();
             post.setViewCount(viewCount + 1);
             sharePostMapper.updateById(post);
+            // 记录浏览行为
+            userBehaviorService.recordBehavior(currentUserId, TargetType.POST, postId, BehaviorType.VIEW);
         }
         User author = userService.getUserById(post.getUserId());
         Set<Long> likedIds = resolveLikedIds(currentUserId, Collections.singletonList(post.getId()));
@@ -156,6 +166,8 @@ public class SharePostService {
         sharePostLikeMapper.insert(like);
         post.setLikeCount(likeCount + 1);
         sharePostMapper.updateById(post);
+        // 记录点赞行为
+        userBehaviorService.recordBehavior(userId, TargetType.POST, postId, BehaviorType.LIKE);
         return true;
     }
 
@@ -165,7 +177,12 @@ public class SharePostService {
         if (post == null) {
             throw new BusinessException(404, "动态不存在");
         }
-        return collectionService.togglePostFavorite(userId, post);
+        boolean favorited = collectionService.togglePostFavorite(userId, post);
+        // 记录收藏行为（仅在收藏时记录）
+        if (favorited) {
+            userBehaviorService.recordBehavior(userId, TargetType.POST, postId, BehaviorType.FAVORITE);
+        }
+        return favorited;
     }
 
     public List<SharePostCommentVO> listComments(Long postId) {
@@ -207,6 +224,10 @@ public class SharePostService {
         return roots;
     }
 
+    /**
+     * 创建评论
+     * SF-12: 集成内容审核功能
+     */
     @Transactional
     public SharePostCommentVO createComment(Long postId, Long userId, SharePostCommentRequest request) {
         SharePost post = sharePostMapper.selectById(postId);
@@ -219,16 +240,34 @@ public class SharePostService {
                 throw new BusinessException("回复的评论不存在");
             }
         }
+        
+        // SF-12: 内容审核
+        String content = request.getContent();
+        ContentModerationService.ModerationResult moderationResult = 
+                contentModerationService.moderate(content);
+        
+        // 如果内容被直接拒绝，抛出异常
+        if (moderationResult.isRejected()) {
+            throw new BusinessException("评论内容包含违规信息，无法发布");
+        }
+        
+        // 如果需要人工审核，过滤敏感词后发布
+        if (moderationResult.needsReview()) {
+            content = contentModerationService.filterContent(content);
+        }
+        
         SharePostComment comment = new SharePostComment();
         comment.setPostId(postId);
         comment.setUserId(userId);
         comment.setParentId(request.getParentId());
-        comment.setContent(request.getContent());
+        comment.setContent(content);
         comment.setLikeCount(0);
         sharePostCommentMapper.insert(comment);
         int commentCount = post.getCommentCount() == null ? 0 : post.getCommentCount();
         post.setCommentCount(commentCount + 1);
         sharePostMapper.updateById(post);
+        // 记录评论行为
+        userBehaviorService.recordBehavior(userId, TargetType.POST, postId, BehaviorType.COMMENT);
         User author = userService.getUserById(userId);
         return SharePostCommentVO.builder()
             .id(comment.getId())
@@ -250,6 +289,77 @@ public class SharePostService {
         return posts.stream()
             .map(post -> toVo(post, userMap.get(post.getUserId()), Collections.emptySet(), Collections.emptySet()))
             .collect(Collectors.toList());
+    }
+
+    /**
+     * 删除动态
+     * 只有动态作者或管理员可以删除
+     */
+    @Transactional
+    public void deletePost(Long postId, Long userId, boolean isAdmin) {
+        SharePost post = sharePostMapper.selectById(postId);
+        if (post == null) {
+            throw new BusinessException(404, "动态不存在");
+        }
+        
+        // 检查权限：只有作者或管理员可以删除
+        if (!post.getUserId().equals(userId) && !isAdmin) {
+            throw new BusinessException(403, "无权删除该动态");
+        }
+        
+        // 删除关联的图片记录
+        sharePostImageMapper.delete(new LambdaQueryWrapper<SharePostImage>()
+            .eq(SharePostImage::getSharePostId, postId));
+        
+        // 删除关联的点赞记录
+        sharePostLikeMapper.delete(new LambdaQueryWrapper<SharePostLike>()
+            .eq(SharePostLike::getPostId, postId));
+        
+        // 删除关联的评论
+        sharePostCommentMapper.delete(new LambdaQueryWrapper<SharePostComment>()
+            .eq(SharePostComment::getPostId, postId));
+        
+        // 删除关联的标签
+        tagExtractionService.deletePostTags(postId);
+        
+        // 删除动态本身
+        sharePostMapper.deleteById(postId);
+    }
+
+    /**
+     * 删除评论
+     * 只有评论作者、动态作者或管理员可以删除
+     */
+    @Transactional
+    public void deleteComment(Long commentId, Long userId, boolean isAdmin) {
+        SharePostComment comment = sharePostCommentMapper.selectById(commentId);
+        if (comment == null) {
+            throw new BusinessException(404, "评论不存在");
+        }
+        
+        // 获取动态信息，检查是否为动态作者
+        SharePost post = sharePostMapper.selectById(comment.getPostId());
+        boolean isPostAuthor = post != null && post.getUserId().equals(userId);
+        boolean isCommentAuthor = comment.getUserId().equals(userId);
+        
+        // 检查权限
+        if (!isCommentAuthor && !isPostAuthor && !isAdmin) {
+            throw new BusinessException(403, "无权删除该评论");
+        }
+        
+        // 先删除子评论（回复）
+        sharePostCommentMapper.delete(new LambdaQueryWrapper<SharePostComment>()
+            .eq(SharePostComment::getParentId, commentId));
+        
+        // 删除评论本身
+        sharePostCommentMapper.deleteById(commentId);
+        
+        // 更新动态评论数
+        if (post != null) {
+            int commentCount = post.getCommentCount() == null ? 0 : post.getCommentCount();
+            post.setCommentCount(Math.max(0, commentCount - 1));
+            sharePostMapper.updateById(post);
+        }
     }
 
     /**

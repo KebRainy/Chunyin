@@ -35,4 +35,9 @@ public class User {
     private LocalDateTime updatedAt;
 
     private Boolean isActive = true;
+    
+    /**
+     * 禁言截止时间
+     */
+    private LocalDateTime muteUntil;
 }

@@ -44,6 +44,9 @@
                 <el-dropdown-menu>
                   <el-dropdown-item command="profile">个人中心</el-dropdown-item>
                   <el-dropdown-item command="settings">设置</el-dropdown-item>
+                  <el-dropdown-item v-if="userStore.isAdmin" command="admin" divided>
+                    <span style="color: #409EFF; font-weight: 600;">管理后台</span>
+                  </el-dropdown-item>
                   <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
                 </el-dropdown-menu>
               </template>
@@ -155,6 +158,8 @@ const handleCommand = async (command) => {
     router.push('/user/profile')
   } else if (command === 'settings') {
     router.push('/user/settings')
+  } else if (command === 'admin') {
+    router.push('/admin/moderation')
   } else if (command === 'logout') {
     await userStore.logout()
     ElMessage.success('已退出登录')

@@ -2,6 +2,7 @@ package com.example.demo1.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.example.demo1.common.enums.BarSortStrategy;
 import com.example.demo1.common.enums.BarStatus;
 import com.example.demo1.common.exception.BusinessException;
 import com.example.demo1.dto.request.BarRegisterRequest;
@@ -35,6 +36,7 @@ public class BarService {
     private final BarApplicationMapper barApplicationMapper;
     private final BarReviewMapper barReviewMapper;
     private final UserMapper userMapper;
+    private final ContentModerationService contentModerationService;
 
     /**
      * 注册酒吧（提交申请）
@@ -71,10 +73,24 @@ public class BarService {
     }
 
     /**
-     * 搜索附近的酒吧
+     * 搜索附近的酒吧（默认综合排序）
      * 直接使用数据库中存储的经纬度计算距离
      */
     public List<BarVO> searchNearbyBars(Double userLatitude, Double userLongitude, Double radiusKm) {
+        return searchNearbyBars(userLatitude, userLongitude, radiusKm, BarSortStrategy.COMPREHENSIVE);
+    }
+    
+    /**
+     * 搜索附近的酒吧（支持自定义排序策略）
+     * SF-11: 附近最佳酒吧排序
+     * 
+     * @param userLatitude 用户纬度
+     * @param userLongitude 用户经度
+     * @param radiusKm 搜索半径（公里）
+     * @param sortStrategy 排序策略
+     * @return 排序后的酒吧列表
+     */
+    public List<BarVO> searchNearbyBars(Double userLatitude, Double userLongitude, Double radiusKm, BarSortStrategy sortStrategy) {
         // 获取所有活跃且有经纬度信息的酒吧
         LambdaQueryWrapper<Bar> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Bar::getIsActive, true)
@@ -97,10 +113,64 @@ public class BarService {
                     return vo;
                 })
                 .filter(vo -> vo.getDistance() <= radiusKm)
-                .sorted((a, b) -> Double.compare(a.getDistance(), b.getDistance()))
                 .collect(Collectors.toList());
         
-        return nearbyBars;
+        // 根据排序策略进行加权排序
+        return sortBarsByStrategy(nearbyBars, sortStrategy, radiusKm);
+    }
+    
+    /**
+     * 根据排序策略对酒吧列表进行加权排序
+     * 
+     * 排序算法说明：
+     * 1. 距离分数 = 1 - (distance / maxDistance)，距离越近分数越高
+     * 2. 评分分数 = avgRating / 5.0，评分越高分数越高
+     * 3. 综合分数 = 距离分数 * 距离权重 + 评分分数 * 评分权重
+     * 
+     * @param bars 酒吧列表
+     * @param strategy 排序策略
+     * @param maxDistance 最大距离（用于归一化）
+     * @return 排序后的列表
+     */
+    private List<BarVO> sortBarsByStrategy(List<BarVO> bars, BarSortStrategy strategy, double maxDistance) {
+        if (bars.isEmpty()) {
+            return bars;
+        }
+        
+        // 计算每个酒吧的综合分数
+        for (BarVO bar : bars) {
+            double score = calculateBarScore(bar, strategy, maxDistance);
+            bar.setScore(score);
+        }
+        
+        // 按综合分数降序排序
+        return bars.stream()
+                .sorted((a, b) -> Double.compare(b.getScore(), a.getScore()))
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * 计算单个酒吧的综合分数
+     */
+    private double calculateBarScore(BarVO bar, BarSortStrategy strategy, double maxDistance) {
+        // 距离分数：距离越近分数越高（0-1之间）
+        double distanceScore = 1.0 - (bar.getDistance() / maxDistance);
+        distanceScore = Math.max(0, Math.min(1, distanceScore)); // 确保在0-1之间
+        
+        // 评分分数：评分越高分数越高（0-1之间）
+        double ratingScore = (bar.getAvgRating() != null ? bar.getAvgRating() : 0.0) / 5.0;
+        ratingScore = Math.max(0, Math.min(1, ratingScore)); // 确保在0-1之间
+        
+        // 额外加权：评价数量多的酒吧更可信
+        int reviewCount = bar.getReviewCount() != null ? bar.getReviewCount() : 0;
+        double reviewBonus = Math.min(reviewCount / 100.0, 0.1); // 最多加0.1分
+        
+        // 计算综合分数
+        double score = distanceScore * strategy.getDistanceWeight() 
+                     + ratingScore * strategy.getRatingWeight()
+                     + reviewBonus;
+        
+        return score;
     }
     
     /**
@@ -207,6 +277,7 @@ public class BarService {
 
     /**
      * 添加酒吧评价
+     * SF-12: 集成内容审核功能
      */
     @Transactional
     public Long addBarReview(BarReviewRequest request, Long userId) {
@@ -227,12 +298,29 @@ public class BarService {
             throw new BusinessException("您已经评价过该酒吧");
         }
 
+        // SF-12: 内容审核
+        String content = request.getContent();
+        if (content != null && !content.trim().isEmpty()) {
+            ContentModerationService.ModerationResult moderationResult = 
+                    contentModerationService.moderate(content);
+            
+            // 如果内容被直接拒绝，抛出异常
+            if (moderationResult.isRejected()) {
+                throw new BusinessException("评价内容包含违规信息，无法发布");
+            }
+            
+            // 如果需要人工审核，过滤敏感词后发布
+            if (moderationResult.needsReview()) {
+                content = contentModerationService.filterContent(content);
+            }
+        }
+
         // 添加评价
         BarReview review = new BarReview();
         review.setBarId(request.getBarId());
         review.setUserId(userId);
         review.setRating(request.getRating());
-        review.setContent(request.getContent());
+        review.setContent(content);
 
         barReviewMapper.insert(review);
 
@@ -380,4 +468,3 @@ public class BarService {
                 .build();
     }
 }
-

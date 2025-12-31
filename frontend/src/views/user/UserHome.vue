@@ -110,6 +110,9 @@ const toggleFollow = async () => {
       profile.value.following = true
       profile.value.followerCount += 1
     }
+  } catch (error) {
+    console.error('关注操作失败:', error)
+    ElMessage.error(error.response?.data?.message || '操作失败，请稍后再试')
   } finally {
     followLoading.value = false
   }
@@ -131,6 +134,9 @@ const sendMessageToUser = async () => {
     ElMessage.success('私信已发送')
     messageForm.content = ''
     messageVisible.value = false
+  } catch (error) {
+    console.error('发送私信失败:', error)
+    ElMessage.error(error.response?.data?.message || '发送失败，请稍后再试')
   } finally {
     messageLoading.value = false
   }

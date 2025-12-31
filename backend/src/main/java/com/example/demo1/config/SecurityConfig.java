@@ -33,7 +33,24 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/auth/**", "/health/**", "/hello/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/circle/posts/**", "/wiki/pages/**", "/search/**").permitAll()
+                .requestMatchers(HttpMethod.GET, 
+                    "/circle/posts",
+                    "/circle/posts/**",
+                    "/circle/nearby",
+                    "/circle/nearby/**",
+                    "/wiki/pages/**", 
+                    "/search",
+                    "/search/**", 
+                    "/recommend/**",
+                    "/ranking/**",
+                    "/bars",
+                    "/bars/**",
+                    "/beverages",
+                    "/beverages/**",
+                    "/users/**",
+                    "/daily-question/today",
+                    "/footprints/**"
+                ).permitAll()
                 .requestMatchers(HttpMethod.GET, "/files/**").permitAll()
                 .anyRequest().authenticated()
             )

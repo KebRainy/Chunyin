@@ -1,12 +1,13 @@
 <template>
-  <div class="post-detail-container">
-    <div v-if="loading" class="loading">
-      <el-skeleton :rows="5" animated />
-    </div>
-    <div v-else-if="!post" class="not-found">
-      <el-empty description="动态不存在或已被删除" />
-    </div>
-    <div v-else class="post-detail">
+  <div class="post-detail-page">
+    <div class="post-detail-container">
+      <div v-if="loading" class="loading">
+        <el-skeleton :rows="5" animated />
+      </div>
+      <div v-else-if="!post" class="not-found">
+        <el-empty description="动态不存在或已被删除" />
+      </div>
+      <div v-else class="post-detail">
       <!-- 动态头部 -->
       <div class="post-header">
         <el-avatar
@@ -26,6 +27,26 @@
             <span v-if="post.ipRegion" class="ip">IP 属地 {{ post.ipRegion }}</span>
             <span v-else-if="post.ipAddressMasked" class="ip">{{ post.ipAddressMasked }}</span>
           </div>
+        </div>
+        <!-- 更多操作菜单（登录用户可见） -->
+        <div v-if="userStore.isLoggedIn" class="post-actions-menu">
+          <el-dropdown trigger="click" @command="handlePostCommand">
+            <el-button circle size="small">
+              <el-icon><MoreFilled /></el-icon>
+            </el-button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item v-if="canDeletePost" command="delete" style="color: #f56c6c;">
+                  <el-icon><Delete /></el-icon>
+                  删除动态
+                </el-dropdown-item>
+                <el-dropdown-item v-if="!canDeletePost" command="report" style="color: #e6a23c;">
+                  <el-icon><WarningFilled /></el-icon>
+                  举报动态
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </div>
 
@@ -112,6 +133,20 @@
                 <div class="comment-text">{{ comment.content }}</div>
                 <div class="comment-actions">
                   <el-button text size="small" @click="setReplyTarget(comment)">回复</el-button>
+                  <el-button 
+                    v-if="canDeleteComment(comment)" 
+                    text 
+                    size="small" 
+                    type="danger"
+                    @click="handleDeleteComment(comment)"
+                  >删除</el-button>
+                  <el-button 
+                    v-if="userStore.isLoggedIn && !canDeleteComment(comment)" 
+                    text 
+                    size="small" 
+                    type="warning"
+                    @click="openReportDialog('POST_COMMENT', comment.id)"
+                  >举报</el-button>
                 </div>
                 <div class="reply-list" v-if="comment.replies?.length">
                   <div
@@ -130,7 +165,23 @@
                         <span class="comment-time">{{ formatTime(reply.createdAt) }}</span>
                       </div>
                       <div class="comment-text">{{ reply.content }}</div>
-                      <el-button text size="small" @click="setReplyTarget(reply)">回复</el-button>
+                      <div class="comment-actions">
+                        <el-button text size="small" @click="setReplyTarget(reply)">回复</el-button>
+                        <el-button 
+                          v-if="canDeleteComment(reply)" 
+                          text 
+                          size="small" 
+                          type="danger"
+                          @click="handleDeleteComment(reply)"
+                        >删除</el-button>
+                        <el-button 
+                          v-if="userStore.isLoggedIn && !canDeleteComment(reply)" 
+                          text 
+                          size="small" 
+                          type="warning"
+                          @click="openReportDialog('POST_COMMENT', reply.id)"
+                        >举报</el-button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -141,10 +192,60 @@
       </div>
     </div>
   </div>
+
+    <!-- 举报对话框 -->
+    <ReportDialog
+      v-model="reportDialogVisible"
+      :content-type="reportContentType"
+      :content-id="reportContentId"
+      @success="handleReportSuccess"
+    />
+
+    <!-- 相关推荐侧边栏 -->
+    <div v-if="!loading && post" class="similar-posts-sidebar">
+      <div class="sidebar-card">
+        <h3 class="sidebar-title">
+          <el-icon><MagicStick /></el-icon>
+          相关推荐
+        </h3>
+        <div v-if="similarLoading" class="sidebar-loading">
+          <el-skeleton :rows="3" animated />
+        </div>
+        <div v-else-if="similarPosts.length === 0" class="sidebar-empty">
+          暂无相关推荐
+        </div>
+        <div v-else class="similar-list">
+          <div
+            v-for="item in similarPosts"
+            :key="item.id"
+            class="similar-item"
+            @click="goToPost(item.id)"
+          >
+            <div class="similar-image" v-if="item.imageUrls?.length">
+              <img :src="item.imageUrls[0]" :alt="item.content" />
+            </div>
+            <div class="similar-image no-image" v-else>
+              <el-icon><Picture /></el-icon>
+            </div>
+            <div class="similar-info">
+              <p class="similar-content">{{ truncate(item.content, 40) }}</p>
+              <div class="similar-meta">
+                <span class="similar-author">{{ item.author?.username }}</span>
+                <span class="similar-stats">
+                  <el-icon><GobletFull /></el-icon>
+                  {{ item.likeCount || 0 }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import {
@@ -152,12 +253,20 @@ import {
   GobletFull,
   Heart,
   ChatDotSquare,
-  Star
+  Star,
+  MagicStick,
+  Picture,
+  Delete,
+  MoreFilled,
+  WarningFilled
 } from '@element-plus/icons-vue'
+import { ElMessageBox } from 'element-plus'
+import ReportDialog from '@/components/ReportDialog.vue'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/zh-cn'
 import { circleApi } from '@/api/circle'
+import { recommendApi } from '@/api/recommend'
 import { recordFootprint } from '@/api/user'
 import { useUserStore } from '@/store/modules/user'
 
@@ -177,6 +286,23 @@ const commentSubmitting = ref(false)
 const comments = ref([])
 const replyTarget = ref(null)
 
+// 相关推荐
+const similarPosts = ref([])
+const similarLoading = ref(false)
+
+// 举报相关
+const reportDialogVisible = ref(false)
+const reportContentType = ref('')
+const reportContentId = ref(0)
+
+// 计算是否为动态作者或管理员（可以删除动态）
+const canDeletePost = computed(() => {
+  if (!userStore.isLoggedIn || !post.value) return false
+  const isAuthor = userStore.userInfo?.id === post.value.author?.id
+  const isAdmin = userStore.isAdmin
+  return isAuthor || isAdmin
+})
+
 const loadPost = async () => {
   loading.value = true
   try {
@@ -186,11 +312,36 @@ const loadPost = async () => {
     favorited.value = response.data?.favorited || false
     await loadComments()
     recordPostFootprint()
+    // 加载相关推荐
+    loadSimilarPosts()
   } catch (error) {
     ElMessage.error('加载动态失败')
   } finally {
     loading.value = false
   }
+}
+
+const loadSimilarPosts = async () => {
+  similarLoading.value = true
+  try {
+    const response = await recommendApi.getSimilarPosts(route.params.id, 6)
+    similarPosts.value = response.data || []
+  } catch (error) {
+    console.error('Failed to load similar posts:', error)
+    // 失败时设置为空数组，不影响页面其他功能
+    similarPosts.value = []
+  } finally {
+    similarLoading.value = false
+  }
+}
+
+const goToPost = (postId) => {
+  router.push(`/posts/${postId}`)
+}
+
+const truncate = (text, length) => {
+  if (!text) return ''
+  return text.length > length ? text.slice(0, length) + '...' : text
 }
 
 const loadComments = async () => {
@@ -294,16 +445,106 @@ const setReplyTarget = (comment) => {
   commentText.value = `@${comment.author?.username} `
 }
 
+// 处理动态操作命令
+const handlePostCommand = async (command) => {
+  if (command === 'delete') {
+    try {
+      await ElMessageBox.confirm(
+        '确定要删除这条动态吗？删除后不可恢复。',
+        '删除确认',
+        {
+          confirmButtonText: '删除',
+          cancelButtonText: '取消',
+          type: 'warning',
+          confirmButtonClass: 'el-button--danger'
+        }
+      )
+      await circleApi.deletePost(post.value.id)
+      ElMessage.success('动态已删除')
+      router.push('/') // 返回首页
+    } catch (error) {
+      if (error !== 'cancel') {
+        ElMessage.error('删除失败，请稍后再试')
+      }
+    }
+  } else if (command === 'report') {
+    openReportDialog('POST', post.value.id)
+  }
+}
+
+// 打开举报对话框
+const openReportDialog = (contentType, contentId) => {
+  reportContentType.value = contentType
+  reportContentId.value = contentId
+  reportDialogVisible.value = true
+}
+
+// 举报成功回调
+const handleReportSuccess = () => {
+  // 可以在这里做一些成功后的处理，比如显示已举报标记
+}
+
+// 判断是否可以删除评论（评论作者、动态作者或管理员）
+const canDeleteComment = (comment) => {
+  if (!userStore.isLoggedIn) return false
+  const currentUserId = userStore.userInfo?.id
+  const isCommentAuthor = comment.author?.id === currentUserId
+  const isPostOwner = post.value?.author?.id === currentUserId
+  const isAdmin = userStore.isAdmin
+  return isCommentAuthor || isPostOwner || isAdmin
+}
+
+// 删除评论
+const handleDeleteComment = async (comment) => {
+  try {
+    await ElMessageBox.confirm(
+      '确定要删除这条评论吗？',
+      '删除确认',
+      {
+        confirmButtonText: '删除',
+        cancelButtonText: '取消',
+        type: 'warning',
+        confirmButtonClass: 'el-button--danger'
+      }
+    )
+    await circleApi.deleteComment(comment.id)
+    ElMessage.success('评论已删除')
+    await loadComments()
+    if (post.value) {
+      post.value.commentCount = Math.max(0, (post.value.commentCount || 0) - 1)
+    }
+  } catch (error) {
+    if (error !== 'cancel') {
+      ElMessage.error('删除失败，请稍后再试')
+    }
+  }
+}
+
 onMounted(() => {
   loadPost()
+})
+
+// 监听路由变化，重新加载
+watch(() => route.params.id, (newId, oldId) => {
+  if (newId && newId !== oldId) {
+    loadPost()
+  }
 })
 </script>
 
 <style scoped>
-.post-detail-container {
-  max-width: 800px;
+.post-detail-page {
+  display: flex;
+  gap: 24px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 20px 0 60px;
+  padding: 20px;
+}
+
+.post-detail-container {
+  flex: 1;
+  max-width: 800px;
+  min-width: 0;
 }
 
 .loading, .not-found {
@@ -340,6 +581,10 @@ onMounted(() => {
 
 .author-info {
   flex: 1;
+}
+
+.post-actions-menu {
+  flex-shrink: 0;
 }
 
 .username {
@@ -533,9 +778,164 @@ onMounted(() => {
   gap: 8px;
 }
 
+/* 相关推荐侧边栏 */
+.similar-posts-sidebar {
+  width: 320px;
+  flex-shrink: 0;
+}
+
+.sidebar-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 20px;
+  border: 1px solid #eceff5;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  position: sticky;
+  top: 80px;
+}
+
+.sidebar-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  color: #1f2d3d;
+  margin: 0 0 16px 0;
+}
+
+.sidebar-title .el-icon {
+  color: #8b5cf6;
+}
+
+.sidebar-loading,
+.sidebar-empty {
+  text-align: center;
+  padding: 20px;
+  color: #999;
+  font-size: 14px;
+}
+
+.similar-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.similar-item {
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+  background: #f8fafc;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.similar-item:hover {
+  background: #f1f5f9;
+  transform: translateX(4px);
+}
+
+.similar-image {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.similar-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.similar-image.no-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e2e8f0;
+  color: #94a3b8;
+}
+
+.similar-image.no-image .el-icon {
+  font-size: 24px;
+}
+
+.similar-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.similar-content {
+  margin: 0;
+  font-size: 13px;
+  color: #334155;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.similar-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+.similar-author {
+  max-width: 100px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.similar-stats {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
 /* 响应式 */
+@media (max-width: 1024px) {
+  .post-detail-page {
+    flex-direction: column;
+  }
+
+  .similar-posts-sidebar {
+    width: 100%;
+  }
+
+  .sidebar-card {
+    position: static;
+  }
+
+  .similar-list {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 8px;
+  }
+
+  .similar-item {
+    flex-direction: column;
+    min-width: 160px;
+    max-width: 180px;
+  }
+
+  .similar-image {
+    width: 100%;
+    height: 100px;
+  }
+}
+
 @media (max-width: 600px) {
-  .post-detail-container {
+  .post-detail-page {
     padding: 12px;
   }
 

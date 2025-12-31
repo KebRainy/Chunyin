@@ -24,4 +24,8 @@ public class SharePostVO {
     private Boolean liked;
     private Boolean favorited;
     private LocalDateTime createdAt;
+    
+    // 推荐相关字段
+    private Boolean isRecommended;
+    private Double recommendScore;
 }

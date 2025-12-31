@@ -93,6 +93,7 @@ import { reactive, ref, computed, watch } from 'vue'
 import dayjs from 'dayjs'
 import { useRoute, useRouter } from 'vue-router'
 import { searchAll } from '@/api/search'
+import { ElMessage } from 'element-plus'
 
 const route = useRoute()
 const router = useRouter()
@@ -136,6 +137,9 @@ const handleSearch = async () => {
     } else {
       results[targetKey] = []
     }
+  } catch (error) {
+    console.error('搜索失败:', error)
+    ElMessage.error('搜索失败，请稍后再试')
   } finally {
     loading.value = false
   }

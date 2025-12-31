@@ -10,7 +10,7 @@
 
 **重要**：后端启动前必须先手动初始化数据库！
 
-在Navicat中导入beverage_platform.sql_
+在Navicat中导入beverage_platform.sql
 
 ### 2. 配置数据库连接
 
@@ -58,8 +58,8 @@ npm run serve
 - SF-8: 缺少编辑控制，编辑器界面仍需优化
 - SF-7：缺少认证流程
 - SF-9：推荐系统不完善
-- SF-12：缺少模型与API接入
--
+- SF-12：缺少模型与API接入  
+
 **未实现**:
 - SF-16
 

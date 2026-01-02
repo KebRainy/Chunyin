@@ -813,6 +813,7 @@ CREATE TABLE `user`  (
   `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   `is_active` tinyint(1) NULL DEFAULT 1,
   `mute_until` timestamp NULL DEFAULT NULL COMMENT '禁言截止时间',
+  `message_policy` enum('ALL','FOLLOWERS_ONLY','NONE') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'ALL' COMMENT '私信接收策略',
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `username`(`username` ASC) USING BTREE,
   UNIQUE INDEX `email`(`email` ASC) USING BTREE,
@@ -826,18 +827,18 @@ CREATE TABLE `user`  (
 -- ----------------------------
 -- Records of user
 -- ----------------------------
-INSERT INTO `user` VALUES (1, 'admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKh7kYKS', 'admin@chunyin.com', 'ADMIN', NULL, NULL, '醇饮平台管理员，负责内容审核和平台运营。', 'SECRET', '1990-01-01', 10, '2025-01-01 00:21:04', '2026-01-01 04:32:13', 1, '2026-01-04 04:32:14');
-INSERT INTO `user` VALUES (2, 'demo', '$2a$10$cm7X8Jxxo2A3InK2Fk2qDuvl6UoT39h1Uhax0DPdLQesMH60tdCx.', 'demo@example.com', 'ADMIN', NULL, 'https://api.dicebear.com/7.x/thumbs/svg?seed=demo', '示例账号，方便开发调试。', 'SECRET', NULL, 1, '2026-01-01 00:16:10', '2026-01-01 00:16:10', 1, NULL);
-INSERT INTO `user` VALUES (3, '精酿达人小王', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKh7kYKS', 'craft_beer@test.com', 'USER', NULL, NULL, '精酿啤酒爱好者，IPA是我的最爱！周末常去各种精酿酒吧打卡。', 'MALE', '1995-08-20', 4, '2025-09-03 00:21:04', '2026-01-01 00:21:04', 1, NULL);
-INSERT INTO `user` VALUES (4, '红酒小姐姐', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKh7kYKS', 'wine_lover@test.com', 'USER', NULL, NULL, '葡萄酒品鉴师在读，喜欢法国波尔多和勃艮第。偶尔也会调一杯鸡尾酒放松。', 'FEMALE', '1994-03-10', 6, '2025-06-15 00:21:04', '2026-01-01 00:21:04', 1, NULL);
-INSERT INTO `user` VALUES (5, '调酒师阿杰', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKh7kYKS', 'bartender_jie@test.com', 'SELLER', NULL, NULL, '专业调酒师，从业8年。擅长经典鸡尾酒和创意特调，欢迎交流调酒技巧！', 'MALE', '1988-11-25', 8, '2025-03-07 00:21:04', '2026-01-01 00:21:04', 1, NULL);
-INSERT INTO `user` VALUES (6, '清酒控', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKh7kYKS', 'sake_fan@test.com', 'USER', NULL, NULL, '日本清酒爱好者，每年都会去日本酒藏朝圣。獭祭、久保田、八海山都是我的心头好。', 'FEMALE', '1993-07-08', 4, '2025-10-03 00:21:04', '2026-01-01 00:21:04', 1, NULL);
-INSERT INTO `user` VALUES (7, '白酒文化传承人', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKh7kYKS', 'baijiu@test.com', 'USER', NULL, NULL, '中国白酒文化研究者，专注于酱香型白酒的品鉴与收藏。茅台、郎酒、习酒都有涉猎。', 'MALE', '1985-12-01', 7, '2025-04-26 00:21:04', '2026-01-01 00:21:04', 1, NULL);
-INSERT INTO `user` VALUES (8, '鸡尾酒新手', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKh7kYKS', 'cocktail_newbie@test.com', 'USER', NULL, NULL, '刚入坑的鸡尾酒爱好者，正在学习调酒基础知识。欢迎大佬们指点！', 'SECRET', '1998-04-18', 2, '2025-12-02 00:21:04', '2026-01-01 00:21:04', 1, NULL);
-INSERT INTO `user` VALUES (9, '酒吧探店博主', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKh7kYKS', 'bar_explorer@test.com', 'USER', NULL, NULL, '全国酒吧探店中，已打卡200+家酒吧。分享真实体验，不恰饭！', 'FEMALE', '1996-09-30', 6, '2025-08-04 00:21:04', '2026-01-01 00:21:04', 1, NULL);
-INSERT INTO `user` VALUES (10, '微醺生活家', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKh7kYKS', 'tipsy_life@test.com', 'USER', NULL, NULL, '享受微醺的感觉，记录生活中的小确幸。偶尔喝点小酒，人生惬意。', 'SECRET', '1991-06-22', 3, '2025-11-02 00:21:04', '2026-01-01 00:21:04', 1, NULL);
-INSERT INTO `user` VALUES (11, 'demo1', '$2a$10$ZAzuO8GyWtW8.B9mRniVvuBALtVuTEmnlTsP2xs0EdqWnnm0Mb2mG', '2350283@tongji.edu.cn', 'ADMIN', NULL, 'https://api.dicebear.com/7.x/thumbs/svg?seed=demo1', '欢迎来到饮品圈，我正在持续探索新的佳酿。', 'SECRET', NULL, 1, '2026-01-01 00:32:33', '2026-01-01 00:36:26', 1, NULL);
-INSERT INTO `user` VALUES (12, 'demo2', '$2a$10$IgDaRw1EAkqXr3MvX1KdOeB6QY3PJkYgy/bPXRQwzcPnOZDDYU2wi', '2350283@tongji.edu.cnx', 'USER', NULL, 'https://api.dicebear.com/7.x/thumbs/svg?seed=demo2', '欢迎来到饮品圈，我正在持续探索新的佳酿。', 'SECRET', NULL, 1, '2026-01-01 01:20:38', '2026-01-01 01:20:38', 1, NULL);
+INSERT INTO `user` VALUES (1, 'admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKh7kYKS', 'admin@chunyin.com', 'ADMIN', NULL, NULL, '醇饮平台管理员，负责内容审核和平台运营。', 'SECRET', '1990-01-01', 10, '2025-01-01 00:21:04', '2026-01-01 04:32:13', 1, '2026-01-04 04:32:14', 'ALL');
+INSERT INTO `user` VALUES (2, 'demo', '$2a$10$cm7X8Jxxo2A3InK2Fk2qDuvl6UoT39h1Uhax0DPdLQesMH60tdCx.', 'demo@example.com', 'ADMIN', NULL, 'https://api.dicebear.com/7.x/thumbs/svg?seed=demo', '示例账号，方便开发调试。', 'SECRET', NULL, 1, '2026-01-01 00:16:10', '2026-01-01 00:16:10', 1, NULL, 'ALL');
+INSERT INTO `user` VALUES (3, '精酿达人小王', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKh7kYKS', 'craft_beer@test.com', 'USER', NULL, NULL, '精酿啤酒爱好者，IPA是我的最爱！周末常去各种精酿酒吧打卡。', 'MALE', '1995-08-20', 4, '2025-09-03 00:21:04', '2026-01-01 00:21:04', 1, NULL, 'ALL');
+INSERT INTO `user` VALUES (4, '红酒小姐姐', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKh7kYKS', 'wine_lover@test.com', 'USER', NULL, NULL, '葡萄酒品鉴师在读，喜欢法国波尔多和勃艮第。偶尔也会调一杯鸡尾酒放松。', 'FEMALE', '1994-03-10', 6, '2025-06-15 00:21:04', '2026-01-01 00:21:04', 1, NULL, 'ALL');
+INSERT INTO `user` VALUES (5, '调酒师阿杰', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKh7kYKS', 'bartender_jie@test.com', 'SELLER', NULL, NULL, '专业调酒师，从业8年。擅长经典鸡尾酒和创意特调，欢迎交流调酒技巧！', 'MALE', '1988-11-25', 8, '2025-03-07 00:21:04', '2026-01-01 00:21:04', 1, NULL, 'ALL');
+INSERT INTO `user` VALUES (6, '清酒控', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKh7kYKS', 'sake_fan@test.com', 'USER', NULL, NULL, '日本清酒爱好者，每年都会去日本酒藏朝圣。獭祭、久保田、八海山都是我的心头好。', 'FEMALE', '1993-07-08', 4, '2025-10-03 00:21:04', '2026-01-01 00:21:04', 1, NULL, 'ALL');
+INSERT INTO `user` VALUES (7, '白酒文化传承人', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKh7kYKS', 'baijiu@test.com', 'USER', NULL, NULL, '中国白酒文化研究者，专注于酱香型白酒的品鉴与收藏。茅台、郎酒、习酒都有涉猎。', 'MALE', '1985-12-01', 7, '2025-04-26 00:21:04', '2026-01-01 00:21:04', 1, NULL, 'ALL');
+INSERT INTO `user` VALUES (8, '鸡尾酒新手', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKh7kYKS', 'cocktail_newbie@test.com', 'USER', NULL, NULL, '刚入坑的鸡尾酒爱好者，正在学习调酒基础知识。欢迎大佬们指点！', 'SECRET', '1998-04-18', 2, '2025-12-02 00:21:04', '2026-01-01 00:21:04', 1, NULL, 'ALL');
+INSERT INTO `user` VALUES (9, '酒吧探店博主', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKh7kYKS', 'bar_explorer@test.com', 'USER', NULL, NULL, '全国酒吧探店中，已打卡200+家酒吧。分享真实体验，不恰饭！', 'FEMALE', '1996-09-30', 6, '2025-08-04 00:21:04', '2026-01-01 00:21:04', 1, NULL, 'ALL');
+INSERT INTO `user` VALUES (10, '微醺生活家', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iKh7kYKS', 'tipsy_life@test.com', 'USER', NULL, NULL, '享受微醺的感觉，记录生活中的小确幸。偶尔喝点小酒，人生惬意。', 'SECRET', '1991-06-22', 3, '2025-11-02 00:21:04', '2026-01-01 00:21:04', 1, NULL, 'ALL');
+INSERT INTO `user` VALUES (11, 'demo1', '$2a$10$ZAzuO8GyWtW8.B9mRniVvuBALtVuTEmnlTsP2xs0EdqWnnm0Mb2mG', '2350283@tongji.edu.cn', 'ADMIN', NULL, 'https://api.dicebear.com/7.x/thumbs/svg?seed=demo1', '欢迎来到饮品圈，我正在持续探索新的佳酿。', 'SECRET', NULL, 1, '2026-01-01 00:32:33', '2026-01-01 00:36:26', 1, NULL, 'ALL');
+INSERT INTO `user` VALUES (12, 'demo2', '$2a$10$IgDaRw1EAkqXr3MvX1KdOeB6QY3PJkYgy/bPXRQwzcPnOZDDYU2wi', '2350283@tongji.edu.cnx', 'USER', NULL, 'https://api.dicebear.com/7.x/thumbs/svg?seed=demo2', '欢迎来到饮品圈，我正在持续探索新的佳酿。', 'SECRET', NULL, 1, '2026-01-01 01:20:38', '2026-01-01 01:20:38', 1, NULL, 'ALL');
 
 -- ----------------------------
 -- Table structure for user_behavior
@@ -1125,6 +1126,27 @@ CREATE TABLE `user_follow`  (
 
 -- ----------------------------
 -- Records of user_follow
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for user_block
+-- ----------------------------
+DROP TABLE IF EXISTS `user_block`;
+CREATE TABLE `user_block`  (
+  `id` bigint NOT NULL AUTO_INCREMENT,
+  `blocker_id` bigint NOT NULL COMMENT '屏蔽者ID',
+  `blocked_id` bigint NOT NULL COMMENT '被屏蔽者ID',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_block_pair`(`blocker_id` ASC, `blocked_id` ASC) USING BTREE,
+  INDEX `idx_block_blocker`(`blocker_id` ASC) USING BTREE,
+  INDEX `idx_block_blocked`(`blocked_id` ASC) USING BTREE,
+  CONSTRAINT `user_block_ibfk_1` FOREIGN KEY (`blocker_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `user_block_ibfk_2` FOREIGN KEY (`blocked_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户屏蔽表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of user_block
 -- ----------------------------
 
 -- ----------------------------

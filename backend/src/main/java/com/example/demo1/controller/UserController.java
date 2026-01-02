@@ -3,6 +3,7 @@ package com.example.demo1.controller;
 import com.example.demo1.common.exception.BusinessException;
 import com.example.demo1.common.response.Result;
 import com.example.demo1.dto.request.ChangePasswordRequest;
+import com.example.demo1.dto.request.UpdateMessagePolicyRequest;
 import com.example.demo1.dto.request.UpdateProfileRequest;
 import com.example.demo1.dto.response.SimpleUserVO;
 import com.example.demo1.dto.response.UserProfileVO;
@@ -90,6 +91,16 @@ public class UserController {
                 .map(userService::buildSimpleUser)
                 .collect(Collectors.toList());
         return Result.success(result);
+    }
+
+    @PutMapping("/message-policy")
+    public Result<Void> updateMessagePolicy(@AuthenticationPrincipal UserPrincipal principal,
+                                            @Valid @RequestBody UpdateMessagePolicyRequest request) {
+        if (principal == null) {
+            throw new BusinessException(401, "请先登录");
+        }
+        userService.updateMessagePolicy(principal.getId(), request);
+        return Result.success();
     }
 }
 

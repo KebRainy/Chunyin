@@ -128,6 +128,19 @@ const router = createRouter({
   routes
 })
 
+// 处理 chunk 加载失败的问题
+router.onError((error) => {
+  const pattern = /Loading chunk (\d)+ failed/g
+  const isChunkLoadFailed = error.message && error.message.match(pattern)
+  if (isChunkLoadFailed) {
+    // 如果 chunk 加载失败，重新加载页面
+    const targetPath = router.currentRoute.value?.fullPath || window.location.pathname
+    if (targetPath && targetPath !== '/login') {
+      window.location.href = targetPath
+    }
+  }
+})
+
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore(pinia)
   if (!userStore.initialized && !userStore.loading) {

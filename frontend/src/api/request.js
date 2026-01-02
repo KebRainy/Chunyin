@@ -27,15 +27,21 @@ request.interceptors.response.use(
 
       switch (status) {
         case 401:
+          // 如果是检查用户信息的请求，不跳转（允许未登录状态）
           if (isAuthCheck) {
             break
           }
-          if (!isAuthEndpoint) {
-            ElMessage.error(serverMessage || '请先登录')
+          // 如果是登录/注册接口，不跳转
+          if (isAuthEndpoint) {
+            break
           }
-          if (!isAuthPage && !isAuthEndpoint) {
-            window.location.href = '/login'
+          // 如果已经在登录/注册页面，不跳转
+          if (isAuthPage) {
+            break
           }
+          // 其他情况才跳转到登录页
+          ElMessage.error(serverMessage || '请先登录')
+          window.location.href = '/login'
           break
         case 403:
           ElMessage.error(serverMessage || '没有访问权限')

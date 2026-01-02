@@ -2,7 +2,7 @@
   <div class="auth-container">
     <el-card class="auth-card">
       <h2>登录醇饮社区</h2>
-      <el-form :model="form" :rules="rules" ref="formRef" label-width="90px">
+      <el-form :model="form" :rules="rules" ref="formRef" label-width="110px">
         <el-form-item label="用户名 / 邮箱" prop="username">
           <el-input v-model="form.username" placeholder="请输入用户名或邮箱" />
         </el-form-item>

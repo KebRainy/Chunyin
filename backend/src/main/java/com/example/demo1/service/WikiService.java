@@ -77,7 +77,10 @@ public class WikiService {
         page.setLastEditorId(editor.getId());
         page.setLastEditorName(editor.getUsername());
         wikiPageMapper.insert(page);
-        recordRevision(page, editor, "创建词条");
+        String revisionSummary = StringUtils.isNotBlank(request.getEditSummary()) 
+            ? request.getEditSummary() 
+            : "创建词条";
+        recordRevision(page, editor, revisionSummary);
         return toVo(page, editorId);
     }
 
@@ -95,7 +98,10 @@ public class WikiService {
         existing.setLastEditorId(editor.getId());
         existing.setLastEditorName(editor.getUsername());
         wikiPageMapper.updateById(existing);
-        recordRevision(existing, editor, "更新词条");
+        String revisionSummary = StringUtils.isNotBlank(request.getEditSummary()) 
+            ? request.getEditSummary() 
+            : "更新词条";
+        recordRevision(existing, editor, revisionSummary);
         return toVo(existing, editorId);
     }
 

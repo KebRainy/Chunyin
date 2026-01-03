@@ -67,3 +67,10 @@ export const recordFootprint = (data) => {
     data
   })
 }
+
+export const blockRecommendedUser = (id) => {
+  return request({
+    url: `/users/${id}/block-recommend`,
+    method: 'post'
+  })
+}

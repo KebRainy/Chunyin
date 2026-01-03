@@ -12,11 +12,11 @@ export const recommendApi = {
   },
 
   // 获取推荐用户
-  getRecommendedUsers: (page = 1, size = 10) => {
+  getRecommendedUsers: (size = 10) => {
     return request({
       url: '/recommend/users',
       method: 'get',
-      params: { page, size }
+      params: { size }
     })
   },
 

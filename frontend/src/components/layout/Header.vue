@@ -7,8 +7,8 @@
           <div
             v-for="nav in navItems"
             :key="nav.path"
-            :class="['nav-item', { active: route.path === nav.path }]"
-            @click="goTo(nav.path)"
+            :class="['nav-item', { active: route.path === nav.path || (nav.path === '/activities' && route.path.startsWith('/activities') && !route.path.startsWith('/activities/create')) || (nav.path === '/seller/activity' && route.path.startsWith('/seller/activity')) || (nav.path === '/admin/activities/review' && route.path.startsWith('/admin/activities/review')) }]"
+            @click="handleNavClick(nav.path)"
           >
             {{ nav.label }}
           </div>
@@ -58,10 +58,14 @@
           </template>
         </div>
         <div class="quick-links">
+          <span v-if="userStore.isLoggedIn" @click="goToFeed">关注</span>
           <span @click="goToMessages">消息</span>
           <span @click="goToFeeds">动态</span>
           <span @click="goToCollections">收藏</span>
           <span @click="goToHistory">足迹</span>
+          <span v-if="userStore.isLoggedIn && !userStore.isSeller && !userStore.isAdmin" @click="goToUserActivity">活动</span>
+          <span v-if="userStore.isSeller" @click="goToSellerActivity">管理</span>
+          <span v-if="userStore.isAdmin" @click="goToAdminReview">活动审核</span>
         </div>
         <el-button
           type="primary"
@@ -91,14 +95,30 @@ const userStore = useUserStore()
 const searchKeyword = ref('')
 const showShareModal = ref(false)
 
-const navItems = [
-  { path: '/', label: '广场' },
-  { path: '/feed', label: '关注' },
-  { path: '/nearby', label: '附近' },
-  { path: '/ranking', label: '排行榜' },
-  { path: '/bars', label: '酒吧' },
-  { path: '/wiki', label: '维基' }
-]
+// 根据用户角色动态生成导航菜单
+const navItems = computed(() => {
+  const baseItems = [
+    { path: '/', label: '广场' },
+    { path: '/nearby', label: '附近' },
+    { path: '/ranking', label: '排行榜' },
+    { path: '/bars', label: '酒吧' },
+    { path: '/wiki', label: '维基' }
+  ]
+  
+  // 根据用户角色添加不同的菜单项
+  if (userStore.isAdmin) {
+    // 管理员显示"活动审核"，使用ActivityList组件
+    baseItems.splice(1, 0, { path: '/admin/activities/review', label: '活动审核' })
+  } else if (userStore.isSeller) {
+    // seller用户显示"管理"，指向商家活动管理页面
+    baseItems.splice(1, 0, { path: '/seller/activity', label: '管理' })
+  } else {
+    // 普通用户（USER）显示"活动"，指向活动列表页面
+    baseItems.splice(1, 0, { path: '/activities', label: '活动' })
+  }
+  
+  return baseItems
+})
 
 onMounted(() => {
   if (!userStore.initialized && !userStore.loading) {
@@ -108,6 +128,59 @@ onMounted(() => {
 
 const goHome = () => router.push('/')
 const goTo = (path) => router.push(path)
+
+// 处理导航菜单点击
+const handleNavClick = (path) => {
+  // 如果是活动或管理页面，需要检查登录状态
+  if (path === '/activities') {
+    if (!userStore.isLoggedIn) {
+      ElMessage.warning('请先登录')
+      router.push('/login')
+      return
+    }
+    router.push('/activities')
+  } else if (path === '/seller/activity') {
+    if (!userStore.isLoggedIn) {
+      ElMessage.warning('请先登录')
+      router.push('/login')
+      return
+    }
+    router.push('/seller/activity')
+  } else if (path === '/seller/activity') {
+    if (!userStore.isLoggedIn) {
+      ElMessage.warning('请先登录')
+      router.push('/login')
+      return
+    }
+    if (!userStore.isSeller) {
+      ElMessage.warning('此功能仅限商家用户')
+      return
+    }
+    router.push('/seller/activity')
+  } else if (path === '/admin/activities/review') {
+    if (!userStore.isLoggedIn) {
+      ElMessage.warning('请先登录')
+      router.push('/login')
+      return
+    }
+    if (!userStore.isAdmin) {
+      ElMessage.warning('此功能仅限管理员')
+      return
+    }
+    router.push('/admin/activities/review')
+  } else {
+    router.push(path)
+  }
+}
+
+const goToFeed = () => {
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return
+  }
+  router.push('/feed')
+}
 const goToMessages = () => {
   if (!userStore.isLoggedIn) {
     ElMessage.warning('请先登录')
@@ -132,6 +205,28 @@ const goToHistory = () => {
     return
   }
   router.push('/user/profile?tab=history')
+}
+const goToUserActivity = () => {
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return
+  }
+  router.push('/activities')
+}
+const goToSellerActivity = () => {
+  if (!userStore.isLoggedIn || !userStore.isSeller) {
+    ElMessage.warning('此功能仅限商家用户')
+    return
+  }
+  router.push('/seller/activity')
+}
+const goToAdminReview = () => {
+  if (!userStore.isLoggedIn || !userStore.isAdmin) {
+    ElMessage.warning('此功能仅限管理员')
+    return
+  }
+  router.push('/admin/activities/review')
 }
 const goLogin = () => router.push('/login')
 const goRegister = () => router.push('/register')

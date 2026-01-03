@@ -47,7 +47,10 @@ const submitForm = () => {
       const res = await login(form)
       userStore.setUserInfo(res.data.profile)
       ElMessage.success('登录成功')
-      router.push('/')
+      
+      // 登录成功后，如果有重定向路径，跳转到该路径，否则跳转到首页
+      const redirect = router.currentRoute.value.query.redirect || '/'
+      router.push(redirect)
     } catch (error) {
       const message = error?.response?.data?.message || error.message || '登录失败，请检查账号和密码'
       ElMessage.error(message)

@@ -16,12 +16,18 @@ import com.example.demo1.entity.User;
 import com.example.demo1.entity.UserBlock;
 import com.example.demo1.entity.UserFollow;
 import com.example.demo1.entity.SharePost;
+import com.example.demo1.entity.UserBehavior;
+import com.example.demo1.common.enums.TargetType;
+import com.example.demo1.common.enums.BehaviorType;
+import com.example.demo1.dto.response.RecommendedUserVO;
 import com.example.demo1.mapper.UserBlockMapper;
 import com.example.demo1.mapper.UserFollowMapper;
 import com.example.demo1.mapper.UserMapper;
 import com.example.demo1.mapper.ImageMapper;
 import com.example.demo1.mapper.SharePostMapper;
+import com.example.demo1.mapper.UserBehaviorMapper;
 import com.example.demo1.util.FileUrlResolver;
+import com.example.demo1.util.IpUtils;
 import com.example.demo1.security.UserPrincipal;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
@@ -36,6 +42,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 
@@ -51,6 +58,7 @@ public class UserService implements UserDetailsService {
     private final SharePostMapper sharePostMapper;
     private final ImageMapper imageMapper;
     private final FileUrlResolver fileUrlResolver;
+    private final UserBehaviorMapper userBehaviorMapper;
 
     private static final String DEFAULT_AVATAR_TEMPLATE = "https://api.dicebear.com/7.x/thumbs/svg?seed=%s";
 
@@ -186,6 +194,10 @@ public class UserService implements UserDetailsService {
     }
 
     public UserProfileVO buildProfile(User target, Long currentUserId) {
+        return buildProfile(target, currentUserId, null);
+    }
+
+    public UserProfileVO buildProfile(User target, Long currentUserId, String ipAddress) {
         long followerCount = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
                 .eq(UserFollow::getFolloweeId, target.getId()));
         long followingCount = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
@@ -203,6 +215,11 @@ public class UserService implements UserDetailsService {
             .mapToLong(Integer::longValue)
             .sum();
 
+        String ipRegion = null;
+        if (ipAddress != null && !ipAddress.isEmpty()) {
+            ipRegion = IpUtils.resolveRegion(ipAddress);
+        }
+
         return UserProfileVO.builder()
                 .id(target.getId())
                 .username(target.getUsername())
@@ -219,6 +236,7 @@ public class UserService implements UserDetailsService {
                 .following(isFollowing)
                 .self(isSelf)
                 .likeReceived(likeReceived)
+                .ipRegion(ipRegion)
                 .build();
     }
 
@@ -396,5 +414,170 @@ public class UserService implements UserDetailsService {
         updateWrapper.eq(User::getId, userId)
                 .set(User::getMessagePolicy, request.getMessagePolicy());
         userMapper.update(null, updateWrapper);
+    }
+
+    /**
+     * 获取推荐用户列表
+     * 包括：可能同关注的人、常看的贴子的发帖人
+     */
+    public List<RecommendedUserVO> getRecommendedUsers(Long userId, int limit) {
+        if (userId == null) {
+            return Collections.emptyList();
+        }
+
+        // 获取已关注的用户ID列表
+        List<Long> followingIds = userFollowMapper.selectList(
+                new LambdaQueryWrapper<UserFollow>()
+                        .eq(UserFollow::getFollowerId, userId))
+                .stream()
+                .map(UserFollow::getFolloweeId)
+                .collect(Collectors.toList());
+
+        // 获取已屏蔽/取消推荐的用户ID列表（使用UserBlock表）
+        List<Long> blockedIds = userBlockMapper.selectList(
+                new LambdaQueryWrapper<UserBlock>()
+                        .eq(UserBlock::getBlockerId, userId))
+                .stream()
+                .map(UserBlock::getBlockedId)
+                .collect(Collectors.toList());
+
+        // 排除自己、已关注、已屏蔽的用户
+        Set<Long> excludeIds = new java.util.HashSet<>();
+        excludeIds.add(userId);
+        excludeIds.addAll(followingIds);
+        excludeIds.addAll(blockedIds);
+
+        Map<Long, RecommendedUserVO> recommendedMap = new java.util.LinkedHashMap<>();
+
+        // 获取当前用户已关注的用户ID集合（用于快速查找）
+        Set<Long> followingSet = new java.util.HashSet<>(followingIds);
+
+        // 1. 可能同关注的人：找到关注了相同用户的其他用户
+        List<Long> sameFollowUserIds = findUsersWithSameFollows(userId, excludeIds, limit / 2);
+        for (Long recommendedUserId : sameFollowUserIds) {
+            User user = getUserById(recommendedUserId);
+            if (user != null && !excludeIds.contains(recommendedUserId)) {
+                RecommendedUserVO vo = RecommendedUserVO.builder()
+                        .id(user.getId())
+                        .username(user.getUsername())
+                        .avatarUrl(buildAvatarUrl(user))
+                        .bio(user.getBio())
+                        .reason("可能同关注的人")
+                        .following(followingSet.contains(recommendedUserId))
+                        .build();
+                recommendedMap.put(recommendedUserId, vo);
+                excludeIds.add(recommendedUserId);
+            }
+        }
+
+        // 2. 常看的贴子的发帖人：从用户浏览记录中提取发帖人
+        List<Long> postAuthorIds = findPostAuthorsFromViews(userId, excludeIds, limit - recommendedMap.size());
+        for (Long authorId : postAuthorIds) {
+            if (!recommendedMap.containsKey(authorId)) {
+                User user = getUserById(authorId);
+                if (user != null && !excludeIds.contains(authorId)) {
+                    RecommendedUserVO vo = RecommendedUserVO.builder()
+                            .id(user.getId())
+                            .username(user.getUsername())
+                            .avatarUrl(buildAvatarUrl(user))
+                            .bio(user.getBio())
+                            .reason("常看的贴子的发帖人")
+                            .following(followingSet.contains(authorId))
+                            .build();
+                    recommendedMap.put(authorId, vo);
+                }
+            }
+        }
+
+        return new java.util.ArrayList<>(recommendedMap.values());
+    }
+
+    /**
+     * 找到关注了相同用户的其他用户
+     */
+    private List<Long> findUsersWithSameFollows(Long userId, Set<Long> excludeIds, int limit) {
+        // 获取当前用户关注的所有用户ID
+        List<Long> userFollowees = userFollowMapper.selectList(
+                new LambdaQueryWrapper<UserFollow>()
+                        .eq(UserFollow::getFollowerId, userId))
+                .stream()
+                .map(UserFollow::getFolloweeId)
+                .collect(Collectors.toList());
+
+        if (userFollowees.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 找到也关注了这些用户的其他用户
+        List<UserFollow> sameFollows = userFollowMapper.selectList(
+                new LambdaQueryWrapper<UserFollow>()
+                        .in(UserFollow::getFolloweeId, userFollowees)
+                        .ne(UserFollow::getFollowerId, userId)
+                        .notIn(!excludeIds.isEmpty(), UserFollow::getFollowerId, excludeIds));
+
+        // 统计每个用户与当前用户共同关注的次数
+        Map<Long, Long> userScoreMap = sameFollows.stream()
+                .collect(Collectors.groupingBy(
+                        UserFollow::getFollowerId,
+                        Collectors.counting()));
+
+        // 按共同关注数排序，取Top-N
+        return userScoreMap.entrySet().stream()
+                .sorted(Map.Entry.<Long, Long>comparingByValue().reversed())
+                .limit(limit)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 从用户浏览记录中提取发帖人
+     */
+    private List<Long> findPostAuthorsFromViews(Long userId, Set<Long> excludeIds, int limit) {
+        // 获取用户最近浏览的动态（最近30天）
+        java.time.LocalDateTime thirtyDaysAgo = java.time.LocalDateTime.now().minusDays(30);
+        List<UserBehavior> behaviors = userBehaviorMapper.selectList(
+                new LambdaQueryWrapper<UserBehavior>()
+                        .eq(UserBehavior::getUserId, userId)
+                        .eq(UserBehavior::getTargetType, TargetType.POST)
+                        .eq(UserBehavior::getBehaviorType, BehaviorType.VIEW)
+                        .ge(UserBehavior::getCreatedAt, thirtyDaysAgo)
+                        .orderByDesc(UserBehavior::getCreatedAt)
+                        .last("LIMIT 100"));
+
+        if (behaviors.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 获取这些动态的发帖人
+        List<Long> postIds = behaviors.stream()
+                .map(UserBehavior::getTargetId)
+                .distinct()
+                .collect(Collectors.toList());
+
+        List<SharePost> posts = sharePostMapper.selectBatchIds(postIds);
+        Map<Long, Long> authorViewCountMap = new java.util.HashMap<>();
+
+        // 统计每个发帖人被浏览的次数
+        for (SharePost post : posts) {
+            if (post != null && post.getUserId() != null && !excludeIds.contains(post.getUserId())) {
+                authorViewCountMap.put(post.getUserId(),
+                        authorViewCountMap.getOrDefault(post.getUserId(), 0L) + 1);
+            }
+        }
+
+        // 按浏览次数排序，取Top-N
+        return authorViewCountMap.entrySet().stream()
+                .sorted(Map.Entry.<Long, Long>comparingByValue().reversed())
+                .limit(limit)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 取消推荐用户（记录到UserBlock表）
+     */
+    @Transactional
+    public void blockRecommendedUser(Long userId, Long blockedUserId) {
+        blockUser(userId, blockedUserId);
     }
 }

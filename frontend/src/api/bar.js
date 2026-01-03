@@ -105,3 +105,31 @@ export const deleteBarReview = (reviewId) => {
   })
 }
 
+/**
+ * 获取推荐的酒吧列表
+ */
+export const getRecommendedBars = (params) => {
+  return request({
+    url: '/bars/recommend',
+    method: 'get',
+    params
+  })
+}
+
+/**
+ * 获取商家拥有的酒吧列表（用于创建活动时选择）
+ */
+export const getMyBars = (alcoholIds) => {
+  const params = {}
+  // 只有当alcoholIds存在且不为空数组时才传递
+  if (alcoholIds && Array.isArray(alcoholIds) && alcoholIds.length > 0) {
+    // axios会自动将数组转换为重复的参数：alcoholIds=1&alcoholIds=2
+    params.alcoholIds = alcoholIds
+  }
+  return request({
+    url: '/bars/my',
+    method: 'get',
+    params
+  })
+}
+

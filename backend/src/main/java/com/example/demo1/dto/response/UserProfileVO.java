@@ -26,4 +26,5 @@ public class UserProfileVO {
     private Boolean following;
     private Boolean self;
     private Long likeReceived;
+    private String ipRegion;
 }

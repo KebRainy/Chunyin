@@ -7,7 +7,10 @@
         </el-avatar>
         <div>
           <h2>{{ profile.username }}</h2>
-          <p class="uid">UID {{ profile.id }} · {{ profile.role }}</p>
+          <p class="uid">
+            UID {{ profile.id }} · {{ profile.role }}
+            <span v-if="profile.ipRegion" class="ip-region">· IP属地 {{ profile.ipRegion }}</span>
+          </p>
           <p class="bio">{{ profile.bio || '这位用户很低调，还没有简介' }}</p>
           <div class="stats">
             <div>
@@ -184,6 +187,10 @@ onMounted(() => {
 .uid {
   color: #909399;
   margin: 4px 0;
+}
+
+.ip-region {
+  color: #909399;
 }
 
 .bio {

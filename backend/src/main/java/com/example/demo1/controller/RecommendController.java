@@ -4,10 +4,12 @@ import com.example.demo1.common.response.PageResult;
 import com.example.demo1.common.response.Result;
 import com.example.demo1.dto.response.SharePostVO;
 import com.example.demo1.security.UserPrincipal;
-import com.example.demo1.service.SharePostService;
+import com.example.demo1.service.RecommendationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 /**
  * 推荐控制器
@@ -18,11 +20,11 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class RecommendController {
 
-    private final SharePostService sharePostService;
+    private final RecommendationService recommendationService;
 
     /**
      * 获取推荐动态
-     * 当前实现：返回最新的热门动态
+     * 基于协同过滤算法，结合用户行为偏好和标签匹配
      */
     @GetMapping("/posts")
     public Result<PageResult<SharePostVO>> getRecommendedPosts(
@@ -32,9 +34,22 @@ public class RecommendController {
         
         Long currentUserId = principal != null ? principal.getId() : null;
         
-        // 简单实现：返回最新的热门动态作为推荐
-        // 未来可以基于用户行为、偏好等实现更复杂的推荐算法
-        PageResult<SharePostVO> result = sharePostService.listPosts(page, size, currentUserId);
+        // 基于协同过滤算法的推荐
+        List<SharePostVO> recommendedPosts = recommendationService.getRecommendedPosts(currentUserId, size);
+        
+        // 手动分页
+        int start = (page - 1) * size;
+        int end = Math.min(start + size, recommendedPosts.size());
+        List<SharePostVO> pagedPosts = start < recommendedPosts.size() 
+            ? recommendedPosts.subList(start, end)
+            : List.of();
+        
+        PageResult<SharePostVO> result = new PageResult<>(
+            (long) recommendedPosts.size(), 
+            page, 
+            size, 
+            pagedPosts
+        );
         
         return Result.success(result);
     }
@@ -80,6 +95,7 @@ public class RecommendController {
 
     /**
      * 获取相似动态
+     * 基于标签相似度推荐
      */
     @GetMapping("/similar-posts/{postId}")
     public Result<java.util.List<SharePostVO>> getSimilarPosts(
@@ -89,10 +105,10 @@ public class RecommendController {
         
         Long currentUserId = principal != null ? principal.getId() : null;
         
-        // 简单实现：返回最新的几条动态作为相似推荐
-        PageResult<SharePostVO> result = sharePostService.listPosts(1, size, currentUserId);
+        // 基于标签相似度的推荐
+        List<SharePostVO> similarPosts = recommendationService.getSimilarPosts(postId, currentUserId, size);
         
-        return Result.success(result.getItems());
+        return Result.success(similarPosts);
     }
 }
 

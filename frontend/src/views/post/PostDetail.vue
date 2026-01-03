@@ -96,22 +96,19 @@
       <!-- 评论区 -->
       <div class="comments-section">
         <h3>评论</h3>
-        <div v-if="userStore.isLoggedIn" class="comment-input">
+        <!-- 一级评论输入框（只在没有回复目标时显示） -->
+        <div v-if="userStore.isLoggedIn && !replyTargetId" class="comment-input">
           <el-input
             v-model="commentText"
             type="textarea"
             placeholder="写下你的评论..."
             rows="3"
           />
-          <div v-if="replyTarget" class="reply-target">
-            回复 @{{ replyTarget.author?.username }}
-            <el-button text size="small" @click="replyTarget = null">取消</el-button>
-          </div>
           <el-button type="primary" @click="submitComment" :loading="commentSubmitting">
             发布评论
           </el-button>
         </div>
-        <div v-else class="login-prompt">
+        <div v-else-if="!userStore.isLoggedIn" class="login-prompt">
           <el-empty description="请登录后发表评论" />
         </div>
         <div class="comments-list">
@@ -119,74 +116,24 @@
             暂无评论
           </div>
           <div v-else>
-            <div v-for="comment in comments" :key="comment.id" class="comment-item">
-              <el-avatar
-                :src="comment.author?.avatarUrl"
-                :size="32"
-                :alt="`${comment.author?.username || '用户'}的头像`"
-              />
-              <div class="comment-content">
-                <div class="comment-header">
-                  <span class="comment-author">{{ comment.author?.username }}</span>
-                  <span class="comment-time">{{ formatTime(comment.createdAt) }}</span>
-                </div>
-                <div class="comment-text">{{ comment.content }}</div>
-                <div class="comment-actions">
-                  <el-button text size="small" @click="setReplyTarget(comment)">回复</el-button>
-                  <el-button 
-                    v-if="canDeleteComment(comment)" 
-                    text 
-                    size="small" 
-                    type="danger"
-                    @click="handleDeleteComment(comment)"
-                  >删除</el-button>
-                  <el-button 
-                    v-if="userStore.isLoggedIn && !canDeleteComment(comment)" 
-                    text 
-                    size="small" 
-                    type="warning"
-                    @click="openReportDialog('POST_COMMENT', comment.id)"
-                  >举报</el-button>
-                </div>
-                <div class="reply-list" v-if="comment.replies?.length">
-                  <div
-                    v-for="reply in comment.replies"
-                    :key="reply.id"
-                    class="reply-item"
-                  >
-                    <el-avatar
-                      :src="reply.author?.avatarUrl"
-                      :size="24"
-                      :alt="`${reply.author?.username || '用户'}的头像`"
-                    />
-                    <div>
-                      <div class="comment-header">
-                        <span class="comment-author">{{ reply.author?.username }}</span>
-                        <span class="comment-time">{{ formatTime(reply.createdAt) }}</span>
-                      </div>
-                      <div class="comment-text">{{ reply.content }}</div>
-                      <div class="comment-actions">
-                        <el-button text size="small" @click="setReplyTarget(reply)">回复</el-button>
-                        <el-button 
-                          v-if="canDeleteComment(reply)" 
-                          text 
-                          size="small" 
-                          type="danger"
-                          @click="handleDeleteComment(reply)"
-                        >删除</el-button>
-                        <el-button 
-                          v-if="userStore.isLoggedIn && !canDeleteComment(reply)" 
-                          text 
-                          size="small" 
-                          type="warning"
-                          @click="openReportDialog('POST_COMMENT', reply.id)"
-                        >举报</el-button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <CommentItem
+              v-for="comment in comments"
+              :key="comment.id"
+              :comment="comment"
+              :level="0"
+              :avatar-size="32"
+              :can-delete="canDeleteComment(comment)"
+              :can-report="userStore.isLoggedIn && !canDeleteComment(comment)"
+              :format-time="formatTime"
+              :can-delete-comment="canDeleteComment"
+              :can-report-comment="(comment) => userStore.isLoggedIn && !canDeleteComment(comment)"
+              :reply-target-id="replyTargetId"
+              @reply="setReplyTarget"
+              @delete="handleDeleteComment"
+              @report="(comment) => openReportDialog('POST_COMMENT', comment.id)"
+              @submit-reply="handleSubmitReply"
+              @cancel-reply="handleCancelReply"
+            />
           </div>
         </div>
       </div>
@@ -262,6 +209,7 @@ import {
 } from '@element-plus/icons-vue'
 import { ElMessageBox } from 'element-plus'
 import ReportDialog from '@/components/ReportDialog.vue'
+import CommentItem from '@/components/CommentItem.vue'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/zh-cn'
@@ -284,7 +232,7 @@ const favorited = ref(false)
 const commentText = ref('')
 const commentSubmitting = ref(false)
 const comments = ref([])
-const replyTarget = ref(null)
+const replyTargetId = ref(null) // 当前正在回复的评论ID
 
 // 相关推荐
 const similarPosts = ref([])
@@ -426,10 +374,9 @@ const submitComment = async () => {
   try {
     await circleApi.createComment(post.value.id, {
       content: commentText.value,
-      parentId: replyTarget.value?.id || null
+      parentId: null
     })
     commentText.value = ''
-    replyTarget.value = null
     await loadComments()
     post.value.commentCount += 1
     ElMessage.success('评论发布成功')
@@ -441,8 +388,32 @@ const submitComment = async () => {
 }
 
 const setReplyTarget = (comment) => {
-  replyTarget.value = comment
-  commentText.value = `@${comment.author?.username} `
+  replyTargetId.value = comment.id
+}
+
+// 处理回复提交（从CommentItem组件触发）
+const handleSubmitReply = async ({ comment, content }) => {
+  if (!content.trim()) {
+    ElMessage.warning('回复内容不能为空')
+    return
+  }
+  try {
+    await circleApi.createComment(post.value.id, {
+      content: content,
+      parentId: comment.id
+    })
+    replyTargetId.value = null
+    await loadComments()
+    post.value.commentCount += 1
+    ElMessage.success('回复发布成功')
+  } catch (error) {
+    ElMessage.error('回复发布失败')
+  }
+}
+
+// 处理取消回复
+const handleCancelReply = () => {
+  replyTargetId.value = null
 }
 
 // 处理动态操作命令
@@ -721,61 +692,13 @@ watch(() => route.params.id, (newId, oldId) => {
   font-size: 14px;
 }
 
-.comment-item {
-  display: flex;
-  gap: 12px;
+.comments-list :deep(.comment-item-wrapper) {
   padding: 16px 0;
   border-bottom: 1px solid #f0f0f0;
 }
 
-.comment-item:last-child {
+.comments-list :deep(.comment-item-wrapper:last-child) {
   border-bottom: none;
-}
-
-.comment-content {
-  flex: 1;
-  word-break: break-word;
-}
-
-.comment-header {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.comment-author {
-  font-weight: 500;
-  color: #333;
-  font-size: 14px;
-}
-
-.comment-time {
-  font-size: 12px;
-  color: #999;
-}
-
-.comment-text {
-  font-size: 14px;
-  color: #666;
-  line-height: 1.6;
-}
-
-.comment-actions {
-  margin-top: 6px;
-}
-
-.reply-list {
-  margin-top: 12px;
-  padding-left: 40px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.reply-item {
-  display: flex;
-  gap: 8px;
 }
 
 /* 相关推荐侧边栏 */

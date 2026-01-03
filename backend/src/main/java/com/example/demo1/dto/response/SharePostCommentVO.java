@@ -15,6 +15,7 @@ public class SharePostCommentVO {
     private SimpleUserVO author;
     private LocalDateTime createdAt;
     private Long parentId;
+    private SimpleUserVO replyToUser; // 被回复的用户信息
     private List<SharePostCommentVO> replies;
 
     public List<SharePostCommentVO> safeReplies() {

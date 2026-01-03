@@ -2,16 +2,21 @@ package com.example.demo1.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.example.demo1.common.exception.BusinessException;
+import com.example.demo1.common.response.PageResult;
 import com.example.demo1.dto.request.ChangePasswordRequest;
 import com.example.demo1.dto.request.RegisterRequest;
+import com.example.demo1.dto.request.UpdateMessagePolicyRequest;
 import com.example.demo1.dto.request.UpdateProfileRequest;
 import com.example.demo1.dto.response.SimpleUserVO;
 import com.example.demo1.dto.response.UserProfileVO;
 import com.example.demo1.entity.Image;
 import com.example.demo1.entity.User;
+import com.example.demo1.entity.UserBlock;
 import com.example.demo1.entity.UserFollow;
 import com.example.demo1.entity.SharePost;
+import com.example.demo1.mapper.UserBlockMapper;
 import com.example.demo1.mapper.UserFollowMapper;
 import com.example.demo1.mapper.UserMapper;
 import com.example.demo1.mapper.ImageMapper;
@@ -32,13 +37,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserService implements UserDetailsService {
 
     private final UserMapper userMapper;
     private final UserFollowMapper userFollowMapper;
+    private final UserBlockMapper userBlockMapper;
     private final PasswordEncoder passwordEncoder;
     private final SharePostMapper sharePostMapper;
     private final ImageMapper imageMapper;
@@ -58,20 +66,49 @@ public class UserService implements UserDetailsService {
 
     @Transactional
     public User register(RegisterRequest request) {
+        log.info("开始注册用户: username={}, email={}", request.getUsername(), request.getEmail());
+        
         if (existsByUsername(request.getUsername())) {
+            log.warn("用户名已存在: {}", request.getUsername());
             throw new BusinessException("用户名已存在，请换一个新的昵称");
         }
         if (existsByEmail(request.getEmail())) {
+            log.warn("邮箱已被注册: {}", request.getEmail());
             throw new BusinessException("邮箱已被注册");
         }
+        
         User user = new User();
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setAvatarUrl(String.format(DEFAULT_AVATAR_TEMPLATE, request.getUsername()));
         user.setBio("欢迎来到饮品圈，我正在持续探索新的佳酿。");
-        userMapper.insert(user);
-        return user;
+        
+        // 插入用户
+        log.debug("准备插入用户到数据库");
+        int result = userMapper.insert(user);
+        log.info("插入用户结果: result={}, userId={}", result, user.getId());
+        
+        if (result <= 0) {
+            log.error("用户插入失败: result={}", result);
+            throw new BusinessException("用户注册失败，请稍后重试");
+        }
+        
+        // 验证插入是否成功（通过ID判断）
+        if (user.getId() == null) {
+            log.error("用户插入后未获取到ID");
+            throw new BusinessException("用户注册失败，未获取到用户ID");
+        }
+        
+        // 再次验证用户是否真的存在于数据库中
+        User savedUser = userMapper.selectById(user.getId());
+        if (savedUser == null) {
+            log.error("用户插入后查询不到: userId={}", user.getId());
+            throw new BusinessException("用户注册失败，数据未正确保存");
+        }
+        
+        log.info("用户注册成功: userId={}, username={}", savedUser.getId(), savedUser.getUsername());
+        return savedUser;
     }
 
     public User getUserById(Long userId) {
@@ -242,22 +279,51 @@ public class UserService implements UserDetailsService {
     }
 
     public List<SimpleUserVO> searchUsers(String keyword, int limit) {
+        return searchUsers(keyword, 1, limit, "time").getItems();
+    }
+
+    /**
+     * 搜索用户（支持分页和排序）
+     * @param keyword 搜索关键字
+     * @param page 页码（从1开始）
+     * @param pageSize 每页大小
+     * @param sortBy 排序方式：time（按时间）或 relevance（按相关度）
+     * @return 分页结果
+     */
+    public PageResult<SimpleUserVO> searchUsers(String keyword, int page, int pageSize, String sortBy) {
         LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        
         if (StringUtils.isBlank(keyword)) {
-            wrapper.orderByDesc(User::getCreatedAt).last("limit " + limit);
+            wrapper.orderByDesc(User::getCreatedAt);
         } else {
             boolean isNumeric = StringUtils.isNumeric(keyword);
             wrapper.and(w -> {
                 if (isNumeric) {
+                    // 支持按ID搜索
                     w.eq(User::getId, Long.parseLong(keyword));
                 } else {
+                    // 搜索用户名（昵称）
                     w.like(User::getUsername, keyword);
                 }
-            }).last("limit " + limit);
+            });
+            
+            // 排序
+            if ("relevance".equalsIgnoreCase(sortBy)) {
+                // 按相关度排序：精确匹配优先
+                // 注意：MyBatis-Plus不支持直接按字符串值排序，这里先按时间排序
+                // 实际相关度排序可以在应用层实现
+                wrapper.orderByDesc(User::getCreatedAt);
+            } else {
+                wrapper.orderByDesc(User::getCreatedAt);
+            }
         }
-        return userMapper.selectList(wrapper).stream()
+        
+        Page<User> mpPage = userMapper.selectPage(new Page<>(page, pageSize), wrapper);
+        List<SimpleUserVO> result = mpPage.getRecords().stream()
                 .map(this::buildSimpleUser)
                 .collect(Collectors.toList());
+        
+        return new PageResult<>(mpPage.getTotal(), page, pageSize, result);
     }
 
     public List<User> getFollowees(Long followerId) {
@@ -277,5 +343,58 @@ public class UserService implements UserDetailsService {
         }
         return findUsersByIds(ids).stream()
                 .collect(Collectors.toMap(User::getId, user -> user));
+    }
+
+    /**
+     * 屏蔽用户
+     */
+    @Transactional
+    public void blockUser(Long blockerId, Long blockedId) {
+        if (Objects.equals(blockerId, blockedId)) {
+            throw new BusinessException("不能屏蔽自己");
+        }
+        getRequiredUser(blockedId); // 确保被屏蔽用户存在
+        
+        // 检查是否已屏蔽
+        if (userBlockMapper.selectCount(new LambdaQueryWrapper<UserBlock>()
+                .eq(UserBlock::getBlockerId, blockerId)
+                .eq(UserBlock::getBlockedId, blockedId)) > 0) {
+            return; // 已屏蔽，直接返回
+        }
+        
+        UserBlock block = new UserBlock();
+        block.setBlockerId(blockerId);
+        block.setBlockedId(blockedId);
+        userBlockMapper.insert(block);
+    }
+
+    /**
+     * 取消屏蔽用户
+     */
+    @Transactional
+    public void unblockUser(Long blockerId, Long blockedId) {
+        userBlockMapper.delete(new LambdaQueryWrapper<UserBlock>()
+                .eq(UserBlock::getBlockerId, blockerId)
+                .eq(UserBlock::getBlockedId, blockedId));
+    }
+
+    /**
+     * 检查是否已屏蔽
+     */
+    public boolean isBlocked(Long blockerId, Long blockedId) {
+        return userBlockMapper.selectCount(new LambdaQueryWrapper<UserBlock>()
+                .eq(UserBlock::getBlockerId, blockerId)
+                .eq(UserBlock::getBlockedId, blockedId)) > 0;
+    }
+
+    /**
+     * 更新私信接收策略
+     */
+    @Transactional
+    public void updateMessagePolicy(Long userId, UpdateMessagePolicyRequest request) {
+        LambdaUpdateWrapper<User> updateWrapper = new LambdaUpdateWrapper<>();
+        updateWrapper.eq(User::getId, userId)
+                .set(User::getMessagePolicy, request.getMessagePolicy());
+        userMapper.update(null, updateWrapper);
     }
 }

@@ -193,30 +193,71 @@ public class SharePostService {
         if (comments.isEmpty()) {
             return Collections.emptyList();
         }
-        Map<Long, User> userMap = userService.mapByIds(
-            comments.stream().map(SharePostComment::getUserId).collect(Collectors.toList()));
+        
+        // 收集所有用户ID（包括评论作者和被回复的用户）
+        Set<Long> userIds = comments.stream()
+            .map(SharePostComment::getUserId)
+            .collect(Collectors.toSet());
+        // 添加所有父评论的用户ID（被回复的用户）
+        comments.stream()
+            .filter(c -> c.getParentId() != null)
+            .forEach(c -> {
+                SharePostComment parent = comments.stream()
+                    .filter(p -> Objects.equals(p.getId(), c.getParentId()))
+                    .findFirst()
+                    .orElse(null);
+                if (parent != null) {
+                    userIds.add(parent.getUserId());
+                }
+            });
+        
+        Map<Long, User> userMap = userService.mapByIds(new ArrayList<>(userIds));
         Map<Long, SharePostCommentVO> voMap = new LinkedHashMap<>();
+        
+        // 创建所有评论的VO，并填充replyToUser信息
         for (SharePostComment comment : comments) {
+            SimpleUserVO replyToUser = null;
+            if (comment.getParentId() != null) {
+                // 查找父评论
+                SharePostComment parent = comments.stream()
+                    .filter(p -> Objects.equals(p.getId(), comment.getParentId()))
+                    .findFirst()
+                    .orElse(null);
+                if (parent != null) {
+                    User parentAuthor = userMap.get(parent.getUserId());
+                    if (parentAuthor != null) {
+                        replyToUser = userService.buildSimpleUser(parentAuthor);
+                    }
+                }
+            }
+            
             SharePostCommentVO vo = SharePostCommentVO.builder()
                 .id(comment.getId())
                 .content(comment.getContent())
                 .createdAt(comment.getCreatedAt())
                 .parentId(comment.getParentId())
                 .author(userService.buildSimpleUser(userMap.get(comment.getUserId())))
+                .replyToUser(replyToUser)
                 .replies(new ArrayList<>())
                 .build();
             voMap.put(comment.getId(), vo);
         }
+        
+        // 构建评论树：将所有子评论添加到父评论的replies中
         List<SharePostCommentVO> roots = new ArrayList<>();
         for (SharePostComment comment : comments) {
             SharePostCommentVO current = voMap.get(comment.getId());
             if (comment.getParentId() == null) {
+                // 一级评论，直接添加到根列表
                 roots.add(current);
             } else {
+                // 子评论，查找父评论并添加到父评论的replies中
                 SharePostCommentVO parent = voMap.get(comment.getParentId());
                 if (parent != null) {
+                    // 父评论存在，添加到父评论的replies中
                     parent.safeReplies().add(current);
                 } else {
+                    // 父评论不存在（可能已被删除），将其作为根评论
                     roots.add(current);
                 }
             }
@@ -280,15 +321,53 @@ public class SharePostService {
     }
 
     public List<SharePostVO> search(String keyword, int limit) {
+        return search(keyword, 1, limit, "time").getItems();
+    }
+
+    /**
+     * 搜索动态（支持分页和排序）
+     * @param keyword 搜索关键字
+     * @param page 页码（从1开始）
+     * @param pageSize 每页大小
+     * @param sortBy 排序方式：time（按时间）或 relevance（按相关度）
+     * @return 分页结果
+     */
+    public PageResult<SharePostVO> search(String keyword, int page, int pageSize, String sortBy) {
         LambdaQueryWrapper<SharePost> wrapper = new LambdaQueryWrapper<>();
-        wrapper.like(StringUtils.isNotBlank(keyword), SharePost::getContent, keyword)
-            .orderByDesc(SharePost::getCreatedAt)
-            .last("limit " + limit);
-        List<SharePost> posts = sharePostMapper.selectList(wrapper);
+        
+        if (StringUtils.isNotBlank(keyword)) {
+            // 搜索内容或标签
+            wrapper.and(w -> {
+                w.like(SharePost::getContent, keyword)
+                    .or()
+                    .like(SharePost::getTags, keyword);
+            });
+        }
+        
+        // 排序
+        if ("relevance".equalsIgnoreCase(sortBy) && StringUtils.isNotBlank(keyword)) {
+            // 按相关度排序：使用MySQL的FIELD函数，内容匹配优先于标签匹配
+            // 注意：MyBatis-Plus不支持直接按字符串值排序，这里先按时间排序
+            // 实际相关度排序可以在应用层实现
+            wrapper.orderByDesc(SharePost::getCreatedAt);
+        } else {
+            // 按时间排序
+            wrapper.orderByDesc(SharePost::getCreatedAt);
+        }
+        
+        Page<SharePost> mpPage = sharePostMapper.selectPage(new Page<>(page, pageSize), wrapper);
+        List<SharePost> posts = mpPage.getRecords();
+        
+        if (posts.isEmpty()) {
+            return new PageResult<>(mpPage.getTotal(), page, pageSize, Collections.emptyList());
+        }
+        
         Map<Long, User> userMap = userService.mapByIds(posts.stream().map(SharePost::getUserId).collect(Collectors.toList()));
-        return posts.stream()
+        List<SharePostVO> result = posts.stream()
             .map(post -> toVo(post, userMap.get(post.getUserId()), Collections.emptySet(), Collections.emptySet()))
             .collect(Collectors.toList());
+        
+        return new PageResult<>(mpPage.getTotal(), page, pageSize, result);
     }
 
     /**

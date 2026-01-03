@@ -1,6 +1,7 @@
 package com.example.demo1.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.example.demo1.common.response.PageResult;
 import com.example.demo1.common.response.Result;
 import com.example.demo1.dto.response.BeverageSummaryVO;
 import com.example.demo1.dto.response.SearchResultVO;
@@ -29,13 +30,17 @@ public class SearchController {
     private final UserService userService;
     private final BeverageMapper beverageMapper;
 
+    /**
+     * 搜索接口（兼容旧版本，返回简单列表）
+     */
     @GetMapping
     public Result<SearchResultVO> search(@RequestParam String keyword,
                                          @RequestParam(required = false, defaultValue = "all") String type) {
         SearchResultVO.SearchResultVOBuilder builder = SearchResultVO.builder();
         String normalized = keyword == null ? "" : keyword.trim();
 
-        if ("all".equalsIgnoreCase(type) || "circle".equalsIgnoreCase(type)) {
+        // 支持前端的type值：post/circle（动态）、wiki（维基）、user（用户）、beverage（酒饮）
+        if ("all".equalsIgnoreCase(type) || "circle".equalsIgnoreCase(type) || "post".equalsIgnoreCase(type)) {
             List<SharePostVO> posts = sharePostService.search(normalized, 10);
             builder.posts(posts);
         }
@@ -47,6 +52,34 @@ public class SearchController {
             builder.users(users);
         }
         return Result.success(builder.build());
+    }
+
+    /**
+     * 搜索动态（支持分页和排序）
+     */
+    @GetMapping("/posts")
+    public Result<PageResult<SharePostVO>> searchPosts(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false, defaultValue = "time") String sortBy) {
+        String normalized = StringUtils.isBlank(keyword) ? "" : keyword.trim();
+        PageResult<SharePostVO> result = sharePostService.search(normalized, page, pageSize, sortBy);
+        return Result.success(result);
+    }
+
+    /**
+     * 搜索用户（支持分页和排序）
+     */
+    @GetMapping("/users")
+    public Result<PageResult<SimpleUserVO>> searchUsers(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer pageSize,
+            @RequestParam(required = false, defaultValue = "time") String sortBy) {
+        String normalized = StringUtils.isBlank(keyword) ? "" : keyword.trim();
+        PageResult<SimpleUserVO> result = userService.searchUsers(normalized, page, pageSize, sortBy);
+        return Result.success(result);
     }
 
     private List<BeverageSummaryVO> searchBeverages(String keyword) {

@@ -7,9 +7,11 @@ import com.example.demo1.dto.response.ConversationSummaryVO;
 import com.example.demo1.dto.response.PrivateMessageVO;
 import com.example.demo1.security.UserPrincipal;
 import com.example.demo1.service.MessageService;
+import com.example.demo1.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,6 +27,7 @@ import java.util.List;
 public class MessageController {
 
     private final MessageService messageService;
+    private final UserService userService;
 
     @GetMapping
     public Result<List<ConversationSummaryVO>> listConversations(@AuthenticationPrincipal UserPrincipal principal) {
@@ -51,6 +54,26 @@ public class MessageController {
             throw new BusinessException(401, "请先登录");
         }
         return Result.success(messageService.sendMessage(principal.getId(), userId, request));
+    }
+
+    @PostMapping("/block/{userId}")
+    public Result<Void> blockUser(@PathVariable Long userId,
+                                  @AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) {
+            throw new BusinessException(401, "请先登录");
+        }
+        userService.blockUser(principal.getId(), userId);
+        return Result.success();
+    }
+
+    @DeleteMapping("/block/{userId}")
+    public Result<Void> unblockUser(@PathVariable Long userId,
+                                    @AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) {
+            throw new BusinessException(401, "请先登录");
+        }
+        userService.unblockUser(principal.getId(), userId);
+        return Result.success();
     }
 }
 

@@ -2,6 +2,7 @@ package com.example.demo1.entity;
 
 import com.baomidou.mybatisplus.annotation.*;
 import com.example.demo1.common.enums.Gender;
+import com.example.demo1.common.enums.MessagePolicy;
 import com.example.demo1.common.enums.UserRole;
 import lombok.Data;
 
@@ -40,4 +41,9 @@ public class User {
      * 禁言截止时间
      */
     private LocalDateTime muteUntil;
+    
+    /**
+     * 私信接收策略
+     */
+    private MessagePolicy messagePolicy = MessagePolicy.ALL;
 }

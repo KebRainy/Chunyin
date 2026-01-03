@@ -15,5 +15,8 @@ public class WikiPageRequest {
 
     @NotBlank(message = "请输入正文内容")
     private String content;
+
+    @Size(max = 200, message = "编辑说明长度不能超过 200 个字符")
+    private String editSummary;
 }
 

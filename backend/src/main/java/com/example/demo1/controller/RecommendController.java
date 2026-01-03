@@ -2,9 +2,11 @@ package com.example.demo1.controller;
 
 import com.example.demo1.common.response.PageResult;
 import com.example.demo1.common.response.Result;
+import com.example.demo1.dto.response.RecommendedUserVO;
 import com.example.demo1.dto.response.SharePostVO;
 import com.example.demo1.security.UserPrincipal;
 import com.example.demo1.service.RecommendationService;
+import com.example.demo1.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -21,6 +23,7 @@ import java.util.List;
 public class RecommendController {
 
     private final RecommendationService recommendationService;
+    private final UserService userService;
 
     /**
      * 获取推荐动态
@@ -58,13 +61,16 @@ public class RecommendController {
      * 获取推荐用户
      */
     @GetMapping("/users")
-    public Result<PageResult<Object>> getRecommendedUsers(
-            @RequestParam(defaultValue = "1") Integer page,
+    public Result<List<RecommendedUserVO>> getRecommendedUsers(
             @RequestParam(defaultValue = "10") Integer size,
             @AuthenticationPrincipal UserPrincipal principal) {
         
-        // TODO: 实现用户推荐逻辑
-        return Result.success(new PageResult<>(0L, page, size, java.util.Collections.emptyList()));
+        if (principal == null) {
+            return Result.success(java.util.Collections.emptyList());
+        }
+        
+        List<RecommendedUserVO> recommendedUsers = userService.getRecommendedUsers(principal.getId(), size);
+        return Result.success(recommendedUsers);
     }
 
     /**

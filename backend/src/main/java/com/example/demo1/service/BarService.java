@@ -2,6 +2,7 @@ package com.example.demo1.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.example.demo1.algorithm.BarRankingAlgorithm;
 import com.example.demo1.common.enums.BarSortStrategy;
 import com.example.demo1.common.enums.BarStatus;
 import com.example.demo1.common.exception.BusinessException;
@@ -15,6 +16,8 @@ import com.example.demo1.entity.Bar;
 import com.example.demo1.entity.BarApplication;
 import com.example.demo1.entity.BarReview;
 import com.example.demo1.entity.User;
+import com.example.demo1.entity.Alcohol;
+import com.example.demo1.mapper.AlcoholMapper;
 import com.example.demo1.mapper.BarApplicationMapper;
 import com.example.demo1.mapper.BarMapper;
 import com.example.demo1.mapper.BarReviewMapper;
@@ -36,6 +39,7 @@ public class BarService {
     private final BarApplicationMapper barApplicationMapper;
     private final BarReviewMapper barReviewMapper;
     private final UserMapper userMapper;
+    private final AlcoholMapper alcoholMapper;
     private final ContentModerationService contentModerationService;
 
     /**
@@ -218,6 +222,19 @@ public class BarService {
                 )
                 .orderByDesc(Bar::getAvgRating);
 
+        List<Bar> bars = barMapper.selectList(wrapper);
+        return bars.stream().map(this::convertToVO).collect(Collectors.toList());
+    }
+
+    /**
+     * 获取所有酒吧（限制数量）
+     */
+    public List<BarVO> getAllBars(Integer limit) {
+        LambdaQueryWrapper<Bar> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Bar::getIsActive, true)
+                .orderByDesc(Bar::getAvgRating)
+                .last("LIMIT " + (limit != null ? limit : 20));
+        
         List<Bar> bars = barMapper.selectList(wrapper);
         return bars.stream().map(this::convertToVO).collect(Collectors.toList());
     }
@@ -466,5 +483,114 @@ public class BarService {
                 .reviewNote(application.getReviewNote())
                 .createdAt(application.getCreatedAt())
                 .build();
+    }
+
+    /**
+     * 获取商家拥有的酒吧列表（用于创建活动时选择）
+     * 根据main_beverages包含的标签排序，包含标签的排在前面
+     * 
+     * @param ownerId 商家用户ID
+     * @param alcoholIds 酒类标签ID列表（可选，用于排序）
+     * @return 商家拥有的酒吧列表
+     */
+    public List<BarVO> getBarsByOwnerId(Long ownerId, List<Long> alcoholIds) {
+        // 查询商家拥有的所有活跃酒吧
+        LambdaQueryWrapper<Bar> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Bar::getOwnerId, ownerId)
+                .eq(Bar::getIsActive, true)
+                .orderByDesc(Bar::getAvgRating); // 默认按评分排序
+        
+        List<Bar> bars = barMapper.selectList(wrapper);
+        List<BarVO> barVOs = bars.stream()
+                .map(this::convertToVO)
+                .collect(Collectors.toList());
+        
+        // 如果提供了alcoholIds，根据main_beverages包含的标签排序
+        if (alcoholIds != null && !alcoholIds.isEmpty()) {
+            // 获取标签名称
+            List<String> alcoholNames = alcoholIds.stream()
+                    .map(id -> {
+                        Alcohol alcohol = alcoholMapper.selectById(id);
+                        return alcohol != null ? alcohol.getName() : null;
+                    })
+                    .filter(name -> name != null)
+                    .collect(Collectors.toList());
+            
+            if (!alcoholNames.isEmpty()) {
+                // 排序：包含标签的排在前面
+                barVOs.sort((a, b) -> {
+                    boolean aContains = alcoholNames.stream()
+                            .anyMatch(name -> a.getMainBeverages() != null && 
+                                    a.getMainBeverages().contains(name));
+                    boolean bContains = alcoholNames.stream()
+                            .anyMatch(name -> b.getMainBeverages() != null && 
+                                    b.getMainBeverages().contains(name));
+                    
+                    if (aContains && !bContains) {
+                        return -1; // a排在前面
+                    } else if (!aContains && bContains) {
+                        return 1; // b排在前面
+                    } else {
+                        // 都包含或都不包含，按评分排序
+                        return Double.compare(
+                                b.getAvgRating() != null ? b.getAvgRating() : 0.0,
+                                a.getAvgRating() != null ? a.getAvgRating() : 0.0
+                        );
+                    }
+                });
+            }
+        }
+        
+        return barVOs;
+    }
+
+    /**
+     * 获取推荐的酒吧列表
+     * 使用BarRankingAlgorithm算法进行排序
+     * 
+     * @param userLatitude 用户纬度
+     * @param userLongitude 用户经度
+     * @param limit 返回数量限制
+     * @return 推荐的酒吧列表
+     */
+    public List<BarVO> getRecommendedBars(Double userLatitude, Double userLongitude, Integer limit) {
+        if (userLatitude == null || userLongitude == null) {
+            throw new BusinessException("请提供有效的经纬度坐标");
+        }
+        
+        // 获取所有活跃且有经纬度信息的酒吧
+        LambdaQueryWrapper<Bar> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Bar::getIsActive, true)
+                .isNotNull(Bar::getLatitude)
+                .isNotNull(Bar::getLongitude);
+        List<Bar> allBars = barMapper.selectList(wrapper);
+        
+        // 转换为VO
+        List<BarVO> barVOs = allBars.stream()
+                .map(this::convertToVO)
+                .collect(Collectors.toList());
+        
+        // 使用BarRankingAlgorithm进行排序
+        BarRankingAlgorithm.UserLocation userLocation = 
+                new BarRankingAlgorithm.UserLocation(userLatitude, userLongitude);
+        
+        // 使用默认权重（距离0.6，质量0.4）
+        BarRankingAlgorithm.RankingPreferences preferences = null;
+        
+        List<BarRankingAlgorithm.BarRecommendationResult> results = 
+                BarRankingAlgorithm.rankBars(barVOs, userLocation, preferences);
+        
+        // 提取BarVO并设置距离和分数
+        List<BarVO> recommendedBars = results.stream()
+                .map(result -> {
+                    BarVO bar = result.getBar();
+                    bar.setDistance(result.getDistance());
+                    bar.setScore(result.getCompositeScore());
+                    return bar;
+                })
+                .limit(limit != null ? limit : 5)
+                .collect(Collectors.toList());
+        
+        return recommendedBars;
     }
 }

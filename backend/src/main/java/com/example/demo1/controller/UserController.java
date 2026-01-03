@@ -10,6 +10,8 @@ import com.example.demo1.dto.response.UserProfileVO;
 import com.example.demo1.entity.User;
 import com.example.demo1.security.UserPrincipal;
 import com.example.demo1.service.UserService;
+import com.example.demo1.util.IpUtils;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -34,21 +36,25 @@ public class UserController {
 
     @GetMapping("/{id}")
     public Result<UserProfileVO> profile(@PathVariable Long id,
-                                         @AuthenticationPrincipal UserPrincipal principal) {
+                                         @AuthenticationPrincipal UserPrincipal principal,
+                                         HttpServletRequest request) {
         User user = userService.getRequiredUser(id);
         Long currentUserId = principal != null ? principal.getId() : null;
-        return Result.success(userService.buildProfile(user, currentUserId));
+        String ipAddress = IpUtils.getClientIp(request);
+        return Result.success(userService.buildProfile(user, currentUserId, ipAddress));
     }
 
     @PutMapping("/profile")
     public Result<UserProfileVO> updateProfile(@AuthenticationPrincipal UserPrincipal principal,
-                                               @Valid @RequestBody UpdateProfileRequest request) {
+                                               @Valid @RequestBody UpdateProfileRequest request,
+                                               HttpServletRequest httpRequest) {
         if (principal == null) {
             throw new BusinessException(401, "请先登录");
         }
         userService.updateProfile(principal.getId(), request);
         User user = userService.getRequiredUser(principal.getId());
-        return Result.success(userService.buildProfile(user, principal.getId()));
+        String ipAddress = IpUtils.getClientIp(httpRequest);
+        return Result.success(userService.buildProfile(user, principal.getId(), ipAddress));
     }
 
     @PutMapping("/password")
@@ -100,6 +106,19 @@ public class UserController {
             throw new BusinessException(401, "请先登录");
         }
         userService.updateMessagePolicy(principal.getId(), request);
+        return Result.success();
+    }
+
+    /**
+     * 取消推荐用户（不再推荐该用户）
+     */
+    @PostMapping("/{id}/block-recommend")
+    public Result<Void> blockRecommendedUser(@PathVariable Long id,
+                                             @AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) {
+            throw new BusinessException(401, "请先登录");
+        }
+        userService.blockRecommendedUser(principal.getId(), id);
         return Result.success();
     }
 }

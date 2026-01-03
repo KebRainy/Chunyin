@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { ElMessage } from 'element-plus'
 import pinia from '@/store'
 import { useUserStore } from '@/store/modules/user'
 
@@ -120,6 +121,41 @@ const routes = [
     name: 'AdminModeration',
     component: () => import('@/views/admin/AdminModeration.vue'),
     meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/seller/activity',
+    name: 'SellerActivity',
+    component: () => import('@/views/seller/Activity.vue'),
+    meta: { requiresAuth: true, requiresSeller: true }
+  },
+  {
+    path: '/admin/management',
+    name: 'AdminManagement',
+    redirect: '/seller/activity',
+    meta: { requiresAuth: true, requiresSeller: true }
+  },
+  {
+    path: '/activities',
+    name: 'ActivityList',
+    component: () => import('@/views/activity/ActivityList.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/activities/create',
+    name: 'CreateActivity',
+    component: () => import('@/views/activity/CreateActivity.vue'),
+    meta: { requiresAuth: true, requiresSeller: true }
+  },
+  {
+    path: '/activities/:id',
+    name: 'ActivityDetail',
+    component: () => import('@/views/activity/ActivityDetail.vue')
+  },
+  {
+    path: '/admin/activities/review',
+    name: 'ActivityReview',
+    component: () => import('@/views/activity/ActivityList.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
   }
 ]
 
@@ -143,15 +179,76 @@ router.onError((error) => {
 
 router.beforeEach(async (to, from, next) => {
   const userStore = useUserStore(pinia)
+  
+  // 重要：如果用户已登录（有userInfo），直接使用现有状态，不重新获取
+  // 只有在未初始化且不在加载中时才获取用户信息
   if (!userStore.initialized && !userStore.loading) {
-    await userStore.fetchUserInfo().catch(() => {})
+    // 如果用户已经有登录信息，直接标记为已初始化，不重新获取
+    if (userStore.userInfo && userStore.userInfo.id) {
+      userStore.initialized = true
+    } else {
+      // 只有在没有用户信息时才尝试获取
+      try {
+        await userStore.fetchUserInfo()
+      } catch (error) {
+        // 如果获取用户信息失败，检查是否是401错误
+        // 401表示token过期或未登录，此时清空用户信息是合理的
+        // 其他错误（如网络错误）不影响已登录状态
+        if (error?.response?.status === 401) {
+          // 401错误，清空用户信息（fetchUserInfo中已处理）
+          // 如果页面需要认证，会跳转到登录页
+        } else {
+          // 其他错误（网络错误等），保留现有状态，不强制跳转
+          // 如果用户之前已登录，保留登录状态
+          console.log('获取用户信息失败（非401），保留现有状态:', error)
+          // 如果用户之前已登录，标记为已初始化，避免重复请求
+          if (userStore.userInfo) {
+            userStore.initialized = true
+          }
+        }
+      }
+    }
   }
 
-  if (to.meta.requiresAuth && !userStore.isLoggedIn) {
-    next('/login')
-  } else if (to.meta.requiresAdmin && !userStore.isAdmin) {
-    next('/')
+  // 等待用户信息加载完成（如果正在加载）
+  if (userStore.loading) {
+    // 等待加载完成，最多等待2秒
+    let waitCount = 0
+    while (userStore.loading && waitCount < 40) {
+      await new Promise(resolve => setTimeout(resolve, 50))
+      waitCount++
+    }
+  }
+
+  // 如果页面需要认证，检查登录状态
+  // 重要：如果用户已登录（有userInfo），即使initialized为false也允许访问
+  if (to.meta.requiresAuth) {
+    // 如果用户已登录，允许访问
+    if (userStore.isLoggedIn) {
+      // 检查角色权限
+      if (to.meta.requiresAdmin && !userStore.isAdmin) {
+        ElMessage.warning('需要管理员权限')
+        next('/')
+        return
+      }
+      if (to.meta.requiresSeller && !userStore.isSeller) {
+        ElMessage.warning('需要商家权限')
+        next('/')
+        return
+      }
+      next()
+      return
+    }
+    
+    // 如果正在前往登录页，允许通过
+    if (to.path === '/login') {
+      next()
+      return
+    }
+    // 否则跳转到登录页，并保存目标路径以便登录后跳转
+    next({ path: '/login', query: { redirect: to.fullPath } })
   } else {
+    // 不需要认证的页面，直接通过
     next()
   }
 })

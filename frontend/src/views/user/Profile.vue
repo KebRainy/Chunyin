@@ -18,7 +18,10 @@
               <h1>{{ userStore.userInfo.username }}</h1>
               <el-tag size="small" effect="dark">Lv.{{ userStore.userInfo.level || 1 }}</el-tag>
             </div>
-            <p class="uid">UID {{ userStore.userInfo.id }}</p>
+            <p class="uid">
+              UID {{ userStore.userInfo.id }}
+              <span v-if="userStore.userInfo.ipRegion" class="ip-region">· IP属地 {{ userStore.userInfo.ipRegion }}</span>
+            </p>
             <div
               class="signature"
               :class="{ editing: editingSignature }"
@@ -581,6 +584,11 @@ watch(
 .uid {
   color: #909399;
   margin: 0;
+  font-size: 14px;
+}
+
+.ip-region {
+  color: #909399;
   font-size: 14px;
 }
 

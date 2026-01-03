@@ -10,6 +10,7 @@ import com.example.demo1.entity.User;
 import com.example.demo1.security.UserPrincipal;
 import com.example.demo1.service.JwtService;
 import com.example.demo1.service.UserService;
+import com.example.demo1.util.IpUtils;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -44,7 +45,8 @@ public class AuthController {
                                           HttpServletResponse response) {
         User user = userService.register(request);
         setAuthCookie(httpRequest, response, jwtService.generateToken(user));
-        UserProfileVO profile = userService.buildProfile(user, user.getId());
+        String ipAddress = IpUtils.getClientIp(httpRequest);
+        UserProfileVO profile = userService.buildProfile(user, user.getId(), ipAddress);
         return Result.success(new LoginResponse(profile));
     }
 
@@ -57,7 +59,8 @@ public class AuthController {
             throw new BusinessException(401, "用户名或密码错误");
         }
         setAuthCookie(httpRequest, response, jwtService.generateToken(user));
-        UserProfileVO profile = userService.buildProfile(user, user.getId());
+        String ipAddress = IpUtils.getClientIp(httpRequest);
+        UserProfileVO profile = userService.buildProfile(user, user.getId(), ipAddress);
         return Result.success(new LoginResponse(profile));
     }
 
@@ -68,18 +71,20 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public Result<UserProfileVO> currentUser(@AuthenticationPrincipal UserPrincipal principal) {
+    public Result<UserProfileVO> currentUser(@AuthenticationPrincipal UserPrincipal principal,
+                                             HttpServletRequest request) {
         if (principal == null) {
             throw new BusinessException(401, "请先登录");
         }
         User user = userService.getRequiredUser(principal.getId());
-        return Result.success(userService.buildProfile(user, principal.getId()));
+        String ipAddress = IpUtils.getClientIp(request);
+        return Result.success(userService.buildProfile(user, principal.getId(), ipAddress));
     }
 
     private void setAuthCookie(HttpServletRequest request, HttpServletResponse response, String token) {
         ResponseCookie cookie = ResponseCookie.from(cookieName, token)
             .httpOnly(true)
-            .path("/api")
+            .path("/")
             .sameSite("Lax")
             .secure(shouldUseSecureCookie(request))
             .maxAge(Duration.ofMillis(expirationMillis))
@@ -90,7 +95,7 @@ public class AuthController {
     private void clearCookie(HttpServletRequest request, HttpServletResponse response) {
         ResponseCookie cookie = ResponseCookie.from(cookieName, "")
             .httpOnly(true)
-            .path("/api")
+            .path("/")
             .sameSite("Lax")
             .secure(shouldUseSecureCookie(request))
             .maxAge(Duration.ZERO)

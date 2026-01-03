@@ -85,8 +85,19 @@ public class BarController {
      * 按名称搜索酒吧
      */
     @GetMapping("/search")
-    public Result<List<BarVO>> searchBarsByName(@RequestParam String name) {
+    public Result<List<BarVO>> searchBarsByName(
+            @RequestParam(required = false) String name,
+            @RequestParam(defaultValue = "20") Integer limit) {
+        // 如果没有提供name参数，返回所有酒吧（限制数量）
+        if (name == null || name.trim().isEmpty()) {
+            List<BarVO> allBars = barService.getAllBars(limit);
+            return Result.success(allBars);
+        }
         List<BarVO> bars = barService.searchBarsByName(name);
+        // 限制返回数量
+        if (bars.size() > limit) {
+            bars = bars.subList(0, limit);
+        }
         return Result.success(bars);
     }
 
@@ -151,6 +162,47 @@ public class BarController {
         }
         barService.deleteBarReview(reviewId, principal.getId());
         return Result.success();
+    }
+
+    /**
+     * 获取推荐的酒吧列表
+     * 使用BarRankingAlgorithm算法进行排序
+     * 
+     * @param latitude 用户纬度
+     * @param longitude 用户经度
+     * @param limit 返回数量限制，默认5
+     * @return 推荐的酒吧列表
+     */
+    @GetMapping("/recommend")
+    public Result<List<BarVO>> getRecommendedBars(
+            @RequestParam(required = false) Double latitude,
+            @RequestParam(required = false) Double longitude,
+            @RequestParam(defaultValue = "5") Integer limit) {
+        // 如果未提供位置信息，返回空列表
+        if (latitude == null || longitude == null) {
+            return Result.success(List.of());
+        }
+        List<BarVO> bars = barService.getRecommendedBars(latitude, longitude, limit);
+        return Result.success(bars);
+    }
+
+    /**
+     * 获取商家拥有的酒吧列表（用于创建活动时选择）
+     * 根据main_beverages包含的标签排序，包含标签的排在前面
+     * 
+     * @param principal 当前登录用户
+     * @param alcoholIds 酒类标签ID列表（可选，用于排序）
+     * @return 商家拥有的酒吧列表
+     */
+    @GetMapping("/my")
+    public Result<List<BarVO>> getMyBars(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(required = false) List<Long> alcoholIds) {
+        if (principal == null) {
+            throw new BusinessException(401, "请先登录");
+        }
+        List<BarVO> bars = barService.getBarsByOwnerId(principal.getId(), alcoholIds);
+        return Result.success(bars);
     }
 }
 

@@ -141,14 +141,26 @@ const todayDate = computed(() => dayjs().format('M月D日'))
 const answered = computed(() => dailyQuestion.value?.answered || false)
 const selectedOption = computed(() => dailyQuestion.value?.selectedOption ?? null)
 
-// 加载推荐动态
-const loadRecommendedPosts = async () => {
+// 加载推荐动态（带重试机制）
+const loadRecommendedPosts = async (retryCount = 0) => {
   try {
     const response = await recommendApi.getRecommendedPosts(1, 10)
     const items = response.data?.items || []
     recommendedPosts.value = items
   } catch (error) {
-    console.error('Failed to load recommended posts:', error)
+    // 如果是连接错误且未超过最大重试次数，延迟后重试
+    const isConnectionError = error.code === 'ECONNREFUSED' || 
+                              error.message?.includes('ECONNREFUSED') ||
+                              error.message?.includes('Network Error')
+    
+    if (isConnectionError && retryCount < 3) {
+      const delay = 1000 * Math.pow(2, retryCount) // 指数退避：1s, 2s, 4s
+      setTimeout(() => {
+        loadRecommendedPosts(retryCount + 1)
+      }, delay)
+    } else {
+      console.error('Failed to load recommended posts:', error)
+    }
   }
 }
 
@@ -184,7 +196,7 @@ const mixPostsWithRecommendations = (normalPosts, recommendations) => {
   return result
 }
 
-const loadPosts = async () => {
+const loadPosts = async (retryCount = 0) => {
   loading.value = true
   try {
     const response = await circleApi.listPosts(currentPage.value, pageSize.value)
@@ -200,6 +212,18 @@ const loadPosts = async () => {
     }
     hasMore.value = items.length >= pageSize.value
   } catch (error) {
+    // 如果是连接错误且未超过最大重试次数，延迟后重试
+    const isConnectionError = error.code === 'ECONNREFUSED' || 
+                              error.message?.includes('ECONNREFUSED') ||
+                              error.message?.includes('Network Error')
+    
+    if (isConnectionError && retryCount < 3) {
+      const delay = 1000 * Math.pow(2, retryCount) // 指数退避：1s, 2s, 4s
+      setTimeout(() => {
+        loadPosts(retryCount + 1)
+      }, delay)
+      return // 不设置loading为false，保持加载状态
+    }
     console.error('Failed to load posts:', error)
     ElMessage.error('加载失败')
   } finally {
@@ -222,12 +246,24 @@ const handleInlinePosted = () => {
   refreshPosts()
 }
 
-const loadDailyQuestion = async () => {
+const loadDailyQuestion = async (retryCount = 0) => {
   questionLoading.value = true
   try {
     const res = await fetchTodayQuestion()
     dailyQuestion.value = res.data
   } catch (error) {
+    // 如果是连接错误且未超过最大重试次数，延迟后重试
+    const isConnectionError = error.code === 'ECONNREFUSED' || 
+                              error.message?.includes('ECONNREFUSED') ||
+                              error.message?.includes('Network Error')
+    
+    if (isConnectionError && retryCount < 3) {
+      const delay = 1000 * Math.pow(2, retryCount) // 指数退避：1s, 2s, 4s
+      setTimeout(() => {
+        loadDailyQuestion(retryCount + 1)
+      }, delay)
+      return // 不设置loading为false，保持加载状态
+    }
     dailyQuestion.value = null
   } finally {
     questionLoading.value = false
@@ -319,10 +355,13 @@ onBeforeRouteLeave((to, from, next) => {
 
 onMounted(async () => {
   window.addEventListener('beforeunload', beforeUnloadHandler)
-  // 先加载推荐内容，再加载普通动态
-  await loadRecommendedPosts()
-  loadPosts()
-  loadDailyQuestion()
+  // 延迟加载，给后端更多启动时间
+  setTimeout(() => {
+    // 先加载推荐内容，再加载普通动态
+    loadRecommendedPosts()
+    loadPosts()
+    loadDailyQuestion()
+  }, 500) // 延迟500ms，给后端启动时间
 })
 
 onBeforeUnmount(() => {

@@ -1,7 +1,7 @@
 /*
- Navicat Premium Dump SQL
+ Navicat Premium Data Transfer
 
- Source Server         : 8.210.210.255_3306
+ Source Server         : Aliyun MySQL
  Source Server Type    : MySQL
  Source Server Version : 80016 (8.0.16)
  Source Host           : 8.210.210.255:3306
@@ -11,11 +11,98 @@
  Target Server Version : 80016 (8.0.16)
  File Encoding         : 65001
 
- Date: 03/01/2026 23:49:04
+ Date: 04/01/2026 08:33:35
 */
 
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
+
+-- ----------------------------
+-- Table structure for activity
+-- ----------------------------
+DROP TABLE IF EXISTS `activity`;
+CREATE TABLE `activity`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `organizer_id` bigint(20) NOT NULL COMMENT '发起者ID',
+  `activity_time` timestamp NOT NULL COMMENT '活动时间',
+  `beverage_id` bigint(20) NULL DEFAULT NULL COMMENT '主要酒类ID（保留用于兼容旧数据）',
+  `alcohol_ids` json NULL COMMENT '酒类标签ID列表（JSON格式，最多2个）',
+  `bar_id` bigint(20) NULL DEFAULT NULL COMMENT '酒吧ID',
+  `max_participants` int(11) NOT NULL COMMENT '参与人数上限',
+  `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '备注',
+  `review_status` enum('PENDING','APPROVED','REJECTED') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'PENDING' COMMENT '审核状态',
+  `reviewed_by` bigint(20) NULL DEFAULT NULL COMMENT '审核人ID',
+  `reviewed_at` timestamp NULL DEFAULT NULL COMMENT '审核时间',
+  `reject_reason` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '拒绝原因',
+  `status` enum('PENDING','APPROVED','REJECTED','ONGOING','FINISHED','CANCELLED') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'PENDING' COMMENT '活动状态',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `is_active` tinyint(1) NULL DEFAULT 1,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_organizer`(`organizer_id` ASC) USING BTREE,
+  INDEX `idx_beverage`(`beverage_id` ASC) USING BTREE,
+  INDEX `idx_bar`(`bar_id` ASC) USING BTREE,
+  INDEX `idx_review_status`(`review_status` ASC) USING BTREE,
+  INDEX `idx_status`(`status` ASC) USING BTREE,
+  INDEX `idx_activity_time`(`activity_time` ASC) USING BTREE,
+  INDEX `activity_ibfk_4`(`reviewed_by` ASC) USING BTREE,
+  CONSTRAINT `activity_ibfk_1` FOREIGN KEY (`organizer_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `activity_ibfk_2` FOREIGN KEY (`beverage_id`) REFERENCES `beverage` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  CONSTRAINT `activity_ibfk_3` FOREIGN KEY (`bar_id`) REFERENCES `bar` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT,
+  CONSTRAINT `activity_ibfk_4` FOREIGN KEY (`reviewed_by`) REFERENCES `user` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '活动表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of activity
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for activity_participant
+-- ----------------------------
+DROP TABLE IF EXISTS `activity_participant`;
+CREATE TABLE `activity_participant`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `activity_id` bigint(20) NOT NULL COMMENT '活动ID',
+  `user_id` bigint(20) NOT NULL COMMENT '参与者ID',
+  `joined_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '参与时间',
+  `has_reviewed` tinyint(1) NULL DEFAULT 0 COMMENT '是否已评价',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_activity_user`(`activity_id` ASC, `user_id` ASC) USING BTREE,
+  INDEX `idx_activity`(`activity_id` ASC) USING BTREE,
+  INDEX `idx_user`(`user_id` ASC) USING BTREE,
+  CONSTRAINT `activity_participant_ibfk_1` FOREIGN KEY (`activity_id`) REFERENCES `activity` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `activity_participant_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '活动参与者表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of activity_participant
+-- ----------------------------
+
+-- ----------------------------
+-- Table structure for alcohol
+-- ----------------------------
+DROP TABLE IF EXISTS `alcohol`;
+CREATE TABLE `alcohol`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '酒类名称',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_name`(`name` ASC) USING BTREE,
+  INDEX `idx_name`(`name` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 16 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '酒类表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of alcohol
+-- ----------------------------
+INSERT INTO `alcohol` VALUES (1, '中国烈酒');
+INSERT INTO `alcohol` VALUES (2, '伏特加');
+INSERT INTO `alcohol` VALUES (3, '威士忌');
+INSERT INTO `alcohol` VALUES (4, '朗姆酒');
+INSERT INTO `alcohol` VALUES (5, '比利时啤酒');
+INSERT INTO `alcohol` VALUES (6, '白酒');
+INSERT INTO `alcohol` VALUES (7, '精酿啤酒');
+INSERT INTO `alcohol` VALUES (8, '葡萄酒');
+INSERT INTO `alcohol` VALUES (9, '金酒');
+INSERT INTO `alcohol` VALUES (10, '鸡尾酒');
 
 -- ----------------------------
 -- Table structure for announcement
@@ -99,9 +186,9 @@ CREATE TABLE `bar`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `application_id`(`application_id` ASC) USING BTREE,
   INDEX `owner_id`(`owner_id` ASC) USING BTREE,
-  INDEX `manager_id`(`manager_id` ASC) USING BTREE,
   INDEX `idx_bar_city`(`city` ASC) USING BTREE,
   INDEX `idx_bar_name`(`name` ASC) USING BTREE,
+  INDEX `manager_id`(`manager_id` ASC) USING BTREE,
   CONSTRAINT `bar_ibfk_1` FOREIGN KEY (`application_id`) REFERENCES `bar_application` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT,
   CONSTRAINT `bar_ibfk_2` FOREIGN KEY (`owner_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
   CONSTRAINT `bar_ibfk_3` FOREIGN KEY (`manager_id`) REFERENCES `user` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT
@@ -279,6 +366,28 @@ CREATE TABLE `beverage_tag`  (
 -- ----------------------------
 
 -- ----------------------------
+-- Table structure for beverage_vector
+-- ----------------------------
+DROP TABLE IF EXISTS `beverage_vector`;
+CREATE TABLE `beverage_vector`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `beverage_id` bigint(20) NULL DEFAULT NULL COMMENT '关联酒类ID',
+  `text_content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '原始文本内容',
+  `vector` json NULL COMMENT '向量数据（JSON格式）',
+  `source_type` varchar(20) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'database' COMMENT '来源类型：database/external',
+  `chunk_index` int(11) NULL DEFAULT 0 COMMENT '文档块索引（用于外部文档分块）',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_beverage_id`(`beverage_id` ASC) USING BTREE,
+  INDEX `idx_source_type`(`source_type` ASC) USING BTREE
+) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '酒类向量存储表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
+-- Records of beverage_vector
+-- ----------------------------
+
+-- ----------------------------
 -- Table structure for comment
 -- ----------------------------
 DROP TABLE IF EXISTS `comment`;
@@ -397,7 +506,7 @@ CREATE TABLE `daily_question`  (
   `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE INDEX `question_date`(`question_date` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 8 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '每日一题表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 9 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '每日一题表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of daily_question
@@ -405,6 +514,7 @@ CREATE TABLE `daily_question`  (
 INSERT INTO `daily_question` VALUES (5, '2026-01-01', '今天你想探索哪一种饮品知识？', '葡萄酒的酿造工艺', '威士忌的熟成秘诀', '精酿啤酒的风味', '无酒精饮品的调配技巧', 0, 0, 0, 0, 0, '葡萄酒酿造涵盖葡萄采摘、发酵、陈酿等步骤，是理解饮品风味的基础。', '/wiki/classic-wine', '2026-01-01 00:16:20');
 INSERT INTO `daily_question` VALUES (6, '2026-01-02', '今天你想探索哪一种饮品知识？', '葡萄酒的酿造工艺', '威士忌的熟成秘诀', '精酿啤酒的风味', '无酒精饮品的调配技巧', 0, 0, 0, 0, 0, '葡萄酒酿造涵盖葡萄采摘、发酵、陈酿等步骤，是理解饮品风味的基础。', '/wiki/classic-wine', '2026-01-02 06:24:27');
 INSERT INTO `daily_question` VALUES (7, '2026-01-03', '今天你想探索哪一种饮品知识？', '葡萄酒的酿造工艺', '威士忌的熟成秘诀', '精酿啤酒的风味', '无酒精饮品的调配技巧', 0, 1, 0, 0, 0, '葡萄酒酿造涵盖葡萄采摘、发酵、陈酿等步骤，是理解饮品风味的基础。', '/wiki/classic-wine', '2026-01-03 01:09:14');
+INSERT INTO `daily_question` VALUES (8, '2026-01-04', '今天你想探索哪一种饮品知识？', '葡萄酒的酿造工艺', '威士忌的熟成秘诀', '精酿啤酒的风味', '无酒精饮品的调配技巧', 0, 0, 0, 0, 0, '葡萄酒酿造涵盖葡萄采摘、发酵、陈酿等步骤，是理解饮品风味的基础。', '/wiki/classic-wine', '2026-01-04 04:57:00');
 
 -- ----------------------------
 -- Table structure for daily_question_answer
@@ -726,7 +836,7 @@ INSERT INTO `share_post` VALUES (21, 6, '清酒入门｜獭祭二割三分，精
 INSERT INTO `share_post` VALUES (22, 7, '茅台品鉴｜飞天茅台2019年，酱香突出，回味悠长。存放三年后，口感更加圆润。好酒需要时间沉淀！🥃 #茅台 #酱香型白酒', '贵州', '白酒,茅台,收藏', '117.135.1.1', '贵州', 1563, 234, 123, 67, '2025-12-24 00:27:24');
 INSERT INTO `share_post` VALUES (23, 6, '日本酒藏之旅｜参观了新潟的八海山酒藏，了解了清酒的酿造过程。从精米到发酵，每一步都充满匠心。回来带了几瓶限定酒！✈️🍶 #日本旅行 #清酒', '日本', '清酒,旅行,酒藏', '180.168.7.1', '日本', 2106, 287, 156, 89, '2024-06-17 00:27:24');
 INSERT INTO `share_post` VALUES (24, 7, '中国白酒香型科普｜酱香、浓香、清香、米香...你知道它们的区别吗？今天来聊聊各大香型的特点和代表品牌！📖 #白酒知识 #香型', '北京', '白酒,知识,科普', '123.125.5.1', '北京', 1783, 198, 87, 45, '2025-12-10 00:27:24');
-INSERT INTO `share_post` VALUES (26, 13, '你好啊', '上海市', NULL, '111.187.9.87', '湖北省', 7, 0, 0, 0, '2026-01-03 17:10:39');
+INSERT INTO `share_post` VALUES (26, 13, '你好啊', '上海市', NULL, '111.187.9.87', '湖北省', 8, 0, 0, 0, '2026-01-03 17:10:39');
 INSERT INTO `share_post` VALUES (27, 11, 'test', '天津市', NULL, '46.3.240.81', '未知地区', 2, 0, 0, 0, '2026-01-03 17:11:49');
 INSERT INTO `share_post` VALUES (28, 11, '1111', '香港特别行政区', NULL, '46.3.240.81', '未知地区', 2, 0, 0, 0, '2026-01-03 17:12:44');
 INSERT INTO `share_post` VALUES (29, 11, '1111122222', '香港特别行政区', NULL, '46.3.240.81', '未知地区', 4, 0, 0, 0, '2026-01-03 17:13:07');
@@ -910,7 +1020,7 @@ CREATE TABLE `user_behavior`  (
   INDEX `idx_user_behavior_type`(`behavior_type` ASC) USING BTREE,
   INDEX `idx_user_behavior_created`(`created_at` ASC) USING BTREE,
   CONSTRAINT `user_behavior_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 452 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户行为记录表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 453 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户行为记录表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of user_behavior
@@ -1307,6 +1417,7 @@ INSERT INTO `user_behavior` VALUES (448, 1, 'POST', 21, 'VIEW', 1, '2026-01-03 2
 INSERT INTO `user_behavior` VALUES (449, 1, 'POST', 31, 'VIEW', 1, '2026-01-03 23:27:12');
 INSERT INTO `user_behavior` VALUES (450, 1, 'POST', 29, 'VIEW', 1, '2026-01-03 23:27:13');
 INSERT INTO `user_behavior` VALUES (451, 1, 'POST', 22, 'VIEW', 1, '2026-01-03 23:47:13');
+INSERT INTO `user_behavior` VALUES (452, 1, 'POST', 26, 'VIEW', 1, '2026-01-04 05:56:38');
 
 -- ----------------------------
 -- Table structure for user_block
@@ -1394,7 +1505,7 @@ CREATE TABLE `user_footprint`  (
   UNIQUE INDEX `uk_footprint`(`user_id` ASC, `target_type` ASC, `target_id` ASC) USING BTREE,
   INDEX `idx_footprint_visited`(`visited_at` ASC) USING BTREE,
   CONSTRAINT `user_footprint_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 98 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户足迹表' ROW_FORMAT = DYNAMIC;
+) ENGINE = InnoDB AUTO_INCREMENT = 99 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '用户足迹表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
 -- Records of user_footprint
@@ -1494,6 +1605,7 @@ INSERT INTO `user_footprint` VALUES (94, 1, 'WIKI', 15, '日本威士忌', '借�
 INSERT INTO `user_footprint` VALUES (95, 1, 'POST', 21, '清酒控', '清酒入门｜獭祭二割三分，精米步合23%，果香浓郁，入口绵柔。虽然价格不菲，但品质确实出众。适合清酒入门者的第一瓶大吟酿！🍶 #清酒 #獭祭', NULL, NULL);
 INSERT INTO `user_footprint` VALUES (96, 1, 'POST', 31, 'demo1', '测试IP', NULL, NULL);
 INSERT INTO `user_footprint` VALUES (97, 1, 'POST', 29, 'demo1', '1111122222', NULL, NULL);
+INSERT INTO `user_footprint` VALUES (98, 1, 'POST', 26, 'demo3', '你好啊', '/api/files/97e91453-e059-4b4a-9739-936bc0acc578', NULL);
 
 -- ----------------------------
 -- Table structure for user_preference
@@ -1760,163 +1872,5 @@ INSERT INTO `wiki_revision` VALUES (60, 17, 1, 'demo', '创建词条', '# 朗姆
 INSERT INTO `wiki_revision` VALUES (61, 18, 1, 'demo', '创建词条', '# 龙舌兰\n\n## 概述\n龙舌兰酒（Tequila）是墨西哥的国酒，以蓝色龙舌兰（Blue Agave）植物的鳞茎为原料蒸馏而成，必须产于墨西哥特定地区。\n\n## 产区规定\n- 必须产于墨西哥哈利斯科州及周边特定地区\n- 至少51%的原料必须是蓝色龙舌兰\n- 100% Agave标注表示完全使用龙舌兰\n\n## 生产过程\n1. 收获8-12年的成熟龙舌兰\n2. 去除叶片，保留鳞茎（Piña）\n3. 蒸煮鳞茎，转化淀粉为糖\n4. 榨汁、发酵、蒸馏\n5. 陈酿或直接装瓶\n\n## 类型分级\n- **Blanco（银/白）**：未陈酿或陈酿不超过2个月\n- **Reposado（陈酿）**：陈酿2-12个月\n- **Añejo（特陈）**：陈酿1-3年\n- **Extra Añejo**：陈酿超过3年\n\n## 饮用文化\n传统：盐+龙舌兰+柠檬；现代：品鉴级龙舌兰适合纯饮；调酒：玛格丽特等。', '2026-01-03 11:00:00');
 INSERT INTO `wiki_revision` VALUES (62, 19, 1, 'demo', '创建词条', '# 莫吉托\n\n## 简介\nMojito（莫吉托）是一款源自古巴的经典鸡尾酒，以清爽的薄荷和柠檬风味闻名，是夏日最受欢迎的鸡尾酒之一。\n\n## 历史传说\n莫吉托起源于16世纪的古巴哈瓦那，据说海盗弗朗西斯·德雷克的船员们最早调制了这款饮料的雏形，用以掩盖劣质朗姆酒的味道。\n\n## 标准配方\n- 白朗姆酒 45ml\n- 青柠汁 20ml\n- 糖浆 15ml\n- 新鲜薄荷叶 6-8片\n- 苏打水 适量\n- 碎冰\n\n## 调制步骤\n1. 在杯中放入薄荷叶和糖浆，轻轻捣碎（Muddle）\n2. 加入青柠汁和朗姆酒\n3. 加满碎冰，搅拌\n4. 倒入苏打水至满\n5. 薄荷叶和青柠片装饰\n\n## 变体\n草莓莫吉托、百香果莫吉托、无酒精莫吉托（Virgin Mojito）等。\n\n## 名人轶事\n美国作家海明威是莫吉托的忠实粉丝，古巴哈瓦那的La Bodeguita del Medio酒吧因他而闻名。', '2026-01-03 14:00:00');
 INSERT INTO `wiki_revision` VALUES (63, 20, 1, 'demo', '创建词条', '# 玛格丽特\n\n## 概述\nMargarita（玛格丽特）是以龙舌兰为基酒的经典鸡尾酒，以其完美的酸甜平衡和标志性的盐边装饰而闻名，是世界上最受欢迎的鸡尾酒之一。\n\n## 起源传说\n关于玛格丽特的起源有多个版本：\n- **最流行版本**：1938年，墨西哥调酒师为纪念去世的恋人Margarita而创作\n- **另一版本**：1948年，德州社交名媛Margarita Sames在派对上发明\n\n## 经典配方（IBA标准）\n- 龙舌兰酒 50ml（建议使用100% Agave）\n- 橙味力娇酒（Cointreau/Triple Sec）20ml\n- 新鲜青柠汁 15ml\n- 盐边装饰\n\n## 调制方法\n1. 用青柠片湿润杯口，沾上盐形成盐边\n2. 将所有液体材料加冰摇匀（Shake）\n3. 滤冰倒入杯中\n4. 青柠片装饰\n\n## 常见变体\n- **冰沙玛格丽特（Frozen Margarita）**：碎冰机打碎\n- **草莓玛格丽特**：加入新鲜草莓\n- **Tommy\'s Margarita**：用龙舌兰糖浆代替橙酒\n\n## 饮用场合\n派对、墨西哥餐厅、海滩酒吧、夏日聚会。', '2026-01-03 15:30:00');
-
--- ----------------------------
--- Table structure for activity
--- ----------------------------
-DROP TABLE IF EXISTS `activity`;
-CREATE TABLE `activity`  (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `organizer_id` bigint(20) NOT NULL COMMENT '发起者ID',
-  `activity_time` timestamp NOT NULL COMMENT '活动时间',
-  `beverage_id` bigint(20) NULL DEFAULT NULL COMMENT '主要酒类ID（保留用于兼容旧数据）',
-  `alcohol_ids` json NULL COMMENT '酒类标签ID列表（JSON格式，最多2个）',
-  `bar_id` bigint(20) NULL DEFAULT NULL COMMENT '酒吧ID',
-  `max_participants` int(11) NOT NULL COMMENT '参与人数上限',
-  `remark` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL COMMENT '备注',
-  `review_status` enum('PENDING','APPROVED','REJECTED') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'PENDING' COMMENT '审核状态',
-  `reviewed_by` bigint(20) NULL DEFAULT NULL COMMENT '审核人ID',
-  `reviewed_at` timestamp NULL DEFAULT NULL COMMENT '审核时间',
-  `reject_reason` varchar(500) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '拒绝原因',
-  `status` enum('PENDING','APPROVED','REJECTED','ONGOING','FINISHED','CANCELLED') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT 'PENDING' COMMENT '活动状态',
-  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
-  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-  `is_active` tinyint(1) NULL DEFAULT 1,
-  PRIMARY KEY (`id`) USING BTREE,
-  INDEX `idx_organizer`(`organizer_id` ASC) USING BTREE,
-  INDEX `idx_beverage`(`beverage_id` ASC) USING BTREE,
-  INDEX `idx_bar`(`bar_id` ASC) USING BTREE,
-  INDEX `idx_review_status`(`review_status` ASC) USING BTREE,
-  INDEX `idx_status`(`status` ASC) USING BTREE,
-  INDEX `idx_activity_time`(`activity_time` ASC) USING BTREE,
-  CONSTRAINT `activity_ibfk_1` FOREIGN KEY (`organizer_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
-  CONSTRAINT `activity_ibfk_2` FOREIGN KEY (`beverage_id`) REFERENCES `beverage` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT,
-  CONSTRAINT `activity_ibfk_3` FOREIGN KEY (`bar_id`) REFERENCES `bar` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT,
-  CONSTRAINT `activity_ibfk_4` FOREIGN KEY (`reviewed_by`) REFERENCES `user` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '活动表' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of activity
--- ----------------------------
-
--- ----------------------------
--- Table structure for activity_participant
--- ----------------------------
-DROP TABLE IF EXISTS `activity_participant`;
-CREATE TABLE `activity_participant`  (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `activity_id` bigint(20) NOT NULL COMMENT '活动ID',
-  `user_id` bigint(20) NOT NULL COMMENT '参与者ID',
-  `joined_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '参与时间',
-  `has_reviewed` tinyint(1) NULL DEFAULT 0 COMMENT '是否已评价',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_activity_user`(`activity_id` ASC, `user_id` ASC) USING BTREE,
-  INDEX `idx_activity`(`activity_id` ASC) USING BTREE,
-  INDEX `idx_user`(`user_id` ASC) USING BTREE,
-  CONSTRAINT `activity_participant_ibfk_1` FOREIGN KEY (`activity_id`) REFERENCES `activity` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
-  CONSTRAINT `activity_participant_ibfk_2` FOREIGN KEY (`user_id`) REFERENCES `user` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '活动参与者表' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of activity_participant
--- ----------------------------
-
--- ----------------------------
--- Table structure for alcohol
--- ----------------------------
-DROP TABLE IF EXISTS `alcohol`;
-CREATE TABLE `alcohol`  (
-  `id` bigint(20) NOT NULL AUTO_INCREMENT,
-  `name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '酒类名称',
-  PRIMARY KEY (`id`) USING BTREE,
-  UNIQUE INDEX `uk_name`(`name` ASC) USING BTREE,
-  INDEX `idx_name`(`name` ASC) USING BTREE
-) ENGINE = InnoDB AUTO_INCREMENT = 1 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '酒类表' ROW_FORMAT = DYNAMIC;
-
--- ----------------------------
--- Records of alcohol
--- ----------------------------
--- 从bar表的main_beverages字段中提取酒类数据
--- 处理包含顿号"、"分隔的多个酒类，以及单个酒类的情况
-INSERT INTO `alcohol` (`name`)
-SELECT DISTINCT TRIM(beverage_name) AS name
-FROM (
-  -- 处理单个酒类（没有顿号）
-  SELECT main_beverages AS beverage_name
-  FROM `bar`
-  WHERE main_beverages IS NOT NULL 
-    AND main_beverages != ''
-    AND main_beverages NOT LIKE '%、%'
-  
-  UNION ALL
-  
-  -- 处理多个酒类（有顿号分隔）
-  SELECT SUBSTRING_INDEX(SUBSTRING_INDEX(b.main_beverages, '、', n.n), '、', -1) AS beverage_name
-  FROM `bar` b
-  CROSS JOIN (
-    SELECT 1 AS n UNION ALL SELECT 2 UNION ALL SELECT 3 UNION ALL SELECT 4 UNION ALL SELECT 5 
-    UNION ALL SELECT 6 UNION ALL SELECT 7 UNION ALL SELECT 8 UNION ALL SELECT 9 UNION ALL SELECT 10
-  ) n
-  WHERE b.main_beverages IS NOT NULL 
-    AND b.main_beverages != ''
-    AND b.main_beverages LIKE '%、%'
-    AND CHAR_LENGTH(b.main_beverages) - CHAR_LENGTH(REPLACE(b.main_beverages, '、', '')) >= n.n - 1
-) AS extracted
-WHERE TRIM(beverage_name) != ''
-ORDER BY name;
-
--- ----------------------------
--- 数据库迁移脚本（用于已存在的数据库）
--- 如果activity表已存在，请执行以下SQL语句进行升级
--- 注意：执行前请先备份数据库
--- 如果字段或约束已存在，执行相应语句会报错，可以安全忽略
--- ----------------------------
-
--- 注意：如果使用完整的SQL文件创建新数据库，CREATE TABLE activity已经包含了alcohol_ids字段
--- 以下迁移脚本仅适用于已存在的旧数据库，如果字段已存在请注释掉相应语句
-
--- 1. 为activity表添加alcohol_ids字段
--- 如果字段已存在（例如使用完整SQL文件创建），请注释掉此语句
--- ALTER TABLE `activity` 
--- ADD COLUMN `alcohol_ids` JSON NULL COMMENT '酒类标签ID列表（JSON格式，最多2个）' AFTER `beverage_id`;
-
--- 2. 修改beverage_id字段为可NULL（兼容旧数据）
--- 如果字段已经是NULL，会报错但可以忽略
-ALTER TABLE `activity` 
-MODIFY COLUMN `beverage_id` bigint(20) NULL DEFAULT NULL COMMENT '主要酒类ID（保留用于兼容旧数据）';
-
--- 3. 修改外键约束，允许beverage_id为NULL时删除
--- 3.1 先删除旧的外键约束
--- 如果外键不存在，会报错：Can't DROP FOREIGN KEY 'activity_ibfk_2'; check that it exists，可以忽略
-ALTER TABLE `activity` DROP FOREIGN KEY `activity_ibfk_2`;
-
--- 3.2 重新添加外键约束，允许NULL值
--- 如果外键已存在，会报错：Duplicate foreign key constraint name 'activity_ibfk_2'，可以忽略
-ALTER TABLE `activity` 
-ADD CONSTRAINT `activity_ibfk_2` FOREIGN KEY (`beverage_id`) REFERENCES `beverage` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT;
-
--- 4. 为bar表添加主理人字段
--- 注意：如果使用完整的SQL文件创建新数据库，CREATE TABLE bar已经包含了manager_id和manager_name字段
--- 以下迁移脚本仅适用于已存在的旧数据库，如果字段已存在请注释掉相应语句
-
--- 4.1 添加manager_id字段
--- 如果字段已存在（例如使用完整SQL文件创建），请注释掉此语句
--- ALTER TABLE `bar` 
--- ADD COLUMN `manager_id` bigint(20) NULL DEFAULT NULL COMMENT '主理人ID' AFTER `owner_id`;
-
--- 4.2 添加manager_name字段
--- 如果字段已存在（例如使用完整SQL文件创建），请注释掉此语句
--- ALTER TABLE `bar` 
--- ADD COLUMN `manager_name` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '主理人姓名' AFTER `manager_id`;
-
--- 4.3 添加manager_id索引
--- 如果索引已存在（例如使用完整SQL文件创建），请注释掉此语句
--- ALTER TABLE `bar` 
--- ADD INDEX `manager_id`(`manager_id` ASC) USING BTREE;
-
--- 4.4 添加manager_id外键约束
--- 如果外键已存在（例如使用完整SQL文件创建），请注释掉此语句
--- ALTER TABLE `bar` 
--- ADD CONSTRAINT `bar_ibfk_3` FOREIGN KEY (`manager_id`) REFERENCES `user` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT;
 
 SET FOREIGN_KEY_CHECKS = 1;

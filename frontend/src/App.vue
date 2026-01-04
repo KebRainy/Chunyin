@@ -11,18 +11,22 @@
         <Footer />
       </el-footer>
     </el-container>
+    <!-- RAG悬浮窗 -->
+    <RAGFloatingWindow />
   </div>
 </template>
 
 <script>
 import Header from './components/layout/Header.vue'
 import Footer from './components/layout/Footer.vue'
+import RAGFloatingWindow from './components/rag/RAGFloatingWindow.vue'
 
 export default {
   name: 'App',
   components: {
     Header,
-    Footer
+    Footer,
+    RAGFloatingWindow
   }
 }
 </script>

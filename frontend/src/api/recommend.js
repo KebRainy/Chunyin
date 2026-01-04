@@ -45,6 +45,15 @@ export const recommendApi = {
       method: 'get',
       params: { size }
     })
+  },
+  
+  // RAG智能推荐酒饮（支持对话历史）
+  ragRecommendBeveragesWithHistory: (data) => {
+    return request({
+      url: '/recommend/beverages/rag',
+      method: 'post',
+      data
+    })
   }
 }
 

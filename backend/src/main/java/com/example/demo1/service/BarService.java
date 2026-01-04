@@ -234,7 +234,7 @@ public class BarService {
         wrapper.eq(Bar::getIsActive, true)
                 .orderByDesc(Bar::getAvgRating)
                 .last("LIMIT " + (limit != null ? limit : 20));
-        
+
         List<Bar> bars = barMapper.selectList(wrapper);
         return bars.stream().map(this::convertToVO).collect(Collectors.toList());
     }
@@ -488,7 +488,7 @@ public class BarService {
     /**
      * 获取商家拥有的酒吧列表（用于创建活动时选择）
      * 根据main_beverages包含的标签排序，包含标签的排在前面
-     * 
+     *
      * @param ownerId 商家用户ID
      * @param alcoholIds 酒类标签ID列表（可选，用于排序）
      * @return 商家拥有的酒吧列表
@@ -499,12 +499,12 @@ public class BarService {
         wrapper.eq(Bar::getOwnerId, ownerId)
                 .eq(Bar::getIsActive, true)
                 .orderByDesc(Bar::getAvgRating); // 默认按评分排序
-        
+
         List<Bar> bars = barMapper.selectList(wrapper);
         List<BarVO> barVOs = bars.stream()
                 .map(this::convertToVO)
                 .collect(Collectors.toList());
-        
+
         // 如果提供了alcoholIds，根据main_beverages包含的标签排序
         if (alcoholIds != null && !alcoholIds.isEmpty()) {
             // 获取标签名称
@@ -515,17 +515,17 @@ public class BarService {
                     })
                     .filter(name -> name != null)
                     .collect(Collectors.toList());
-            
+
             if (!alcoholNames.isEmpty()) {
                 // 排序：包含标签的排在前面
                 barVOs.sort((a, b) -> {
                     boolean aContains = alcoholNames.stream()
-                            .anyMatch(name -> a.getMainBeverages() != null && 
+                            .anyMatch(name -> a.getMainBeverages() != null &&
                                     a.getMainBeverages().contains(name));
                     boolean bContains = alcoholNames.stream()
-                            .anyMatch(name -> b.getMainBeverages() != null && 
+                            .anyMatch(name -> b.getMainBeverages() != null &&
                                     b.getMainBeverages().contains(name));
-                    
+
                     if (aContains && !bContains) {
                         return -1; // a排在前面
                     } else if (!aContains && bContains) {
@@ -540,14 +540,14 @@ public class BarService {
                 });
             }
         }
-        
+
         return barVOs;
     }
 
     /**
      * 获取推荐的酒吧列表
      * 使用BarRankingAlgorithm算法进行排序
-     * 
+     *
      * @param userLatitude 用户纬度
      * @param userLongitude 用户经度
      * @param limit 返回数量限制
@@ -557,29 +557,29 @@ public class BarService {
         if (userLatitude == null || userLongitude == null) {
             throw new BusinessException("请提供有效的经纬度坐标");
         }
-        
+
         // 获取所有活跃且有经纬度信息的酒吧
         LambdaQueryWrapper<Bar> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Bar::getIsActive, true)
                 .isNotNull(Bar::getLatitude)
                 .isNotNull(Bar::getLongitude);
         List<Bar> allBars = barMapper.selectList(wrapper);
-        
+
         // 转换为VO
         List<BarVO> barVOs = allBars.stream()
                 .map(this::convertToVO)
                 .collect(Collectors.toList());
-        
+
         // 使用BarRankingAlgorithm进行排序
-        BarRankingAlgorithm.UserLocation userLocation = 
+        BarRankingAlgorithm.UserLocation userLocation =
                 new BarRankingAlgorithm.UserLocation(userLatitude, userLongitude);
-        
+
         // 使用默认权重（距离0.6，质量0.4）
         BarRankingAlgorithm.RankingPreferences preferences = null;
-        
-        List<BarRankingAlgorithm.BarRecommendationResult> results = 
+
+        List<BarRankingAlgorithm.BarRecommendationResult> results =
                 BarRankingAlgorithm.rankBars(barVOs, userLocation, preferences);
-        
+
         // 提取BarVO并设置距离和分数
         List<BarVO> recommendedBars = results.stream()
                 .map(result -> {
@@ -590,7 +590,7 @@ public class BarService {
                 })
                 .limit(limit != null ? limit : 5)
                 .collect(Collectors.toList());
-        
+
         return recommendedBars;
     }
 }

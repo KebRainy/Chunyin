@@ -156,6 +156,12 @@ const routes = [
     name: 'ActivityReview',
     component: () => import('@/views/activity/ActivityList.vue'),
     meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/wiki/review',
+    name: 'WikiReview',
+    component: () => import('@/views/admin/WikiReview.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
   }
 ]
 

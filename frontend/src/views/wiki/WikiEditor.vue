@@ -7,8 +7,12 @@
             <p class="eyebrow">{{ isEdit ? '编辑条目' : '新建条目' }}</p>
             <h2>{{ form.title || '未命名词条' }}</h2>
             <div class="status-bar" v-if="hasUnsavedChanges || autoSaveStatus">
-              <el-icon v-if="autoSaveStatus === 'saving'"><Loading /></el-icon>
-              <el-icon v-else-if="autoSaveStatus === 'saved'"><CircleCheck /></el-icon>
+              <el-icon v-if="autoSaveStatus === 'saving'">
+                <Loading />
+              </el-icon>
+              <el-icon v-else-if="autoSaveStatus === 'saved'">
+                <CircleCheck />
+              </el-icon>
               <span class="status-text">
                 {{ autoSaveStatus === 'saving' ? '正在保存...' : autoSaveStatus === 'saved' ? '已自动保存' : '有未保存的更改' }}
               </span>
@@ -24,22 +28,11 @@
       </template>
       <el-form :model="form" label-width="80px" class="editor-form">
         <el-form-item label="标题">
-          <el-input 
-            v-model="form.title" 
-            placeholder="请输入标题"
-            maxlength="200"
-            show-word-limit
-          />
+          <el-input v-model="form.title" placeholder="请输入标题" maxlength="200" show-word-limit />
         </el-form-item>
         <el-form-item label="摘要">
-          <el-input
-            v-model="form.summary"
-            type="textarea"
-            :rows="2"
-            maxlength="500"
-            show-word-limit
-            placeholder="简要概述条目"
-          />
+          <el-input v-model="form.summary" type="textarea" :rows="2" maxlength="500" show-word-limit
+            placeholder="简要概述条目" />
         </el-form-item>
         <el-form-item label="正文">
           <div class="editor-grid">
@@ -47,102 +40,52 @@
               <div class="toolbar">
                 <div class="toolbar-group">
                   <el-button-group>
-                    <el-button 
-                      size="small" 
-                      @click="insertMarkdown('**', '**', '加粗')"
-                      title="加粗 (Ctrl+B)"
-                    >
+                    <el-button size="small" @click="insertMarkdown('**', '**', '加粗')" title="加粗 (Ctrl+B)">
                       <strong>B</strong>
                     </el-button>
-                    <el-button 
-                      size="small" 
-                      @click="insertMarkdown('*', '*', '斜体')"
-                      title="斜体 (Ctrl+I)"
-                    >
+                    <el-button size="small" @click="insertMarkdown('*', '*', '斜体')" title="斜体 (Ctrl+I)">
                       <em>I</em>
                     </el-button>
-                    <el-button 
-                      size="small" 
-                      @click="insertMarkdown('`', '`', '行内代码')"
-                      title="行内代码"
-                    >
+                    <el-button size="small" @click="insertMarkdown('`', '`', '行内代码')" title="行内代码">
                       &lt;/&gt;
                     </el-button>
                   </el-button-group>
                 </div>
                 <div class="toolbar-group">
                   <el-button-group>
-                    <el-button 
-                      size="small" 
-                      @click="insertMarkdown('# ', '', '一级标题')"
-                      title="一级标题"
-                    >
+                    <el-button size="small" @click="insertMarkdown('# ', '', '一级标题')" title="一级标题">
                       H1
                     </el-button>
-                    <el-button 
-                      size="small" 
-                      @click="insertMarkdown('## ', '', '二级标题')"
-                      title="二级标题"
-                    >
+                    <el-button size="small" @click="insertMarkdown('## ', '', '二级标题')" title="二级标题">
                       H2
                     </el-button>
-                    <el-button 
-                      size="small" 
-                      @click="insertMarkdown('### ', '', '三级标题')"
-                      title="三级标题"
-                    >
+                    <el-button size="small" @click="insertMarkdown('### ', '', '三级标题')" title="三级标题">
                       H3
                     </el-button>
                   </el-button-group>
                 </div>
                 <div class="toolbar-group">
                   <el-button-group>
-                    <el-button 
-                      size="small" 
-                      @click="insertMarkdown('- ', '', '无序列表')"
-                      title="无序列表"
-                    >
+                    <el-button size="small" @click="insertMarkdown('- ', '', '无序列表')" title="无序列表">
                       •
                     </el-button>
-                    <el-button 
-                      size="small" 
-                      @click="insertMarkdown('1. ', '', '有序列表')"
-                      title="有序列表"
-                    >
+                    <el-button size="small" @click="insertMarkdown('1. ', '', '有序列表')" title="有序列表">
                       1.
                     </el-button>
-                    <el-button 
-                      size="small" 
-                      @click="insertMarkdown('> ', '', '引用')"
-                      title="引用"
-                    >
+                    <el-button size="small" @click="insertMarkdown('> ', '', '引用')" title="引用">
                       "
                     </el-button>
                   </el-button-group>
                 </div>
                 <div class="toolbar-group">
-                  <el-button 
-                    size="small" 
-                    @click="insertCodeBlock"
-                    title="代码块"
-                  >
+                  <el-button size="small" @click="insertCodeBlock" title="代码块">
                     { }
                   </el-button>
-                  <el-button 
-                    size="small" 
-                    @click="insertLink"
-                    title="插入链接"
-                  >
+                  <el-button size="small" @click="insertLink" title="插入链接">
                     链接
                   </el-button>
-                  <el-upload
-                    class="upload-btn"
-                    action="/api/files/upload?category=WIKI"
-                    :show-file-list="false"
-                    :before-upload="beforeUpload"
-                    :on-success="handleUploadSuccess"
-                    :on-error="handleUploadError"
-                  >
+                  <el-upload class="upload-btn" action="/api/files/upload?category=WIKI" :show-file-list="false"
+                    :before-upload="beforeUpload" :on-success="handleUploadSuccess" :on-error="handleUploadError">
                     <el-button size="small" :loading="uploadingImage">
                       {{ uploadingImage ? '上传中...' : '图片' }}
                     </el-button>
@@ -150,16 +93,10 @@
                 </div>
               </div>
               <div class="editor-wrapper">
-                <el-input
-                  ref="contentInputRef"
-                  v-model="form.content"
-                  type="textarea"
-                  :rows="18"
-                  class="markdown-input"
+                <el-input ref="contentInputRef" v-model="form.content" type="textarea" :rows="18" class="markdown-input"
                   placeholder="支持 Markdown 语法，使用工具栏快捷按钮或直接输入 Markdown 语法"
                   @keydown.ctrl.b.prevent="insertMarkdown('**', '**', '加粗')"
-                  @keydown.ctrl.i.prevent="insertMarkdown('*', '*', '斜体')"
-                />
+                  @keydown.ctrl.i.prevent="insertMarkdown('*', '*', '斜体')" />
                 <div class="editor-stats">
                   <span>字数: {{ contentStats.words }}</span>
                   <span>字符: {{ contentStats.chars }}</span>
@@ -169,11 +106,7 @@
               <div class="uploaded-images" v-if="uploadedImages.length">
                 <p class="images-title">已上传图片</p>
                 <div class="images-list">
-                  <div
-                    v-for="item in uploadedImages"
-                    :key="item.uid"
-                    class="image-thumb"
-                  >
+                  <div v-for="item in uploadedImages" :key="item.uid" class="image-thumb">
                     <img :src="item.url" :alt="item.url">
                     <el-button text type="danger" size="small" @click="removeImage(item)">
                       删除
@@ -185,12 +118,7 @@
             <div class="preview-panel">
               <div class="preview-header">
                 <span>实时预览</span>
-                <el-button 
-                  text 
-                  size="small" 
-                  @click="togglePreviewFullscreen"
-                  v-if="tocItems.length > 0"
-                >
+                <el-button text size="small" @click="togglePreviewFullscreen" v-if="tocItems.length > 0">
                   {{ showToc ? '隐藏目录' : '显示目录' }}
                 </el-button>
               </div>
@@ -198,12 +126,8 @@
                 <div class="preview-toc" v-if="showToc && tocItems.length > 0">
                   <h4>目录</h4>
                   <ul>
-                    <li 
-                      v-for="(item, index) in tocItems" 
-                      :key="index"
-                      :class="`toc-level-${item.level}`"
-                      @click="scrollToHeading(item.text)"
-                    >
+                    <li v-for="(item, index) in tocItems" :key="index" :class="`toc-level-${item.level}`"
+                      @click="scrollToHeading(item.text)">
                       {{ item.text }}
                     </li>
                   </ul>
@@ -214,14 +138,8 @@
           </div>
         </el-form-item>
         <el-form-item label="编辑说明" v-if="isEdit">
-          <el-input
-            v-model="form.editSummary"
-            type="textarea"
-            :rows="2"
-            maxlength="200"
-            show-word-limit
-            placeholder="简要说明本次编辑的变更内容（可选）"
-          />
+          <el-input v-model="form.editSummary" type="textarea" :rows="2" maxlength="200" show-word-limit
+            placeholder="简要说明本次编辑的变更内容（可选）" />
         </el-form-item>
       </el-form>
     </el-card>
@@ -302,16 +220,16 @@ const insertMarkdown = (before, after, placeholder = '') => {
   if (!contentInputRef.value) return
   const textarea = contentInputRef.value.$el.querySelector('textarea')
   if (!textarea) return
-  
+
   const start = textarea.selectionStart
   const end = textarea.selectionEnd
   const selectedText = form.content.substring(start, end)
-  const replacement = selectedText 
-    ? `${before}${selectedText}${after}` 
+  const replacement = selectedText
+    ? `${before}${selectedText}${after}`
     : `${before}${placeholder}${after}`
-  
+
   form.content = form.content.substring(0, start) + replacement + form.content.substring(end)
-  
+
   nextTick(() => {
     const newPos = start + replacement.length
     textarea.setSelectionRange(newPos, newPos)
@@ -323,19 +241,19 @@ const insertCodeBlock = () => {
   if (!contentInputRef.value) return
   const textarea = contentInputRef.value.$el.querySelector('textarea')
   if (!textarea) return
-  
+
   const start = textarea.selectionStart
   const end = textarea.selectionEnd
   const selectedText = form.content.substring(start, end)
-  const replacement = selectedText 
-    ? `\`\`\`\n${selectedText}\n\`\`\`` 
+  const replacement = selectedText
+    ? `\`\`\`\n${selectedText}\n\`\`\``
     : `\`\`\`\n// 代码内容\n\`\`\``
-  
+
   form.content = form.content.substring(0, start) + replacement + form.content.substring(end)
-  
+
   nextTick(() => {
-    const newPos = selectedText 
-      ? start + replacement.length 
+    const newPos = selectedText
+      ? start + replacement.length
       : start + replacement.length - 10
     textarea.setSelectionRange(newPos, newPos)
     textarea.focus()
@@ -346,18 +264,18 @@ const insertLink = () => {
   if (!contentInputRef.value) return
   const textarea = contentInputRef.value.$el.querySelector('textarea')
   if (!textarea) return
-  
+
   const start = textarea.selectionStart
   const end = textarea.selectionEnd
   const selectedText = form.content.substring(start, end)
-  const replacement = selectedText 
+  const replacement = selectedText
     ? `[${selectedText}](https://)`
     : `[链接文本](https://)`
-  
+
   form.content = form.content.substring(0, start) + replacement + form.content.substring(end)
-  
+
   nextTick(() => {
-    const newPos = selectedText 
+    const newPos = selectedText
       ? start + replacement.length - 1
       : start + replacement.length - 9
     textarea.setSelectionRange(newPos, newPos)
@@ -469,7 +387,7 @@ const extractImagesFromContent = () => {
 // 自动保存草稿到 localStorage
 const autoSaveDraft = () => {
   if (!form.title && !form.content) return
-  
+
   const draftKey = isEdit.value ? `wiki_draft_${route.params.id}` : 'wiki_draft_new'
   const draft = {
     title: form.title,
@@ -533,7 +451,7 @@ const loadPage = async () => {
     }
     return
   }
-  
+
   try {
     const res = await fetchWikiPage(route.params.id)
     Object.assign(form, {
@@ -554,7 +472,7 @@ const handleSubmit = async () => {
     ElMessage.warning('标题和正文不能为空')
     return
   }
-  
+
   loading.value = true
   try {
     if (isEdit.value) {
@@ -579,7 +497,31 @@ const handleSubmit = async () => {
     router.push('/wiki')
   } catch (error) {
     console.error('提交失败:', error)
-    ElMessage.error(error.response?.data?.message || '提交失败，请稍后再试')
+
+    // axios 响应拦截器在 code!=200 时直接 reject(res)，所以这里优先使用 error 本身
+    const res = error?.code ? error : error.response?.data
+    // 注意：这里判断 res.code，而不是 HTTP status
+    if (res?.code === 409 && res?.data?.existingWiki) {
+      const existingWiki = res.data.existingWiki
+      try {
+        await ElMessageBox.confirm(
+          `词条"${existingWiki.title}"已存在，是否跳转到该词条的编辑页面？`,
+          '词条已存在',
+          {
+            confirmButtonText: '跳转',
+            cancelButtonText: '取消',
+            type: 'warning'
+          }
+        )
+        // 使用后端返回的 id 跳转到编辑页
+        router.push(`/wiki/edit/${existingWiki.id}`)
+      } catch {
+        // 用户取消
+      }
+      return
+    }
+
+    ElMessage.error(res?.message || '提交失败，请稍后再试')
   } finally {
     loading.value = false
   }
@@ -608,17 +550,17 @@ const handleGoBack = async () => {
 
 onMounted(() => {
   loadPage()
-  
+
   // 监听内容变化，自动保存
   watch(
     () => [form.title, form.summary, form.content],
     () => {
       hasUnsavedChanges.value = form.content !== originalContent.value
-      
+
       if (autoSaveTimer) {
         clearTimeout(autoSaveTimer)
       }
-      
+
       autoSaveTimer = setTimeout(() => {
         if (hasUnsavedChanges.value) {
           autoSaveStatus.value = 'saving'
@@ -628,7 +570,7 @@ onMounted(() => {
     },
     { deep: true }
   )
-  
+
   // 监听内容变化，提取图片
   watch(
     () => form.content,
@@ -642,7 +584,7 @@ onMounted(() => {
     },
     { immediate: true }
   )
-  
+
   // 页面离开前提示
   window.addEventListener('beforeunload', (e) => {
     if (hasUnsavedChanges.value) {
@@ -659,7 +601,7 @@ onBeforeUnmount(() => {
   if (autoSaveTimer) {
     clearTimeout(autoSaveTimer)
   }
-  window.removeEventListener('beforeunload', () => {})
+  window.removeEventListener('beforeunload', () => { })
 })
 </script>
 
@@ -967,11 +909,11 @@ onBeforeUnmount(() => {
   .editor-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .preview-wrapper {
     flex-direction: column;
   }
-  
+
   .preview-toc {
     width: 100%;
     max-height: 200px;

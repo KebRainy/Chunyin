@@ -14,6 +14,7 @@
             <el-upload
               class="avatar-upload"
               action="/api/files/upload?category=AVATAR"
+              with-credentials
               :show-file-list="false"
               :on-success="handleAvatarSuccess"
               :before-upload="beforeAvatarUpload"

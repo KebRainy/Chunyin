@@ -4,3 +4,6 @@ pydantic==2.10.5
 numpy==2.2.1
 opencv-python-headless==4.10.0.84
 pillow==11.0.0
+opencc-python-reimplemented==0.1.7
+onnxruntime==1.23.2
+tokenizers==0.15.2

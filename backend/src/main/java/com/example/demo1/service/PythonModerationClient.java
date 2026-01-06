@@ -1,7 +1,6 @@
 package com.example.demo1.service;
 
 import com.example.demo1.common.exception.BusinessException;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -39,6 +38,7 @@ public class PythonModerationClient {
     private boolean failOpen;
 
     private final HttpClient httpClient = HttpClient.newBuilder()
+        .version(HttpClient.Version.HTTP_1_1)
         .connectTimeout(Duration.ofMillis(300))
         .build();
 
@@ -47,12 +47,17 @@ public class PythonModerationClient {
             return Optional.empty();
         }
         try {
-            TextRequest payload = new TextRequest(text, scene);
+            Map<String, Object> payload = Map.of(
+                "text", text,
+                "content", text,
+                "scene", scene
+            );
             String body = objectMapper.writeValueAsString(payload);
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl + "/v1/moderate/text"))
                 .timeout(Duration.ofMillis(timeoutMs))
                 .header("Content-Type", "application/json")
+                .header("Accept", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
                 .build();
 
@@ -79,12 +84,19 @@ public class PythonModerationClient {
                 return Optional.empty();
             }
             String b64 = Base64.getEncoder().encodeToString(imageBytes);
-            ImageRequest payload = new ImageRequest(b64, mimeType, scene);
+            Map<String, Object> payload = Map.of(
+                "image_base64", b64,
+                "imageBase64", b64,
+                "mime_type", mimeType,
+                "mimeType", mimeType,
+                "scene", scene
+            );
             String body = objectMapper.writeValueAsString(payload);
             HttpRequest request = HttpRequest.newBuilder()
                 .uri(URI.create(baseUrl + "/v1/moderate/image"))
                 .timeout(Duration.ofMillis(timeoutMs))
                 .header("Content-Type", "application/json")
+                .header("Accept", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
                 .build();
 
@@ -102,14 +114,6 @@ public class PythonModerationClient {
         }
     }
 
-    public record TextRequest(String text, String scene) {}
-
-    public record ImageRequest(
-        @JsonProperty("image_base64") String imageBase64,
-        @JsonProperty("mime_type") String mimeType,
-        String scene
-    ) {}
-
     public record ModerationResponse(
         String action,
         List<String> categories,
@@ -117,4 +121,3 @@ public class PythonModerationClient {
         List<String> reasons
     ) {}
 }
-

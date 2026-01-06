@@ -26,6 +26,7 @@ public class FileStorageService {
     private final ImageMapper imageMapper;
     private final ImageDataRepository imageDataRepository;
     private final FileUrlResolver fileUrlResolver;
+    private final ContentModerationService contentModerationService;
 
     public String storeImage(MultipartFile file, Long userId) {
         return storeImage(file, userId, FileCategory.GENERAL);
@@ -38,6 +39,16 @@ public class FileStorageService {
             byte[] imageData = file.getBytes();
 
             FileCategory resolvedCategory = FileCategory.fromNullable(category);
+
+            // 图片审核：仅对动态/Wiki等可公开传播的图片做审核
+            if (resolvedCategory == FileCategory.POST || resolvedCategory == FileCategory.WIKI) {
+                ContentModerationService.ModerationResult moderation =
+                    contentModerationService.moderateImage(imageData, file.getContentType(), "UPLOAD_" + resolvedCategory.name());
+                if (!moderation.isApproved()) {
+                    throw new BusinessException(400, "图片疑似包含违规内容，上传失败");
+                }
+            }
+
             Image image = new Image();
             image.setUuid(uuid);
             image.setFileName(file.getOriginalFilename());
@@ -65,6 +76,15 @@ public class FileStorageService {
             String uuid = UUID.randomUUID().toString();
             byte[] imageData = file.getBytes();
             FileCategory resolvedCategory = FileCategory.fromNullable(category);
+
+            // 图片审核：仅对动态/Wiki等可公开传播的图片做审核
+            if (resolvedCategory == FileCategory.POST || resolvedCategory == FileCategory.WIKI) {
+                ContentModerationService.ModerationResult moderation =
+                    contentModerationService.moderateImage(imageData, file.getContentType(), "UPLOAD_" + resolvedCategory.name());
+                if (!moderation.isApproved()) {
+                    throw new BusinessException(400, "图片疑似包含违规内容，上传失败");
+                }
+            }
 
             Image image = new Image();
             image.setUuid(uuid);

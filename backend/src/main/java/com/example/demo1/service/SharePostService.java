@@ -86,8 +86,8 @@ public class SharePostService {
         post.setFavoriteCount(0);
         post.setCommentCount(0);
 
+        // 图片审核（发布时兜底）：避免绕过上传接口或使用历史图片ID绕过审核
         if (request.getImageIds() != null && !request.getImageIds().isEmpty()) {
-            // 内容审核（图片）：目前无人工复核队列，因此对 REVIEW/BLOCK 均直接拦截发布
             for (Long imageId : request.getImageIds()) {
                 Image image = imageMapper.selectById(imageId);
                 if (image == null) {

@@ -70,6 +70,7 @@
             v-model:file-list="uploadFileList"
             list-type="picture-card"
             action="/api/files/upload?category=POST"
+            with-credentials
             multiple
             :on-success="handleUploadSuccess"
             :on-remove="handleRemove"

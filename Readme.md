@@ -50,7 +50,7 @@ moderation.python.fail-open=true
 
 ```bash
 cd backend/python
-run_python_server.sh
+bash run_python_server.sh
 ```
 
 或在 Windows 上
@@ -60,7 +60,7 @@ cd backend\python
 .\run_python_server.bat
 ```
 
-> 说明：YOLOv5n 很小、推理快，但它不是“暴恐专用模型”，这里只取 `knife/scissors` 作为粗略暴力信号（速度优先，误报/漏报都可能发生）。
+更多说明与排查见：`docs/内容审核功能说明.md`。
 
 ### 4. 启动后端
 
@@ -85,6 +85,7 @@ npm run serve
 访问：
 - 前端：http://localhost:8080
 - 后端：http://localhost:8081/api
+- 内容审核模型接口：http://localhost:8099
 
 
 ## 实现情况

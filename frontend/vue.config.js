@@ -10,6 +10,11 @@ module.exports = {
         target: 'http://localhost:8081',
         changeOrigin: true,
         secure: false
+      },
+      '/files': {
+        target: 'http://localhost:8081',
+        changeOrigin: true,
+        secure: false
       }
     }
   },

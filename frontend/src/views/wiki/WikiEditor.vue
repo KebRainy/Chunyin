@@ -84,7 +84,7 @@
                   <el-button size="small" @click="insertLink" title="插入链接">
                     链接
                   </el-button>
-                  <el-upload class="upload-btn" action="/api/files/upload?category=WIKI" :show-file-list="false"
+                  <el-upload class="upload-btn" action="/api/files/upload?category=WIKI" with-credentials :show-file-list="false"
                     :before-upload="beforeUpload" :on-success="handleUploadSuccess" :on-error="handleUploadError">
                     <el-button size="small" :loading="uploadingImage">
                       {{ uploadingImage ? '上传中...' : '图片' }}

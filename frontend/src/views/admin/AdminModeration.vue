@@ -1,21 +1,45 @@
 <template>
   <div class="admin-moderation">
     <div class="admin-header">
-      <h1>内容审核管理</h1>
-      <div class="stats-cards">
-        <div class="stat-card pending">
-          <div class="stat-value">{{ stats.pendingCount || 0 }}</div>
-          <div class="stat-label">待处理</div>
+      <h1>管理后台</h1>
+    </div>
+
+    <!-- 审核入口卡片 -->
+    <div class="review-cards">
+      <el-card class="review-card" shadow="hover" @click="goToActivityReview">
+        <div class="card-content">
+          <el-icon class="card-icon" :size="48" color="#409EFF">
+            <Calendar />
+          </el-icon>
+          <h3>活动审核</h3>
+          <p>审核用户提交的活动申请</p>
         </div>
-        <div class="stat-card high-risk">
-          <div class="stat-value">{{ stats.highRiskCount || 0 }}</div>
-          <div class="stat-label">高风险</div>
+      </el-card>
+
+      <el-card class="review-card" shadow="hover" @click="goToWikiReview">
+        <div class="card-content">
+          <el-icon class="card-icon" :size="48" color="#67C23A">
+            <Document />
+          </el-icon>
+          <h3>Wiki审核</h3>
+          <p>审核用户提交的Wiki词条</p>
         </div>
-        <div class="stat-card processed">
-          <div class="stat-value">{{ stats.processedToday || 0 }}</div>
-          <div class="stat-label">今日已处理</div>
+      </el-card>
+
+      <el-card class="review-card" shadow="hover" @click="goToBarReview">
+        <div class="card-content">
+          <el-icon class="card-icon" :size="48" color="#E6A23C">
+            <Shop />
+          </el-icon>
+          <h3>酒吧审核</h3>
+          <p>审核用户提交的酒吧申请</p>
         </div>
-      </div>
+      </el-card>
+    </div>
+
+    <!-- 内容审核管理 -->
+    <div class="section-header">
+      <h2>内容审核管理</h2>
     </div>
 
     <div class="filter-bar">
@@ -345,15 +369,13 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
+import { Calendar, Document, Shop } from '@element-plus/icons-vue'
 import { adminApi, REPORT_STATUS } from '@/api/admin'
 
-// 统计数据
-const stats = ref({
-  pendingCount: 0,
-  highRiskCount: 0,
-  processedToday: 0
-})
+const router = useRouter()
+
 
 // 当前标签页
 const activeTab = ref('high-risk')
@@ -401,18 +423,6 @@ const batchHandleForm = ref({
 })
 
 const submitting = ref(false)
-
-// 加载统计数据
-const loadStats = async () => {
-  try {
-    const res = await adminApi.getReportStats()
-    if (res.code === 200) {
-      stats.value = res.data
-    }
-  } catch (error) {
-    console.error('加载统计数据失败:', error)
-  }
-}
 
 // 加载举报列表
 const loadReports = async () => {
@@ -491,7 +501,6 @@ const submitHandle = async () => {
       ElMessage.success('处理成功')
       showHandle.value = false
       await loadReports()
-      await loadStats()
     } else {
       ElMessage.error(res.message || '处理失败')
     }
@@ -540,7 +549,6 @@ const submitBatchHandle = async () => {
       showBatchHandle.value = false
       selectedReports.value = []
       await loadReports()
-      await loadStats()
     } else {
       ElMessage.error(res.message || '批量处理失败')
     }
@@ -624,8 +632,20 @@ const formatDate = (dateStr) => {
   })
 }
 
+// 跳转到审核页面
+const goToActivityReview = () => {
+  router.push('/admin/activities/review')
+}
+
+const goToWikiReview = () => {
+  router.push('/admin/wiki/review')
+}
+
+const goToBarReview = () => {
+  router.push('/admin/bars/review')
+}
+
 onMounted(() => {
-  loadStats()
   loadReports()
 })
 </script>
@@ -648,58 +668,56 @@ onMounted(() => {
   color: #303133;
 }
 
-.stats-cards {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-bottom: 20px;
+.section-header {
+  margin: 40px 0 20px 0;
 }
 
-.stat-card {
-  background: white;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-  transition: transform 0.2s;
-}
-
-.stat-card:hover {
-  transform: translateY(-2px);
-}
-
-.stat-card .stat-value {
-  font-size: 32px;
+.section-header h2 {
+  font-size: 20px;
   font-weight: 600;
-  margin-bottom: 8px;
+  color: #303133;
+  margin: 0;
 }
 
-.stat-card .stat-label {
-  font-size: 14px;
+.review-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 24px;
+  margin-bottom: 30px;
+}
+
+.review-card {
+  cursor: pointer;
+  transition: all 0.3s;
+  border-radius: 8px;
+}
+
+.review-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.card-content {
+  text-align: center;
+  padding: 20px;
+}
+
+.card-icon {
+  margin-bottom: 16px;
+}
+
+.card-content h3 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  color: #303133;
+  font-weight: 600;
+}
+
+.card-content p {
+  margin: 0;
   color: #909399;
-}
-
-.stat-card.pending {
-  border-left: 4px solid #E6A23C;
-}
-
-.stat-card.pending .stat-value {
-  color: #E6A23C;
-}
-
-.stat-card.high-risk {
-  border-left: 4px solid #F56C6C;
-}
-
-.stat-card.high-risk .stat-value {
-  color: #F56C6C;
-}
-
-.stat-card.processed {
-  border-left: 4px solid #67C23A;
-}
-
-.stat-card.processed .stat-value {
-  color: #67C23A;
+  font-size: 14px;
+  line-height: 1.5;
 }
 
 .filter-bar {

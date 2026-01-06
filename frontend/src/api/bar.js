@@ -64,6 +64,16 @@ export const getMyApplications = () => {
 }
 
 /**
+ * 获取待审核的酒吧申请列表（管理员）
+ */
+export const getPendingApplications = () => {
+  return request({
+    url: '/bars/applications/pending',
+    method: 'get'
+  })
+}
+
+/**
  * 审核酒吧申请（管理员功能）
  */
 export const reviewBarApplication = (id, params) => {

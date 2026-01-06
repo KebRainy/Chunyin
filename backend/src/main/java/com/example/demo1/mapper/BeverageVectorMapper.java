@@ -7,3 +7,4 @@ public interface BeverageVectorMapper extends BaseMapper<BeverageVector> {
 }
 
 
+

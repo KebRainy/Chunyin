@@ -129,12 +129,6 @@ const routes = [
     meta: { requiresAuth: true, requiresSeller: true }
   },
   {
-    path: '/admin/management',
-    name: 'AdminManagement',
-    redirect: '/seller/activity',
-    meta: { requiresAuth: true, requiresSeller: true }
-  },
-  {
     path: '/activities',
     name: 'ActivityList',
     component: () => import('@/views/activity/ActivityList.vue'),
@@ -161,6 +155,12 @@ const routes = [
     path: '/admin/wiki/review',
     name: 'WikiReview',
     component: () => import('@/views/admin/WikiReview.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
+    path: '/admin/bars/review',
+    name: 'BarReview',
+    component: () => import('@/views/admin/BarReview.vue'),
     meta: { requiresAuth: true, requiresAdmin: true }
   }
 ]
@@ -246,12 +246,19 @@ router.beforeEach(async (to, from, next) => {
       return
     }
     
-    // 如果正在前往登录页，允许通过
+    // 如果正在前往登录页，清除用户信息并允许通过
     if (to.path === '/login') {
+      // 确保清除所有用户信息
+      if (userStore.userInfo) {
+        userStore.clearUserInfo()
+      }
       next()
       return
     }
-    // 否则跳转到登录页，并保存目标路径以便登录后跳转
+    // 否则跳转到登录页，清除用户信息，并保存目标路径以便登录后跳转
+    if (userStore.userInfo) {
+      userStore.clearUserInfo()
+    }
     next({ path: '/login', query: { redirect: to.fullPath } })
   } else {
     // 不需要认证的页面，直接通过

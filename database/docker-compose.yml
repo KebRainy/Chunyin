@@ -10,7 +10,7 @@ services:
       - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
-      - ./beverage_platform.sql:/docker-entrypoint-initdb.d/01_beverage_platform.sql:ro
+      - ../data/beverage_platform.sql:/docker-entrypoint-initdb.d/01_beverage_platform.sql:ro
     command:
       - --default-authentication-plugin=mysql_native_password
       - --character-set-server=utf8mb4

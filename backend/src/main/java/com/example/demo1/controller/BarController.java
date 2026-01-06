@@ -114,6 +114,20 @@ public class BarController {
     }
 
     /**
+     * 获取待审核的酒吧申请列表（管理员功能）
+     */
+    @GetMapping("/applications/pending")
+    public Result<List<BarApplicationVO>> getPendingApplications(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) {
+            throw new BusinessException(401, "请先登录");
+        }
+        // TODO: 检查管理员权限
+        List<BarApplicationVO> applications = barService.getPendingApplications();
+        return Result.success(applications);
+    }
+
+    /**
      * 审核酒吧申请（管理员功能）
      */
     @PutMapping("/applications/{id}/review")

@@ -4,6 +4,7 @@ import com.example.demo1.common.enums.UserRole;
 import com.example.demo1.common.exception.BusinessException;
 import com.example.demo1.common.response.PageResult;
 import com.example.demo1.common.response.Result;
+import com.example.demo1.dto.request.ActivityBarReviewRequest;
 import com.example.demo1.dto.request.CreateActivityRequest;
 import com.example.demo1.dto.request.ReviewActivityRequest;
 import com.example.demo1.dto.response.ActivityVO;
@@ -107,16 +108,18 @@ public class ActivityController {
 
     /**
      * 获取推荐的活动
+     * @param timeRange 时间范围：THREE_DAYS(最近三天), ONE_MONTH(最近一个月), ONE_YEAR(最近一年), ALL(全部)
      */
     @GetMapping("/recommended")
     public Result<PageResult<ActivityVO>> getRecommendedActivities(
             @AuthenticationPrincipal UserPrincipal principal,
             @RequestParam(required = false) Long barId,
             @RequestParam(required = false) Long beverageId,
+            @RequestParam(required = false) String timeRange,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size) {
         Long userId = principal != null ? principal.getId() : null;
-        PageResult<ActivityVO> result = activityService.getRecommendedActivities(userId, barId, beverageId, page, size);
+        PageResult<ActivityVO> result = activityService.getRecommendedActivities(userId, barId, beverageId, timeRange, page, size);
         return Result.success(result);
     }
 
@@ -176,6 +179,20 @@ public class ActivityController {
     }
 
     /**
+     * 取消活动（发起者）
+     */
+    @PostMapping("/{id}/cancel-activity")
+    public Result<Void> cancelActivity(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        if (principal == null) {
+            throw new BusinessException(401, "请先登录");
+        }
+        activityService.cancelActivity(id, principal.getId());
+        return Result.success();
+    }
+
+    /**
      * 审核活动（管理员）
      */
     @PostMapping("/{id}/review")
@@ -209,6 +226,31 @@ public class ActivityController {
         }
         PageResult<ActivityVO> result = activityService.getPendingActivities(page, size);
         return Result.success(result);
+    }
+
+    /**
+     * 获取活动参与者列表
+     */
+    @GetMapping("/{id}/participants")
+    public Result<List<com.example.demo1.dto.response.SimpleUserVO>> getActivityParticipants(
+            @PathVariable Long id) {
+        List<com.example.demo1.dto.response.SimpleUserVO> participants = activityService.getActivityParticipants(id);
+        return Result.success(participants);
+    }
+
+    /**
+     * 活动结束后评价酒吧
+     */
+    @PostMapping("/{id}/review-bar")
+    public Result<Void> reviewActivityBar(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody ActivityBarReviewRequest request) {
+        if (principal == null) {
+            throw new BusinessException(401, "请先登录");
+        }
+        activityService.reviewActivityBar(id, request, principal.getId());
+        return Result.success();
     }
 }
 

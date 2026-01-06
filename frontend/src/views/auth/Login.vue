@@ -19,7 +19,7 @@
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { login } from '@/api/auth'
 import { useUserStore } from '@/store/modules/user'
@@ -32,6 +32,13 @@ const loading = ref(false)
 const form = reactive({
   username: '',
   password: ''
+})
+
+// 进入登录页时，清除之前的用户信息
+onMounted(() => {
+  if (userStore.userInfo) {
+    userStore.clearUserInfo()
+  }
 })
 
 const rules = {

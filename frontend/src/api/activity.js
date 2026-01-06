@@ -89,12 +89,13 @@ export const getMyCreatedActivities = (page = 1, size = 10) => {
 
 /**
  * 获取推荐的活动
+ * @param timeRange 时间范围：THREE_DAYS(最近三天), ONE_MONTH(最近一个月), ONE_YEAR(最近一年), ALL(全部)
  */
-export const getRecommendedActivities = (barId, beverageId, page = 1, size = 10) => {
+export const getRecommendedActivities = (barId, beverageId, timeRange, page = 1, size = 10) => {
   return request({
     url: '/activities/recommended',
     method: 'get',
-    params: { barId, beverageId, page, size }
+    params: { barId, beverageId, timeRange, page, size }
   })
 }
 
@@ -140,6 +141,16 @@ export const cancelJoinActivity = (id) => {
 }
 
 /**
+ * 取消活动（发起者）
+ */
+export const cancelActivity = (id) => {
+  return request({
+    url: `/activities/${id}/cancel-activity`,
+    method: 'post'
+  })
+}
+
+/**
  * 审核活动（管理员）
  */
 export const reviewActivity = (id, data) => {
@@ -158,6 +169,27 @@ export const getPendingActivities = (page = 1, size = 10) => {
     url: '/activities/pending',
     method: 'get',
     params: { page, size }
+  })
+}
+
+/**
+ * 获取活动参与者列表
+ */
+export const getActivityParticipants = (id) => {
+  return request({
+    url: `/activities/${id}/participants`,
+    method: 'get'
+  })
+}
+
+/**
+ * 活动结束后评价酒吧
+ */
+export const reviewActivityBar = (activityId, data) => {
+  return request({
+    url: `/activities/${activityId}/review-bar`,
+    method: 'post',
+    data
   })
 }
 

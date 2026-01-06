@@ -65,7 +65,6 @@
           <span @click="goToHistory">足迹</span>
           <span v-if="userStore.isLoggedIn && !userStore.isSeller && !userStore.isAdmin" @click="goToUserActivity">活动</span>
           <span v-if="userStore.isSeller" @click="goToSellerActivity">管理</span>
-          <span v-if="userStore.isAdmin" @click="goToAdminReview">活动审核</span>
         </div>
         <el-button
           type="primary"
@@ -107,10 +106,11 @@ const navItems = computed(() => {
   
   // 根据用户角色添加不同的菜单项
   if (userStore.isAdmin) {
-    // 管理员显示"活动审核"和"Wiki审核"
+    // 管理员显示"活动审核"、"Wiki审核"和"酒吧审核"
     baseItems.splice(1, 0, 
       { path: '/admin/activities/review', label: '活动审核' },
-      { path: '/admin/wiki/review', label: 'Wiki审核' }
+      { path: '/admin/wiki/review', label: 'Wiki审核' },
+      { path: '/admin/bars/review', label: '酒吧审核' }
     )
   } else if (userStore.isSeller) {
     // seller用户显示"管理"，指向商家活动管理页面
@@ -223,13 +223,6 @@ const goToSellerActivity = () => {
     return
   }
   router.push('/seller/activity')
-}
-const goToAdminReview = () => {
-  if (!userStore.isLoggedIn || !userStore.isAdmin) {
-    ElMessage.warning('此功能仅限管理员')
-    return
-  }
-  router.push('/admin/activities/review')
 }
 const goLogin = () => router.push('/login')
 const goRegister = () => router.push('/register')

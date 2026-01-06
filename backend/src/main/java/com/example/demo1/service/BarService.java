@@ -558,11 +558,26 @@ public class BarService {
             throw new BusinessException("请提供有效的经纬度坐标");
         }
 
-        // 获取所有活跃且有经纬度信息的酒吧
+        // 默认搜索半径50公里（用于初筛）
+        double radiusKm = 50.0;
+        
+        // 计算经纬度范围（Bounding Box）
+        double latChange = radiusKm / 111.0;
+        double lonChange = Math.abs(radiusKm / (111.0 * Math.cos(Math.toRadians(userLatitude))));
+        
+        double minLat = userLatitude - latChange;
+        double maxLat = userLatitude + latChange;
+        double minLon = userLongitude - lonChange;
+        double maxLon = userLongitude + lonChange;
+
+        // 获取范围内的活跃酒吧
         LambdaQueryWrapper<Bar> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Bar::getIsActive, true)
                 .isNotNull(Bar::getLatitude)
-                .isNotNull(Bar::getLongitude);
+                .isNotNull(Bar::getLongitude)
+                .between(Bar::getLatitude, minLat, maxLat)
+                .between(Bar::getLongitude, minLon, maxLon);
+                
         List<Bar> allBars = barMapper.selectList(wrapper);
 
         // 转换为VO

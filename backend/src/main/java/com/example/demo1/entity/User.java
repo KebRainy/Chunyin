@@ -45,5 +45,5 @@ public class User {
     /**
      * 私信接收策略
      */
-    private MessagePolicy messagePolicy = MessagePolicy.ALL;
+    private MessagePolicy messagePolicy = MessagePolicy.LIMIT_ONE_BEFORE_REPLY_OR_FOLLOW;
 }

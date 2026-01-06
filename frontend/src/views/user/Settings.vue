@@ -33,7 +33,7 @@
             <el-input v-model="form.email" type="email" placeholder="输入邮箱" />
           </el-form-item>
           <el-form-item label="性别">
-            <el-radio-group v-model="form.gender" style="display: flex; flex-direction: column;">
+            <el-radio-group v-model="form.gender" class="radio-vertical-left">
               <el-radio value="MALE">男</el-radio>
               <el-radio value="FEMALE">女</el-radio>
               <el-radio value="SECRET">保密</el-radio>
@@ -96,6 +96,29 @@
       </div>
     </div>
 
+    <div class="settings-card">
+      <div class="card-header">
+        <div>
+          <p class="eyebrow">Privacy</p>
+          <h3>私信设置</h3>
+        </div>
+      </div>
+      <el-form :model="form" label-width="140px" class="settings-form" @submit.prevent="saveSettings">
+        <el-form-item label="接收私信">
+          <el-radio-group v-model="form.messagePolicy" class="radio-vertical-left">
+            <el-radio value="ALL">任何人都可以向我发送信息</el-radio>
+            <el-radio value="FOLLOWEES_ONLY">仅我关注的人可以向我发送信息</el-radio>
+            <el-radio value="LIMIT_ONE_BEFORE_REPLY_OR_FOLLOW">回复或关注他前仅可以给我发送一条信息</el-radio>
+            <el-radio value="NONE">不接收信息</el-radio>
+          </el-radio-group>
+        </el-form-item>
+        <div class="form-actions">
+          <el-button @click="resetForm">取消</el-button>
+          <el-button type="primary" @click="saveSettings">保存设置</el-button>
+        </div>
+      </el-form>
+    </div>
+
     <el-dialog title="修改密码" v-model="passwordDialogVisible" width="400px">
       <el-form :model="passwordForm" label-width="80px">
         <el-form-item label="原密码">
@@ -132,7 +155,7 @@
 import { ref } from 'vue'
 import { useUserStore } from '@/store/modules/user'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { updateProfile, changePassword as changePasswordApi } from '@/api/user'
+import { updateProfile, updateMessagePolicy, changePassword as changePasswordApi } from '@/api/user'
 
 const userStore = useUserStore()
 const avatarPreview = ref(userStore.userInfo?.avatarUrl)
@@ -144,7 +167,8 @@ const form = ref({
   gender: userStore.userInfo?.gender || 'SECRET',
   email: userStore.userInfo?.email || '',
   birthday: userStore.userInfo?.birthday ? new Date(userStore.userInfo.birthday) : null,
-  avatarImageId: null
+  avatarImageId: null,
+  messagePolicy: userStore.userInfo?.messagePolicy || 'LIMIT_ONE_BEFORE_REPLY_OR_FOLLOW'
 })
 
 const passwordForm = ref({
@@ -189,6 +213,9 @@ const handleAvatarSuccess = (response) => {
 
 const saveSettings = async () => {
   try {
+    await updateMessagePolicy({
+      messagePolicy: form.value.messagePolicy
+    })
     await updateProfile({
       username: form.value.username,
       bio: form.value.bio,
@@ -197,7 +224,7 @@ const saveSettings = async () => {
       birthday: toDateString(form.value.birthday),
       avatarImageId: form.value.avatarImageId
     })
-    await userStore.fetchUserInfo()
+    await userStore.fetchUserInfo(true)
     ElMessage.success('设置已保存')
   } catch (error) {
     ElMessage.error('保存失败')
@@ -211,7 +238,8 @@ const resetForm = () => {
     gender: userStore.userInfo?.gender || 'SECRET',
     email: userStore.userInfo?.email || '',
     birthday: userStore.userInfo?.birthday ? new Date(userStore.userInfo.birthday) : null,
-    avatarImageId: null
+    avatarImageId: null,
+    messagePolicy: userStore.userInfo?.messagePolicy || 'LIMIT_ONE_BEFORE_REPLY_OR_FOLLOW'
   }
 }
 
@@ -306,6 +334,12 @@ const deleteAccount = () => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+}
+
+.radio-vertical-left {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .avatar-section {

@@ -20,10 +20,10 @@ export const useUserStore = defineStore('user', {
       this.initialized = true  // 标记已初始化
     },
 
-    async fetchUserInfo() {
+    async fetchUserInfo(force = false) {
       // 重要：如果用户已登录，直接返回，不需要重新获取
       // 这样可以避免不必要的API调用，也避免误判登录状态
-      if (this.userInfo && this.userInfo.id) {
+      if (!force && this.userInfo && this.userInfo.id) {
         this.initialized = true
         return
       }

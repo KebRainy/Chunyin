@@ -1,6 +1,7 @@
 package com.example.demo1.dto.response;
 
 import com.example.demo1.common.enums.Gender;
+import com.example.demo1.common.enums.MessagePolicy;
 import com.example.demo1.common.enums.UserRole;
 import lombok.Builder;
 import lombok.Data;
@@ -27,4 +28,5 @@ public class UserProfileVO {
     private Boolean self;
     private Long likeReceived;
     private String ipRegion;
+    private MessagePolicy messagePolicy;
 }

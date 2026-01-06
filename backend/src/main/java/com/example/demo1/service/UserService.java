@@ -237,6 +237,7 @@ public class UserService implements UserDetailsService {
                 .self(isSelf)
                 .likeReceived(likeReceived)
                 .ipRegion(ipRegion)
+                .messagePolicy(isSelf ? target.getMessagePolicy() : null)
                 .build();
     }
 

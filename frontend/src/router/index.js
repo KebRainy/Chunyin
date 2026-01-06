@@ -100,6 +100,18 @@ const routes = [
     component: () => import('@/views/auth/Register.vue')
   },
   {
+    path: '/seller/register',
+    name: 'SellerRegister',
+    component: () => import('@/views/seller/SellerRegister.vue'),
+    meta: { requiresAuth: true }
+  },
+  {
+    path: '/admin/seller-review',
+    name: 'SellerReview',
+    component: () => import('@/views/admin/SellerReview.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true }
+  },
+  {
     path: '/user/profile',
     name: 'UserProfile',
     component: () => import('@/views/user/Profile.vue'),

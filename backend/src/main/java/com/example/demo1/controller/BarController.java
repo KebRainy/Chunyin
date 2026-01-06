@@ -2,6 +2,7 @@ package com.example.demo1.controller;
 
 import com.example.demo1.common.enums.BarSortStrategy;
 import com.example.demo1.common.enums.BarStatus;
+import com.example.demo1.common.enums.UserRole;
 import com.example.demo1.common.exception.BusinessException;
 import com.example.demo1.common.response.Result;
 import com.example.demo1.dto.request.BarRegisterRequest;
@@ -34,6 +35,12 @@ public class BarController {
         if (principal == null) {
             throw new BusinessException(401, "请先登录");
         }
+        
+        // 检查用户是否为商家
+        if (principal.getRole() != UserRole.SELLER && principal.getRole() != UserRole.ADMIN) {
+             throw new BusinessException(403, "只有认证商家才能注册酒吧，请先进行商家认证");
+        }
+        
         Long barId = barService.registerBar(request, principal.getId());
         return Result.success(barId);
     }

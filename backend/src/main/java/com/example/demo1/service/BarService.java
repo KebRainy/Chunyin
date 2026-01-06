@@ -612,11 +612,11 @@ public class BarService {
 
         // 默认搜索半径50公里（用于初筛）
         double radiusKm = 50.0;
-
+        
         // 计算经纬度范围（Bounding Box）
         double latChange = radiusKm / 111.0;
         double lonChange = Math.abs(radiusKm / (111.0 * Math.cos(Math.toRadians(userLatitude))));
-
+        
         double minLat = userLatitude - latChange;
         double maxLat = userLatitude + latChange;
         double minLon = userLongitude - lonChange;
@@ -629,7 +629,7 @@ public class BarService {
                 .isNotNull(Bar::getLongitude)
                 .between(Bar::getLatitude, minLat, maxLat)
                 .between(Bar::getLongitude, minLon, maxLon);
-
+                
         List<Bar> allBars = barMapper.selectList(wrapper);
 
         // 转换为VO

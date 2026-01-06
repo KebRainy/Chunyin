@@ -1,6 +1,19 @@
 <template>
   <div class="bar-register">
-    <el-card class="register-card">
+    <div v-if="!canRegister" class="permission-denied">
+      <el-card>
+        <el-empty description="只有认证商家才能注册酒吧">
+          <template #extra>
+            <div class="permission-actions">
+              <p class="permission-text">您需要先通过商家资质认证，才能申请入驻酒吧。</p>
+              <el-button type="primary" @click="goToSellerRegister">去认证商家资质</el-button>
+            </div>
+          </template>
+        </el-empty>
+      </el-card>
+    </div>
+
+    <el-card v-else class="register-card">
       <template #header>
         <h2>注册酒吧</h2>
         <p class="subtitle">提交您的酒吧信息，待管理员审核通过后将在平台展示</p>
@@ -159,9 +172,14 @@
 <script>
 import { registerBar, getMyApplications } from '@/api/bar'
 import { ElMessage } from 'element-plus'
+import { useUserStore } from '@/store/modules/user'
 
 export default {
   name: 'BarRegister',
+  setup() {
+    const userStore = useUserStore()
+    return { userStore }
+  },
   data() {
     return {
       form: {
@@ -197,10 +215,23 @@ export default {
       myBars: []
     }
   },
+  computed: {
+    canRegister() {
+      return this.userStore?.isSeller || this.userStore?.isAdmin
+    }
+  },
   mounted() {
     this.loadMyBars()
   },
   methods: {
+    goToSellerRegister() {
+      if (!this.userStore?.isLoggedIn) {
+        ElMessage.warning('请先登录')
+        this.$router.push('/login')
+        return
+      }
+      this.$router.push('/seller/register')
+    },
     async handleSubmit() {
       const valid = await this.$refs.formRef.validate().catch(() => false)
       if (!valid) return
@@ -270,6 +301,23 @@ export default {
 
 h2, h3 {
   margin: 0;
+}
+</style>
+
+<style scoped>
+.permission-denied {
+  max-width: 800px;
+  margin: 0 auto;
+}
+.permission-text {
+  color: #666;
+  margin-bottom: 20px;
+}
+.permission-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
 }
 </style>
 

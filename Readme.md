@@ -26,7 +26,7 @@ mysql -uroot -p -e "CREATE DATABASE IF NOT EXISTS beverage_platform DEFAULT CHAR
 mysql -uroot -p beverage_platform < database/beverage_platform.sql
 ```
 
-如果你用的是 PowerShell，可以改用：
+如果是 PowerShell，可以改用（有可能出现二进制字符不兼容问题，推荐使用 msys2）：
 
 ```powershell
 Get-Content database/beverage_platform.sql | mysql -uroot -p beverage_platform

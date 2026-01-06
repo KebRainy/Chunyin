@@ -32,6 +32,8 @@ public class SecurityConfig {
             .cors(cors -> {})
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
+                // 允许 CORS 预检请求（否则前端跨端口 POST 可能直接 403）
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                 .requestMatchers("/auth/**", "/health/**", "/hello/**").permitAll()
                 .requestMatchers(HttpMethod.GET, 
                     "/circle/posts",

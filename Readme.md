@@ -8,42 +8,20 @@
 
 ### 1. 初始化数据库
 
-**重要**：后端启动前必须先初始化 MySQL 数据库（Navicat 不是必需，只是一个可视化客户端）。
-
-你可以用以下任意一种方式导入 `data/beverage_platform.sql`：
-
-**方式 A：命令行（无需 Navicat）**
-
-1) 先创建数据库：
+**重要**：后端启动前必须先初始化 MySQL 数据库。
 
 ```bash
 mysql -uroot -p -e "CREATE DATABASE IF NOT EXISTS beverage_platform DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-```
-
-2) 再导入表结构/数据：
-
-```bash
 mysql -uroot -p beverage_platform < data/beverage_platform.sql
+mysql -uroot -p beverage_platform < data/patch_add_wiki_revision.sql
 ```
 
-如果你之前已经导入过旧版数据库，且维基编辑/统计报 500（或提示“数据库结构错误”），再执行一次：
-
-```bash
-mysql -uroot -p beverage_platform < database/patch_add_wiki_revision.sql
-```
-
-如果是 PowerShell，可以改用（有可能出现二进制字符不兼容问题，推荐使用 msys2）：
+如果是 PowerShell，可以改用（有可能出现二进制字符不兼容问题，推荐使用 MSYS2）：
 
 ```powershell
+mysql -uroot -p -e "CREATE DATABASE IF NOT EXISTS beverage_platform DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 Get-Content data/beverage_platform.sql | mysql -uroot -p beverage_platform
-```
-
-**方式 B：Docker（无需本机安装 MySQL）**
-
-项目已提供 `database/docker-compose.yml`，先启动 Docker Desktop，然后执行：
-
-```bash
-docker compose -f database/docker-compose.yml up -d
+Get-Content data/patch_add_wiki_revision.sql | mysql -uroot -p beverage_platform
 ```
 
 ### 2. 配置数据库连接
@@ -56,9 +34,35 @@ spring.datasource.username=root
 spring.datasource.password=your_password
 ```
 
-可选：如果要启用“本地 Python 内容审核（文本/图片）”，见 `tools/moderation/README.md`。
+### 3. 配置内容审核（可选）
 
-### 3. 启动后端
+
+在 `backend/src/main/resources/application.properties` 添加/修改：
+
+```properties
+moderation.python.enabled=true
+moderation.python.base-url=http://127.0.0.1:8099
+moderation.python.timeout-ms=800
+moderation.python.fail-open=true
+```
+
+建议使用 Python 3.10+ 执行以下命令：
+
+```bash
+cd backend/python
+run_python_server.sh
+```
+
+或在 Windows 上
+
+```powershell
+cd backend\python
+.\run_python_server.bat
+```
+
+> 说明：YOLOv5n 很小、推理快，但它不是“暴恐专用模型”，这里只取 `knife/scissors` 作为粗略暴力信号（速度优先，误报/漏报都可能发生）。
+
+### 4. 启动后端
 
 ```bash
 cd backend
@@ -66,7 +70,7 @@ mvn install
 mvn spring-boot:run
 ```
 
-### 4. 启动前端
+### 5. 启动前端
 
 ```bash
 cd frontend
@@ -75,6 +79,8 @@ npm run serve
 ```
 
 如果启动时报 `The project seems to require yarn but it's not installed`，说明目录里存在 `yarn.lock`，删掉它或安装 yarn 即可。
+
+如果前端启动端口不在 `8080`，访问权限问题，请留意。
 
 访问：
 - 前端：http://localhost:8080

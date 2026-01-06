@@ -48,7 +48,7 @@ module.exports = {
         return options
       })
     }
-    
+
     // 优化 chunk 文件名
     if (process.env.NODE_ENV === 'production') {
       config.output.filename('js/[name].[contenthash:8].js')

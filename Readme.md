@@ -8,9 +8,37 @@
 
 ### 1. 初始化数据库
 
-**重要**：后端启动前必须先手动初始化数据库！
+**重要**：后端启动前必须先初始化 MySQL 数据库（Navicat 不是必需，只是一个可视化客户端）。
 
-在Navicat中导入beverage_platform.sql
+你可以用以下任意一种方式导入 `database/beverage_platform.sql`：
+
+**方式 A：命令行（无需 Navicat）**
+
+1) 先创建数据库：
+
+```bash
+mysql -uroot -p -e "CREATE DATABASE IF NOT EXISTS beverage_platform DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+```
+
+2) 再导入表结构/数据：
+
+```bash
+mysql -uroot -p beverage_platform < database/beverage_platform.sql
+```
+
+如果你用的是 PowerShell，可以改用：
+
+```powershell
+Get-Content database/beverage_platform.sql | mysql -uroot -p beverage_platform
+```
+
+**方式 B：Docker（无需本机安装 MySQL）**
+
+项目已提供 `database/docker-compose.yml`，先启动 Docker Desktop，然后执行：
+
+```bash
+docker compose -f database/docker-compose.yml up -d
+```
 
 ### 2. 配置数据库连接
 
@@ -38,7 +66,11 @@ npm install
 npm run serve
 ```
 
-访问：http://localhost:8080
+如果启动时报 `The project seems to require yarn but it's not installed`，说明目录里存在 `yarn.lock`，删掉它或安装 yarn 即可。
+
+访问：
+- 前端：http://localhost:8080
+- 后端：http://localhost:8081/api
 
 
 ## 实现情况

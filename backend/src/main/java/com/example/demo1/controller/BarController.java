@@ -65,8 +65,8 @@ public class BarController {
         if (latitude == null || longitude == null) {
             throw new BusinessException("请提供有效的经纬度坐标");
         }
-        if (radiusKm <= 0 || radiusKm > 100) {
-            throw new BusinessException("搜索半径必须在0-100公里之间");
+        if (radiusKm == null || radiusKm <= 0) {
+            throw new BusinessException("搜索半径必须大于0公里");
         }
         List<BarVO> bars = barService.searchNearbyBars(latitude, longitude, radiusKm, sortStrategy);
         return Result.success(bars);

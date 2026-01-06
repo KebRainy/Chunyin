@@ -44,6 +44,7 @@ public class WikiService {
     private final WikiDiscussionMapper wikiDiscussionMapper;
     private final UserService userService;
     private final CollectionService collectionService;
+    private final ContentModerationService contentModerationService;
 
     public PageResult<WikiPageVO> listPages(String keyword, int page, int pageSize) {
         return listPages(keyword, page, pageSize, null);
@@ -411,10 +412,22 @@ public class WikiService {
             throw new BusinessException(404, "词条不存在");
         }
         User author = userService.getRequiredUser(userId);
+
+        // 内容审核（文本）
+        String content = request.getContent();
+        ContentModerationService.ModerationResult moderationResult =
+            contentModerationService.moderate(content);
+        if (moderationResult.isRejected()) {
+            throw new BusinessException("讨论内容包含违规信息，无法发布");
+        }
+        if (moderationResult.needsReview()) {
+            content = contentModerationService.filterContent(content);
+        }
+
         WikiDiscussion discussion = new WikiDiscussion();
         discussion.setPageId(page.getId());
         discussion.setUserId(userId);
-        discussion.setContent(request.getContent());
+        discussion.setContent(content);
         wikiDiscussionMapper.insert(discussion);
         return WikiDiscussionVO.builder()
             .id(discussion.getId())

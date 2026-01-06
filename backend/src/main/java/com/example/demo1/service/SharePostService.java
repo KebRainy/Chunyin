@@ -55,14 +55,28 @@ public class SharePostService {
     private final CollectionService collectionService;
     private final UserService userService;
     private final FileUrlResolver fileUrlResolver;
+    private final FileStorageService fileStorageService;
     private final TagExtractionService tagExtractionService;
     private final UserBehaviorService userBehaviorService;
     private final ContentModerationService contentModerationService;
 
+    @Transactional
     public SharePostVO createPost(Long userId, SharePostRequest request, String ipAddress) {
         SharePost post = new SharePost();
         post.setUserId(userId);
-        post.setContent(request.getContent());
+
+        // 内容审核（文本）
+        String content = request.getContent();
+        ContentModerationService.ModerationResult moderationResult =
+            contentModerationService.moderate(content);
+        if (moderationResult.isRejected()) {
+            throw new BusinessException("动态内容包含违规信息，无法发布");
+        }
+        if (moderationResult.needsReview()) {
+            content = contentModerationService.filterContent(content);
+        }
+        post.setContent(content);
+
         post.setLocation(request.getLocation());
         post.setIpAddress(ipAddress);
         post.setIpRegion(IpUtils.resolveRegion(ipAddress));
@@ -71,6 +85,23 @@ public class SharePostService {
         post.setLikeCount(0);
         post.setFavoriteCount(0);
         post.setCommentCount(0);
+
+        if (request.getImageIds() != null && !request.getImageIds().isEmpty()) {
+            // 内容审核（图片）：目前无人工复核队列，因此对 REVIEW/BLOCK 均直接拦截发布
+            for (Long imageId : request.getImageIds()) {
+                Image image = imageMapper.selectById(imageId);
+                if (image == null) {
+                    throw new BusinessException(400, "图片不存在: " + imageId);
+                }
+                byte[] data = fileStorageService.loadData(image);
+                ContentModerationService.ModerationResult imageModeration =
+                    contentModerationService.moderateImage(data, image.getMimeType(), "POST_IMAGE");
+                if (!imageModeration.isApproved()) {
+                    throw new BusinessException(400, "图片疑似包含违规内容，无法发布");
+                }
+            }
+        }
+
         sharePostMapper.insert(post);
 
         if (request.getImageIds() != null && !request.getImageIds().isEmpty()) {
@@ -84,7 +115,7 @@ public class SharePostService {
         }
 
         // 自动提取标签并保存
-        tagExtractionService.extractAndSaveTags(post.getId(), request.getContent(), request.getTags());
+        tagExtractionService.extractAndSaveTags(post.getId(), content, request.getTags());
 
         User author = userService.getUserById(userId);
         return toVo(post, author, Collections.emptySet(), Collections.emptySet());

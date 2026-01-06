@@ -62,3 +62,8 @@ pnpm-debug.log*
 .claude
 html-examples
 TODO.md
+
+# Local moderation (Python)
+tools/moderation/.venv/
+tools/moderation/models/
+tools/moderation/__pycache__/

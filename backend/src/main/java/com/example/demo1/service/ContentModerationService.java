@@ -1,6 +1,7 @@
 package com.example.demo1.service;
 
 import lombok.extern.slf4j.Slf4j;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import jakarta.annotation.PostConstruct;
@@ -15,7 +16,10 @@ import java.util.regex.Pattern;
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class ContentModerationService {
+
+    private final PythonModerationClient pythonModerationClient;
 
     /**
      * 敏感词集合（高风险，直接屏蔽）
@@ -186,7 +190,47 @@ public class ContentModerationService {
             }
         }
 
+        // 7. 可选：本地 Python 模型/规则补充（速度优先，失败可 fail-open）
+        if (level != ModerationLevel.REJECTED) {
+            Optional<PythonModerationClient.ModerationResponse> python = pythonModerationClient.moderateText(content, "TEXT");
+            if (python.isPresent()) {
+                level = mergePythonDecision(python.get(), level, violations);
+            }
+        }
+
         return new ModerationResult(level, violations);
+    }
+
+    public ModerationResult moderateImage(byte[] imageBytes, String mimeType, String scene) {
+        Optional<PythonModerationClient.ModerationResponse> python = pythonModerationClient.moderateImage(imageBytes, mimeType, scene);
+        if (python.isEmpty()) {
+            return ModerationResult.approved();
+        }
+        List<String> violations = new ArrayList<>();
+        ModerationLevel level = mergePythonDecision(python.get(), ModerationLevel.APPROVED, violations);
+        return new ModerationResult(level, violations);
+    }
+
+    private ModerationLevel mergePythonDecision(PythonModerationClient.ModerationResponse python,
+                                               ModerationLevel current,
+                                               List<String> violations) {
+        if (python == null || python.action() == null) {
+            return current;
+        }
+        String action = python.action().toUpperCase(Locale.ROOT);
+        if (python.reasons() != null && !python.reasons().isEmpty()) {
+            violations.add("本地审核: " + String.join("; ", python.reasons()));
+        } else if (python.categories() != null && !python.categories().isEmpty()) {
+            violations.add("本地审核: " + String.join(",", python.categories()));
+        }
+
+        if ("BLOCK".equals(action)) {
+            return ModerationLevel.REJECTED;
+        }
+        if ("REVIEW".equals(action) && current == ModerationLevel.APPROVED) {
+            return ModerationLevel.PENDING_REVIEW;
+        }
+        return current;
     }
 
     /**

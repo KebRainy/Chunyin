@@ -56,6 +56,8 @@ spring.datasource.username=root
 spring.datasource.password=your_password
 ```
 
+可选：如果要启用“本地 Python 内容审核（文本/图片）”，见 `tools/moderation/README.md`。
+
 ### 3. 启动后端
 
 ```bash

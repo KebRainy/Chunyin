@@ -5,7 +5,7 @@
         <div class="header">
           <div>
             <p class="eyebrow">{{ isEdit ? '编辑条目' : '新建条目' }}</p>
-            <h2>{{ form.title || '未命名词条' }}</h2>
+            <h2 class="art-heading-h2">{{ form.title || '未命名词条' }}</h2>
             <div class="status-bar" v-if="hasUnsavedChanges || autoSaveStatus">
               <el-icon v-if="autoSaveStatus === 'saving'">
                 <Loading />

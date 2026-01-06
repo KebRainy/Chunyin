@@ -3,7 +3,7 @@
     <section class="wiki-hero">
       <div class="hero-content">
         <p class="eyebrow">醇饮百科</p>
-        <h1>搜一搜，就能找到任何关于酒饮的答案</h1>
+        <h1 class="art-heading">搜一搜，就能找到任何关于酒饮的答案</h1>
         <p class="subtitle">社区共建 · 实时更新 · 支持多端访问</p>
       </div>
       <div class="hero-search">
@@ -45,7 +45,7 @@
     <section class="wiki-content">
       <div class="list-panel">
         <div class="section-header">
-          <h3>{{ keyword ? '搜索结果' : '精选词条' }}</h3>
+          <h3 class="art-heading-h3">{{ keyword ? '搜索结果' : '精选词条' }}</h3>
           <span class="count">共 {{ total }} 条</span>
         </div>
         <div v-if="loading" class="loading">

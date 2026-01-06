@@ -374,6 +374,22 @@ onBeforeUnmount(() => {
   max-width: 1400px;
   margin: 0 auto;
   padding: 20px;
+  position: relative;
+}
+
+.home-container::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 20% 30%, rgba(139, 69, 19, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 70%, rgba(212, 175, 55, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 50% 50%, rgba(205, 133, 63, 0.05) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: -1;
 }
 
 /* ============ 顶部区域 ============ */
@@ -392,9 +408,17 @@ onBeforeUnmount(() => {
 }
 
 .share-editor-card {
-  border-radius: 24px;
-  border: 1px solid #eceff5;
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(139, 69, 19, 0.1);
+  box-shadow: var(--shadow-md);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.share-editor-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
 }
 
 .share-editor-card :deep(.el-card__body),
@@ -420,8 +444,14 @@ onBeforeUnmount(() => {
 
 .share-editor-header h3 {
   margin: 0;
-  font-size: 20px;
-  color: #1f2d3d;
+  font-size: 24px;
+  font-family: var(--font-display);
+  font-weight: 700;
+  background: var(--gradient-wine);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 1px;
 }
 
 .share-editor-header span {
@@ -430,22 +460,50 @@ onBeforeUnmount(() => {
 }
 
 .login-prompt {
-  border-radius: 24px;
-  border: 1px solid #eceff5;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4);
-  padding: 24px;
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(139, 69, 19, 0.1);
+  box-shadow: var(--shadow-md);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  padding: 32px 24px;
   text-align: center;
   justify-content: center;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
   align-items: center;
+  transition: all 0.3s ease;
+}
+
+.login-prompt:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
 }
 
 .login-prompt p {
-  color: #303133;
-  margin-bottom: 16px;
-  font-size: 16px;
+  color: #4a5568;
+  margin-bottom: 0;
+  font-size: 15px;
+  font-family: var(--font-serif);
+  line-height: 1.6;
+  letter-spacing: 0.5px;
+}
+
+.login-prompt :deep(.el-button--primary) {
+  background: var(--gradient-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  padding: 12px 32px;
+  transition: all 0.3s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.login-prompt :deep(.el-button--primary:hover) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
 }
 
 .daily-question-section {
@@ -453,9 +511,17 @@ onBeforeUnmount(() => {
 }
 
 .question-card {
-  border-radius: 24px;
-  border: 1px solid #eceff5;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(139, 69, 19, 0.1);
+  box-shadow: var(--shadow-md);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.question-card:hover {
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-2px);
 }
 
 .question-header {
@@ -575,11 +641,13 @@ onBeforeUnmount(() => {
 /* ============ 主体区域 ============ */
 .posts-container {
   min-height: 400px;
-  background: #fff;
-  border-radius: 28px;
-  border: 1px solid #eceff5;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(139, 69, 19, 0.1);
   padding: 24px;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.04);
+  box-shadow: var(--shadow-lg);
+  animation: fadeIn 0.6s ease-out;
 }
 
 .loading {

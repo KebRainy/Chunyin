@@ -101,31 +101,36 @@ const formatTime = (value) => {
 
 <style scoped>
 .post-card {
-  background: #fff;
-  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  border: 1px solid #f1f1f1;
+  border: 1px solid rgba(139, 69, 19, 0.1);
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: all 0.3s ease;
   break-inside: avoid;
   position: relative;
+  box-shadow: var(--shadow-sm);
 }
 
 .post-card:hover {
-  box-shadow: 0 18px 28px rgba(15, 23, 42, 0.08);
-  transform: translateY(-2px);
+  box-shadow: var(--shadow-lg);
+  transform: translateY(-4px);
+  border-color: rgba(139, 69, 19, 0.2);
 }
 
 /* 推荐卡片样式 */
 .post-card.is-recommended {
-  border: 1px solid #e6d9f7;
-  background: linear-gradient(135deg, #fdfbff 0%, #fff 100%);
+  border: 2px solid rgba(212, 175, 55, 0.3);
+  background: linear-gradient(135deg, rgba(255, 253, 245, 0.95) 0%, rgba(255, 255, 255, 0.95) 100%);
+  box-shadow: var(--shadow-md);
 }
 
 .post-card.is-recommended:hover {
-  box-shadow: 0 18px 28px rgba(139, 92, 246, 0.12);
+  box-shadow: var(--shadow-xl);
+  border-color: rgba(212, 175, 55, 0.5);
 }
 
 .recommend-badge {
@@ -232,9 +237,10 @@ const formatTime = (value) => {
 .content {
   margin: 0;
   color: #1f2d3d;
-  line-height: 1.6;
-  font-size: 16px;
-  font-weight: 500;
+  line-height: 1.7;
+  font-size: 15px;
+  font-weight: 400;
+  font-family: var(--font-serif);
 }
 
 .tags {
@@ -263,6 +269,7 @@ const formatTime = (value) => {
   font-weight: 600;
   font-size: 13px;
   color: #1f2d3d;
+  font-family: var(--font-sans);
 }
 
 .card-meta .time {

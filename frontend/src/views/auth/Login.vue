@@ -78,15 +78,89 @@ const goRegister = () => {
   justify-content: center;
   align-items: center;
   min-height: 70vh;
+  position: relative;
+  padding: 40px 20px;
+}
+
+.auth-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    radial-gradient(circle at 30% 40%, rgba(139, 69, 19, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 70% 60%, rgba(212, 175, 55, 0.1) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .auth-card {
-  width: 420px;
-  padding: 30px 20px;
+  width: 100%;
+  max-width: 480px;
+  padding: 40px 30px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(139, 69, 19, 0.1);
+  box-shadow: var(--shadow-xl);
+  position: relative;
+  z-index: 1;
+  animation: fadeIn 0.6s ease-out;
 }
 
 h2 {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 32px;
+  font-family: var(--font-display);
+  font-size: 32px;
+  font-weight: 700;
+  background: var(--gradient-wine);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  letter-spacing: 2px;
+}
+
+:deep(.el-form-item__label) {
+  font-family: var(--font-serif);
+  font-weight: 500;
+  color: #4a5568;
+}
+
+:deep(.el-input__wrapper) {
+  border-radius: var(--radius-md);
+  transition: all 0.3s ease;
+}
+
+:deep(.el-input__wrapper:hover) {
+  box-shadow: var(--shadow-sm);
+}
+
+:deep(.el-button--primary) {
+  background: var(--gradient-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  font-family: var(--font-sans);
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  padding: 12px 32px;
+  transition: all 0.3s ease;
+}
+
+:deep(.el-button--primary:hover) {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+:deep(.el-button--text) {
+  font-family: var(--font-sans);
+  color: var(--primary-color);
+  transition: all 0.3s ease;
+}
+
+:deep(.el-button--text:hover) {
+  color: var(--primary-dark);
 }
 </style>

@@ -1,7 +1,7 @@
 <template>
   <div class="auth-container">
     <el-card class="auth-card">
-      <h2>注册新账号</h2>
+      <h2 class="art-heading-h2">注册新账号</h2>
       <el-form :model="form" :rules="rules" ref="formRef" label-width="80px">
         <el-form-item label="用户名" prop="username">
           <el-input v-model="form.username" placeholder="2-50 个字符" />

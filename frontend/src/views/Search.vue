@@ -3,7 +3,7 @@
     <section class="search-hero">
       <div>
         <p class="eyebrow">Search</p>
-        <h1>探索醇饮社区</h1>
+        <h1 class="art-heading">探索醇饮社区</h1>
       </div>
       <el-input
         v-model="keyword"

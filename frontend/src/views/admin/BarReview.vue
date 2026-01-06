@@ -1,7 +1,7 @@
 <template>
   <div class="bar-review">
     <div class="page-header">
-      <h2>酒吧审核</h2>
+      <h2 class="art-heading-h2">酒吧审核</h2>
     </div>
 
     <el-card>

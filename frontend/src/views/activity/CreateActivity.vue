@@ -1,7 +1,7 @@
 <template>
   <div class="create-activity">
     <div class="page-header">
-      <h2>发起活动</h2>
+      <h2 class="art-heading-h2">发起活动</h2>
       <el-button @click="$router.back()">返回</el-button>
     </div>
 

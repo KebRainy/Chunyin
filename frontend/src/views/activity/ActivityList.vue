@@ -1,7 +1,7 @@
 <template>
   <div class="activity-list">
     <div class="page-header">
-      <h2>{{ isAdminReview ? '活动审核' : '活动中心' }}</h2>
+      <h2 class="art-heading-h2">{{ isAdminReview ? '活动审核' : '活动中心' }}</h2>
     </div>
 
     <!-- 管理员审核界面 -->

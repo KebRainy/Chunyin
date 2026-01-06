@@ -1,7 +1,7 @@
 <template>
   <div class="ranking-container">
     <div class="ranking-header">
-      <h1 class="title">热门排行榜</h1>
+      <h1 class="title art-heading">热门排行榜</h1>
       <p class="subtitle">发现平台最受欢迎的精彩内容</p>
     </div>
 

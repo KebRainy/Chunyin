@@ -1,7 +1,7 @@
 <template>
   <div class="wiki-review">
     <div class="review-header">
-      <h2>Wiki词条审核</h2>
+      <h2 class="art-heading-h2">Wiki词条审核</h2>
       <p class="subtitle">待审核的词条列表</p>
     </div>
 
@@ -139,21 +139,24 @@ onMounted(() => {
 
 .review-header h2 {
   margin: 0 0 8px 0;
-  font-size: 24px;
-  color: #1f2d3d;
 }
 
 .review-header .subtitle {
   margin: 0;
-  color: #909399;
+  color: #888;
   font-size: 14px;
+  font-family: var(--font-serif);
+  font-style: italic;
+  letter-spacing: 0.5px;
 }
 
 .review-content {
-  background: #fff;
-  border-radius: 8px;
-  padding: 20px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-lg);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(139, 69, 19, 0.1);
 }
 
 .wiki-title {

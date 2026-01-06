@@ -1,7 +1,7 @@
 <template>
   <div class="admin-moderation">
     <div class="admin-header">
-      <h1>管理后台</h1>
+      <h1 class="art-heading">管理后台</h1>
     </div>
 
     <!-- 审核入口卡片 -->
@@ -11,7 +11,7 @@
           <el-icon class="card-icon" :size="48" color="#409EFF">
             <Calendar />
           </el-icon>
-          <h3>活动审核</h3>
+          <h3 class="art-heading-h3">活动审核</h3>
           <p>审核用户提交的活动申请</p>
         </div>
       </el-card>
@@ -21,7 +21,7 @@
           <el-icon class="card-icon" :size="48" color="#67C23A">
             <Document />
           </el-icon>
-          <h3>Wiki审核</h3>
+          <h3 class="art-heading-h3">Wiki审核</h3>
           <p>审核用户提交的Wiki词条</p>
         </div>
       </el-card>
@@ -31,7 +31,7 @@
           <el-icon class="card-icon" :size="48" color="#E6A23C">
             <Shop />
           </el-icon>
-          <h3>酒吧审核</h3>
+          <h3 class="art-heading-h3">酒吧审核</h3>
           <p>审核用户提交的酒吧申请</p>
         </div>
       </el-card>
@@ -39,7 +39,7 @@
 
     <!-- 内容审核管理 -->
     <div class="section-header">
-      <h2>内容审核管理</h2>
+      <h2 class="art-heading-h2">内容审核管理</h2>
     </div>
 
     <div class="filter-bar">
@@ -188,7 +188,7 @@
     >
       <div class="report-detail" v-if="currentReport">
         <div class="detail-section">
-          <h3>内容信息</h3>
+          <h3 class="art-heading-h3">内容信息</h3>
           <div class="detail-item">
             <span class="label">内容：</span>
             <div class="content-box">{{ currentReport.contentSnapshot }}</div>
@@ -215,7 +215,7 @@
         </div>
 
         <div class="detail-section">
-          <h3>举报信息</h3>
+          <h3 class="art-heading-h3">举报信息</h3>
           <div class="detail-item">
             <span class="label">举报原因：</span>
             <el-tag type="warning">{{ getReasonLabel(currentReport.reason) }}</el-tag>
@@ -239,7 +239,7 @@
         </div>
 
         <div class="detail-section" v-if="currentReport.status !== 'PENDING'">
-          <h3>处理信息</h3>
+          <h3 class="art-heading-h3">处理信息</h3>
           <div class="detail-item">
             <span class="label">状态：</span>
             <el-tag :type="getStatusType(currentReport.status)">

@@ -12,7 +12,7 @@
           <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600" alt="concept">
         </div>
         <div class="toc">
-          <h4>目录</h4>
+          <h4 class="art-heading-h4">目录</h4>
           <ul>
             <li v-for="(item, index) in tocItems" :key="index">
               <span>{{ item.text }}</span>
@@ -31,7 +31,7 @@
         <header class="wiki-header">
           <div>
             <p class="eyebrow">词条</p>
-            <h1>{{ wiki.title }}</h1>
+            <h1 class="art-heading">{{ wiki.title }}</h1>
             <p class="meta">
               最后更新 {{ formatTime(wiki.updatedAt) }} · {{ wiki.lastEditorName || '系统' }}
             </p>
@@ -42,7 +42,7 @@
         <el-tabs v-model="activeTab" class="wiki-tabs">
           <el-tab-pane label="条目信息" name="overview">
             <section class="wiki-summary" v-if="wiki.summary">
-              <h4>概要</h4>
+              <h4 class="art-heading-h4">概要</h4>
               <p>{{ wiki.summary }}</p>
             </section>
 

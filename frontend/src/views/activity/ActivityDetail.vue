@@ -6,7 +6,7 @@
       <el-card v-if="activity" class="activity-card">
         <template #header>
           <div class="card-header">
-            <h2>{{ activity.beverageName }} 组局</h2>
+            <h2 class="art-heading-h2">{{ activity.beverageName }} 组局</h2>
             <el-tag :type="getStatusType(activity.status)">
               {{ getStatusText(activity.status) }}
             </el-tag>
@@ -135,7 +135,7 @@
 
       <el-card v-if="activity && activity.reviewStatus === 'APPROVED'" class="participants-card">
         <template #header>
-          <h3>参与者列表（{{ activity.currentParticipants }}人）</h3>
+          <h3 class="art-heading-h3">参与者列表（{{ activity.currentParticipants }}人）</h3>
         </template>
         <div class="participants-list">
           <div v-if="participants.length === 0" class="empty-participants">

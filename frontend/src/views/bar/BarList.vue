@@ -1,7 +1,7 @@
 <template>
   <div class="bar-list">
     <div class="page-header">
-      <h2>附近酒吧</h2>
+      <h2 class="art-heading-h2">附近酒吧</h2>
       <el-button type="primary" @click="$router.push('/bars/register')">
         注册酒吧
       </el-button>

@@ -263,12 +263,13 @@ const handleCommand = async (command) => {
 .header-container {
   height: 68px;
   background: rgba(255, 255, 255, 0.95);
-  border-bottom: 1px solid #f2f2f2;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   position: sticky;
   top: 0;
   z-index: 100;
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.05);
 }
 
 .header-content {
@@ -289,11 +290,37 @@ const handleCommand = async (command) => {
 }
 
 .logo {
-  font-size: 22px;
-  font-weight: 700;
-  color: #2f54eb;
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 900;
+  background: var(--gradient-gold);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   cursor: pointer;
-  letter-spacing: 2px;
+  letter-spacing: 3px;
+  text-shadow: 0 2px 4px rgba(212, 175, 55, 0.3);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.logo::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--gradient-gold);
+  transition: width 0.3s ease;
+}
+
+.logo:hover::after {
+  width: 100%;
+}
+
+.logo:hover {
+  transform: scale(1.05);
 }
 
 .nav-menu {

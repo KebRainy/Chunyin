@@ -498,8 +498,10 @@ const handleSubmit = async () => {
   } catch (error) {
     console.error('提交失败:', error)
 
-    // axios 响应拦截器在 code!=200 时直接 reject(res)，所以这里优先使用 error 本身
-    const res = error?.code ? error : error.response?.data
+    // 兼容两种错误形态：
+    // 1) 响应拦截器 reject(res)（res 为 {code,message,data}）
+    // 2) HTTP 500 等非 2xx（axios error，需要从 error.response.data 取后端 Result）
+    const res = error?.response?.data ?? error
     // 注意：这里判断 res.code，而不是 HTTP status
     if (res?.code === 409 && res?.data?.existingWiki) {
       const existingWiki = res.data.existingWiki

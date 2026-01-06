@@ -26,6 +26,12 @@ mysql -uroot -p -e "CREATE DATABASE IF NOT EXISTS beverage_platform DEFAULT CHAR
 mysql -uroot -p beverage_platform < database/beverage_platform.sql
 ```
 
+如果你之前已经导入过旧版数据库，且维基编辑/统计报 500（或提示“数据库结构错误”），再执行一次：
+
+```bash
+mysql -uroot -p beverage_platform < database/patch_add_wiki_revision.sql
+```
+
 如果是 PowerShell，可以改用（有可能出现二进制字符不兼容问题，推荐使用 msys2）：
 
 ```powershell

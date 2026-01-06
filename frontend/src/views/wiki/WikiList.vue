@@ -143,8 +143,12 @@ const loadPages = async () => {
 }
 
 const loadStats = async () => {
-  const res = await fetchWikiStats()
-  wikiStats.value = res.data || wikiStats.value
+  try {
+    const res = await fetchWikiStats()
+    wikiStats.value = res.data || wikiStats.value
+  } catch {
+    // ignore
+  }
 }
 
 const searchPages = () => {

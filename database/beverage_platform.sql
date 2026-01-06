@@ -1807,6 +1807,25 @@ CREATE TABLE `wiki_page`  (
 ) ENGINE = InnoDB AUTO_INCREMENT = 91 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '维基页面表' ROW_FORMAT = DYNAMIC;
 
 -- ----------------------------
+-- Table structure for wiki_revision
+-- ----------------------------
+DROP TABLE IF EXISTS `wiki_revision`;
+CREATE TABLE `wiki_revision`  (
+  `id` bigint(20) NOT NULL AUTO_INCREMENT,
+  `page_id` bigint(20) NOT NULL COMMENT '维基页面ID',
+  `editor_id` bigint(20) NULL DEFAULT NULL COMMENT '编辑者ID（系统为NULL）',
+  `editor_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '编辑者名称',
+  `summary` varchar(200) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '编辑摘要',
+  `content` longtext CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '版本内容快照',
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`) USING BTREE,
+  INDEX `idx_wiki_revision_page`(`page_id` ASC) USING BTREE,
+  INDEX `idx_wiki_revision_editor`(`editor_id` ASC) USING BTREE,
+  CONSTRAINT `wiki_revision_ibfk_1` FOREIGN KEY (`page_id`) REFERENCES `wiki_page` (`id`) ON DELETE CASCADE ON UPDATE RESTRICT,
+  CONSTRAINT `wiki_revision_ibfk_2` FOREIGN KEY (`editor_id`) REFERENCES `user` (`id`) ON DELETE SET NULL ON UPDATE RESTRICT
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '维基历史版本表' ROW_FORMAT = DYNAMIC;
+
+-- ----------------------------
 -- Records of wiki_page
 -- ----------------------------
 INSERT INTO `wiki_page` VALUES (1, 'maotai', '茅台酒', '中国贵州省的传统名酒，酱香型白酒的代表，被誉为\"国酒\"。', '# 茅台酒\n\n## 概述\n茅台酒是中国贵州省遵义市仁怀市茅台镇特产，中国国家地理标志产品。茅台酒是大曲酱香型白酒的鼻祖，已有800多年的历史。\n\n## 历史渊源\n茅台酒因产于遵义赤水河畔的茅台镇而得名。据史料记载，早在公元前135年，茅台镇一带就酿造出令汉武帝\"甘美之\"的酒。\n\n## 酿造工艺\n- 采用高温制曲、高温堆积、高温发酵、高温流酒的独特工艺\n- 生产周期长达一年\n- 需要经过九次蒸煮、八次发酵、七次取酒\n- 基酒还要经过至少三年的贮存\n\n## 风味特点\n酱香突出、幽雅细腻、酒体醇厚、回味悠长、空杯留香持久。', 'PUBLISHED', 1, 'demo', '2025-12-28 10:30:00', '2026-01-03 10:48:41');

@@ -1,7 +1,7 @@
 <template>
   <div class="bar-review">
     <div class="page-header">
-      <h2 class="art-heading-h2">酒吧审核</h2>
+      <h2>酒吧审核</h2>
     </div>
 
     <el-card>
@@ -81,9 +81,14 @@
         </el-table-column>
       </el-table>
 
-      <div v-if="!loading && applications.length === 0" class="empty-state">
-        <el-empty description="暂无待审核的酒吧申请" />
-      </div>
+      <el-pagination
+        v-if="applications.length > 0"
+        :current-page="1"
+        :page-size="10"
+        :total="applications.length"
+        layout="total, prev, pager, next"
+        style="margin-top: 20px; justify-content: center"
+      />
     </el-card>
 
     <!-- 拒绝对话框 -->
@@ -265,7 +270,14 @@ const viewDetail = (application) => {
 // 格式化日期时间
 const formatDateTime = (dateTime) => {
   if (!dateTime) return ''
-  return dayjs(dateTime).format('YYYY-MM-DD HH:mm')
+  const date = new Date(dateTime)
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 // 格式化时间（LocalTime）
@@ -334,11 +346,6 @@ onMounted(() => {
 
 .text-muted {
   color: #999;
-}
-
-.empty-state {
-  padding: 40px 0;
-  text-align: center;
 }
 
 .detail-content {

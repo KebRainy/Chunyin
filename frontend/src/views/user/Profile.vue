@@ -16,7 +16,13 @@
           <div class="meta-column">
             <div class="user-title">
               <h1>{{ userStore.userInfo.username }}</h1>
-              <el-tag size="small" effect="dark">Lv.{{ userStore.userInfo.level || 1 }}</el-tag>
+              <el-tag 
+                size="small" 
+                effect="dark" 
+                :type="getLevelTagType(userStore.userInfo.level || 1)"
+              >
+                Lv.{{ userStore.userInfo.level || 1 }}
+              </el-tag>
             </div>
             <p class="uid">
               UID {{ userStore.userInfo.id }}
@@ -464,6 +470,15 @@ const goSettings = () => {
   router.push('/user/settings')
 }
 
+// 根据等级返回标签颜色类型
+const getLevelTagType = (level) => {
+  if (level >= 20) return 'danger' // 红色 - 高级
+  if (level >= 15) return 'warning' // 橙色 - 中高级
+  if (level >= 10) return 'success' // 绿色 - 中级
+  if (level >= 5) return 'primary' // 蓝色 - 初级
+  return 'info' // 灰色 - 新手
+}
+
 const saveSignature = async () => {
   try {
     await updateProfile({ bio: signature.value })
@@ -581,6 +596,54 @@ watch(
   margin: 0;
 }
 
+.user-title :deep(.el-tag) {
+  font-weight: 600;
+  font-size: 12px;
+  padding: 2px 10px;
+  border: none !important;
+  backdrop-filter: none !important;
+}
+
+.user-title :deep(.el-tag--dark) {
+  border: none !important;
+  backdrop-filter: none !important;
+}
+
+.user-title :deep(.el-tag--dark.el-tag--primary) {
+  background: #409eff !important;
+  background-color: #409eff !important;
+  color: #fff !important;
+  border-color: #409eff !important;
+}
+
+.user-title :deep(.el-tag--dark.el-tag--success) {
+  background: #67c23a !important;
+  background-color: #67c23a !important;
+  color: #fff !important;
+  border-color: #67c23a !important;
+}
+
+.user-title :deep(.el-tag--dark.el-tag--warning) {
+  background: #e6a23c !important;
+  background-color: #e6a23c !important;
+  color: #fff !important;
+  border-color: #e6a23c !important;
+}
+
+.user-title :deep(.el-tag--dark.el-tag--danger) {
+  background: #f56c6c !important;
+  background-color: #f56c6c !important;
+  color: #fff !important;
+  border-color: #f56c6c !important;
+}
+
+.user-title :deep(.el-tag--dark.el-tag--info) {
+  background: #909399 !important;
+  background-color: #909399 !important;
+  color: #fff !important;
+  border-color: #909399 !important;
+}
+
 .uid {
   color: #909399;
   margin: 0;
@@ -614,7 +677,9 @@ watch(
   cursor: default;
   /* border-color: #2f54eb; */
   /* box-shadow: 0 12px 30px rgba(47, 84, 235, 0.2); */
-  background: #fff;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .signature-text {
@@ -654,10 +719,11 @@ watch(
   position: relative;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  border: 1px solid #eceff5;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 999px;
-  background: #fff;
-  box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-md);
   overflow: hidden;
 }
 
@@ -697,11 +763,12 @@ watch(
 }
 
 .content-card {
-  background: #fff;
-  border-radius: 26px;
-  border: 1px solid #eceff5;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   padding: 24px;
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--shadow-lg);
 }
 
 .section-header {

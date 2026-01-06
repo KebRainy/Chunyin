@@ -11,6 +11,11 @@ import lombok.Data;
 public class ReviewWikiPageRequest {
     @NotNull(message = "审核状态不能为空")
     private WikiStatus status;
+    
+    /**
+     * 拒绝原因（当状态为REJECTED时可选）
+     */
+    private String rejectReason;
 }
 
 

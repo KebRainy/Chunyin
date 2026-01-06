@@ -218,10 +218,11 @@ onMounted(() => {
 /* 关注用户列表 */
 .followees-section {
   padding: 18px 24px;
-  border-radius: 24px;
-  border: 1px solid #eceff5;
-  background: #fff;
-  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.05);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  box-shadow: var(--shadow-md);
 }
 
 .followees-loading {
@@ -265,10 +266,11 @@ onMounted(() => {
 .feed-posts {
   flex: 1;
   min-height: 400px;
-  background: #fff;
-  border-radius: 28px;
-  border: 1px solid #eceff5;
-  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.04);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-lg);
   padding: 24px;
 }
 
@@ -276,10 +278,11 @@ onMounted(() => {
 .recommended-users-sidebar {
   width: 320px;
   flex-shrink: 0;
-  background: #fff;
-  border-radius: 20px;
-  border: 1px solid #eceff5;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md);
   padding: 20px;
   position: sticky;
   top: 88px;

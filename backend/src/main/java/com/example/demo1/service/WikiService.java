@@ -345,7 +345,7 @@ public class WikiService {
      * 审核Wiki页面（管理员）
      * 
      * @param pageId 页面ID
-     * @param status 审核状态（PUBLISHED或保持UNDER_REVIEW）
+     * @param status 审核状态（PUBLISHED、REJECTED或保持UNDER_REVIEW）
      * @param reviewerId 审核者ID
      */
     @Transactional
@@ -359,15 +359,21 @@ public class WikiService {
             throw new BusinessException(400, "该词条不需要审核");
         }
 
+        LambdaUpdateWrapper<WikiPage> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(WikiPage::getId, pageId);
+        
         if (WikiStatus.PUBLISHED.equals(status)) {
             // 审核通过，设置为已发布
-            LambdaUpdateWrapper<WikiPage> wrapper = new LambdaUpdateWrapper<>();
-            wrapper.eq(WikiPage::getId, pageId)
-                   .set(WikiPage::getStatus, WikiStatus.PUBLISHED);
+            wrapper.set(WikiPage::getStatus, WikiStatus.PUBLISHED);
             wikiPageMapper.update(null, wrapper);
             log.info("管理员 {} 审核通过Wiki页面: id={}, title={}", reviewerId, pageId, page.getTitle());
+        } else if (WikiStatus.REJECTED.equals(status)) {
+            // 审核拒绝，设置为已拒绝
+            wrapper.set(WikiPage::getStatus, WikiStatus.REJECTED);
+            wikiPageMapper.update(null, wrapper);
+            log.info("管理员 {} 拒绝Wiki页面: id={}, title={}", reviewerId, pageId, page.getTitle());
         } else {
-            // 保持待审核状态（可以用于拒绝审核，但当前设计中没有拒绝状态）
+            // 保持待审核状态
             log.info("管理员 {} 保持Wiki页面待审核: id={}, title={}", reviewerId, pageId, page.getTitle());
         }
     }

@@ -21,8 +21,8 @@
           <el-button v-if="userStore.isLoggedIn" type="primary" plain @click="goEditor">
             + 新建条目
           </el-button>
-          <el-button v-if="userStore.isLoggedIn" type="warning" @click="handleBatchImport">
-            ! 一键导入测试数据
+          <el-button v-if="userStore.isAdmin" type="warning" @click="handleBatchImport">
+            一键导入词条数据
           </el-button>
         </div>
       </div>
@@ -269,11 +269,12 @@ onMounted(() => {
 }
 
 .wiki-hero {
-  background: #fff;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
   padding: 32px;
-  border-radius: 32px;
-  border: 1px solid #eceff5;
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.07);
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-lg);
 }
 
 .hero-content h1 {
@@ -308,11 +309,20 @@ onMounted(() => {
 }
 
 .stat-card {
-  background: #fafafa;
-  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(8px);
+  border-radius: var(--radius-lg);
   padding: 16px;
   text-align: center;
-  border: 1px solid #f0f2f5;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-2px);
 }
 
 .stat-card .value {
@@ -336,11 +346,12 @@ onMounted(() => {
 
 .list-panel,
 .preview-panel {
-  background: #fff;
-  border-radius: 28px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-xl);
   padding: 24px;
-  border: 1px solid #eceff5;
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.05);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-lg);
 }
 
 .section-header {
@@ -371,7 +382,9 @@ onMounted(() => {
   border-radius: 18px;
   cursor: pointer;
   transition: border-color 0.2s, box-shadow 0.2s;
-  background: #fafafa;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(0, 0, 0, 0.06);
 }
 
 .wiki-item.active,
@@ -411,9 +424,11 @@ onMounted(() => {
   line-height: 1.8;
   color: #303133;
   border-radius: 12px;
-  background: #f9fafb;
+  background: rgba(250, 250, 250, 0.8);
+  backdrop-filter: blur(5px);
   padding: 16px;
   margin-bottom: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .preview-meta {

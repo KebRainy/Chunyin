@@ -31,10 +31,11 @@
       <p class="content">{{ snippet(post.content) }}</p>
       <div class="tags" v-if="post.tags?.length">
         <el-tag
-          v-for="tag in post.tags.slice(0, 2)"
+          v-for="(tag, index) in post.tags.slice(0, 2)"
           :key="tag"
           size="small"
           effect="light"
+          :type="getTagType(index)"
         >
           # {{ tag }}
         </el-tag>
@@ -96,6 +97,12 @@ const formatTime = (value) => {
     return date.format('M月D日')
   }
   return date.format('YYYY年M月D日')
+}
+
+// 根据索引返回标签颜色类型，避免颜色重合
+const getTagType = (index) => {
+  const types = ['primary', 'success', 'warning', 'danger', 'info']
+  return types[index % types.length]
 }
 </script>
 

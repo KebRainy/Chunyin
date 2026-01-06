@@ -203,11 +203,12 @@ watch(
 }
 
 .search-hero {
-  border-radius: 28px;
-  border: 1px solid #eceff5;
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   padding: 24px 28px;
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.05);
-  background: #fff;
+  box-shadow: var(--shadow-lg);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -220,12 +221,19 @@ watch(
 }
 
 .tab-chip {
-  border: 1px solid #dcdfe6;
+  border: 1px solid rgba(0, 0, 0, 0.1);
   border-radius: 999px;
   padding: 8px 18px;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(5px);
   cursor: pointer;
   color: #606266;
+  transition: all 0.3s ease;
+}
+
+.tab-chip:hover {
+  background: rgba(255, 255, 255, 0.95);
+  border-color: rgba(0, 0, 0, 0.15);
 }
 
 .tab-chip.active {
@@ -235,11 +243,12 @@ watch(
 }
 
 .result-panel {
-  border-radius: 32px;
-  border: 1px solid #eceff5;
-  background: #fff;
+  border-radius: var(--radius-xl);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
   padding: 24px 28px;
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--shadow-lg);
 }
 
 .result-header {

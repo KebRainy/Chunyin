@@ -51,8 +51,7 @@ export const useUserStore = defineStore('user', {
         // 其他错误（如网络错误）保留现有用户信息，避免误判
         if (err?.response?.status === 401) {
           // 401错误，说明token确实过期或无效
-          this.userInfo = null
-          this.initialized = true
+          this.clearUserInfo()
         } else {
           // 网络错误等其他错误，如果用户之前已登录，保留登录状态
           // 不设置initialized为true，允许下次重试
@@ -69,14 +68,10 @@ export const useUserStore = defineStore('user', {
     },
 
     async logout() {
-      try {
-        await logoutApi()
-      } catch (error) {
-        // 即使logout接口失败（如403），也继续执行登出逻辑
-        // 因为用户可能已经登出了，但cookie还在
-      }
+      await logoutApi()
       this.userInfo = null
       this.initialized = true
+      this.loading = false
     }
   }
 })

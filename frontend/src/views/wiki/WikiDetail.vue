@@ -431,11 +431,12 @@ watch(
 }
 
 .wiki-sidebar {
-  background: #fff;
-  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-xl);
   padding: 20px;
-  border: 1px solid #eceff5;
-  box-shadow: 0 16px 32px rgba(15, 23, 42, 0.06);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-lg);
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -468,10 +469,11 @@ watch(
 }
 
 .wiki-main {
-  background: #fff;
-  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-xl);
   padding: 32px;
-  border: 1px solid #eceff5;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.07);
 }
 

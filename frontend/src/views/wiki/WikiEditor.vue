@@ -731,7 +731,9 @@ onBeforeUnmount(() => {
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  background: #fff;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .image-thumb img {
@@ -761,11 +763,13 @@ onBeforeUnmount(() => {
 .preview-toc {
   width: 200px;
   flex-shrink: 0;
-  background: #fff;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  border-radius: var(--radius-md);
   padding: 12px;
   max-height: 520px;
   overflow-y: auto;
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .preview-toc h4 {
@@ -808,11 +812,13 @@ onBeforeUnmount(() => {
 
 .preview-content {
   flex: 1;
-  background: #fff;
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(8px);
+  border-radius: var(--radius-md);
   padding: 20px;
   overflow: auto;
   max-height: 520px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   line-height: 1.8;
 }
 

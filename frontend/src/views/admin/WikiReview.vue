@@ -1,15 +1,14 @@
 <template>
   <div class="wiki-review">
-    <div class="review-header">
-      <h2 class="art-heading-h2">Wiki词条审核</h2>
-      <p class="subtitle">待审核的词条列表</p>
+    <div class="page-header">
+      <h2>Wiki词条审核</h2>
     </div>
 
-    <div class="review-content">
-      <el-table :data="wikis" v-loading="loading" stripe>
+    <el-card>
+      <el-table v-loading="loading" :data="wikis" stripe>
         <el-table-column prop="title" label="标题" min-width="200">
           <template #default="{ row }">
-            <span class="wiki-title">{{ row.title }}</span>
+            <div class="wiki-title">{{ row.title }}</div>
           </template>
         </el-table-column>
         <el-table-column prop="summary" label="摘要" min-width="250" show-overflow-tooltip />
@@ -19,34 +18,80 @@
             {{ formatDateTime(row.updatedAt) }}
           </template>
         </el-table-column>
-        <el-table-column label="状态" width="120">
+        <el-table-column label="状态" width="100">
           <template #default="{ row }">
-            <el-tag :type="row.status === 'PUBLISHED' ? 'success' : 'warning'">
-              {{ row.status === 'PUBLISHED' ? '已审核' : '待审核' }}
+            <el-tag :type="getStatusType(row.status)">
+              {{ getStatusText(row.status) }}
             </el-tag>
           </template>
         </el-table-column>
         <el-table-column label="操作" width="200" fixed="right">
           <template #default="{ row }">
-            <el-button size="small" @click="viewDetail(row)">查看详情</el-button>
-            <el-button size="small" type="success" @click="handleApprove(row)" :loading="submitting"
-              :disabled="row.status === 'PUBLISHED'">
+            <el-button
+              v-if="row.status === 'UNDER_REVIEW'"
+              type="success"
+              size="small"
+              @click="handleApprove(row)"
+              :loading="submitting"
+            >
               通过
+            </el-button>
+            <el-button
+              v-if="row.status === 'UNDER_REVIEW'"
+              type="danger"
+              size="small"
+              @click="handleReject(row)"
+              :loading="submitting"
+            >
+              拒绝
+            </el-button>
+            <el-button
+              type="primary"
+              size="small"
+              @click="viewDetail(row)"
+            >
+              详情
             </el-button>
           </template>
         </el-table-column>
       </el-table>
 
-      <div class="pagination" v-if="total > 0">
-        <el-pagination v-model:current-page="page" v-model:page-size="pageSize" :page-sizes="[10, 20, 50]"
-          :total="total" layout="total, sizes, prev, pager, next" @size-change="loadWikis"
-          @current-change="loadWikis" />
-      </div>
+      <el-pagination
+        v-if="total > 0"
+        v-model:current-page="page"
+        v-model:page-size="pageSize"
+        :total="total"
+        layout="total, prev, pager, next"
+        @current-change="loadWikis"
+        style="margin-top: 20px; justify-content: center"
+      />
+    </el-card>
 
-      <div v-if="!loading && wikis.length === 0" class="empty-state">
-        <p>暂无待审核的词条</p>
-      </div>
-    </div>
+    <!-- 拒绝对话框 -->
+    <el-dialog
+      v-model="rejectDialogVisible"
+      title="拒绝词条"
+      width="500px"
+    >
+      <el-form :model="rejectForm" label-width="100px">
+        <el-form-item label="拒绝原因" required>
+          <el-input
+            v-model="rejectForm.rejectReason"
+            type="textarea"
+            :rows="4"
+            placeholder="请输入拒绝原因"
+            maxlength="200"
+            show-word-limit
+          />
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="rejectDialogVisible = false">取消</el-button>
+        <el-button type="danger" @click="confirmReject" :loading="submitting">
+          确认拒绝
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -65,6 +110,12 @@ const wikis = ref([])
 const page = ref(1)
 const pageSize = ref(10)
 const total = ref(0)
+
+const rejectDialogVisible = ref(false)
+const currentWiki = ref(null)
+const rejectForm = ref({
+  rejectReason: ''
+})
 
 // 加载待审核词条
 const loadWikis = async () => {
@@ -110,6 +161,60 @@ const handleApprove = async (wiki) => {
   }
 }
 
+// 拒绝审核
+const handleReject = (wiki) => {
+  currentWiki.value = wiki
+  rejectForm.value.rejectReason = ''
+  rejectDialogVisible.value = true
+}
+
+// 确认拒绝
+const confirmReject = async () => {
+  if (!rejectForm.value.rejectReason || !rejectForm.value.rejectReason.trim()) {
+    ElMessage.warning('请输入拒绝原因')
+    return
+  }
+
+  submitting.value = true
+  try {
+    const res = await reviewWikiPage(currentWiki.value.id, {
+      status: 'REJECTED',
+      rejectReason: rejectForm.value.rejectReason
+    })
+    if (res.code === 200) {
+      ElMessage.success('已拒绝')
+      rejectDialogVisible.value = false
+      await loadWikis()
+    }
+  } catch (error) {
+    ElMessage.error(error.response?.data?.message || '审核失败')
+  } finally {
+    submitting.value = false
+  }
+}
+
+// 获取状态文本
+const getStatusText = (status) => {
+  const statusMap = {
+    'UNDER_REVIEW': '待审核',
+    'PUBLISHED': '已审核',
+    'REJECTED': '已拒绝',
+    'DRAFT': '草稿'
+  }
+  return statusMap[status] || status
+}
+
+// 获取状态类型
+const getStatusType = (status) => {
+  const typeMap = {
+    'UNDER_REVIEW': 'warning',
+    'PUBLISHED': 'success',
+    'REJECTED': 'danger',
+    'DRAFT': 'info'
+  }
+  return typeMap[status] || 'info'
+}
+
 // 查看详情
 const viewDetail = (wiki) => {
   router.push(`/wiki/${wiki.slug}`)
@@ -118,7 +223,14 @@ const viewDetail = (wiki) => {
 // 格式化日期时间
 const formatDateTime = (dateTime) => {
   if (!dateTime) return ''
-  return dayjs(dateTime).format('YYYY-MM-DD HH:mm')
+  const date = new Date(dateTime)
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 onMounted(() => {
@@ -128,51 +240,18 @@ onMounted(() => {
 
 <style scoped>
 .wiki-review {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 24px;
+  padding: 20px;
 }
 
-.review-header {
-  margin-bottom: 24px;
+.page-header {
+  margin-bottom: 20px;
 }
 
-.review-header h2 {
-  margin: 0 0 8px 0;
-}
-
-.review-header .subtitle {
+.page-header h2 {
   margin: 0;
-  color: #888;
-  font-size: 14px;
-  font-family: var(--font-serif);
-  font-style: italic;
-  letter-spacing: 0.5px;
-}
-
-.review-content {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: var(--radius-lg);
-  padding: 24px;
-  box-shadow: var(--shadow-md);
-  border: 1px solid rgba(139, 69, 19, 0.1);
 }
 
 .wiki-title {
-  font-weight: 500;
-  color: #303133;
-}
-
-.pagination {
-  margin-top: 20px;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.empty-state {
-  text-align: center;
-  padding: 60px 20px;
-  color: #909399;
+  font-weight: bold;
 }
 </style>

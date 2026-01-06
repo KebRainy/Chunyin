@@ -67,7 +67,12 @@
 
         <!-- 动态标签 -->
         <div v-if="post.tags?.length" class="post-tags">
-          <el-tag v-for="tag in post.tags" :key="tag" effect="dark">
+          <el-tag 
+            v-for="(tag, index) in post.tags" 
+            :key="tag" 
+            effect="dark"
+            :type="getTagType(index)"
+          >
             # {{ tag }}
           </el-tag>
         </div>
@@ -290,6 +295,12 @@ const goToPost = (postId) => {
 const truncate = (text, length) => {
   if (!text) return ''
   return text.length > length ? text.slice(0, length) + '...' : text
+}
+
+// 根据索引返回标签颜色类型，避免颜色重合
+const getTagType = (index) => {
+  const types = ['primary', 'success', 'warning', 'danger', 'info']
+  return types[index % types.length]
 }
 
 const loadComments = async () => {
@@ -525,11 +536,12 @@ watch(() => route.params.id, (newId, oldId) => {
 }
 
 .post-detail {
-  background-color: #fff;
-  border-radius: 32px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-xl);
   padding: 32px;
-  border: 1px solid #eceff5;
-  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-lg);
 }
 
 /* 头部 */
@@ -618,6 +630,44 @@ watch(() => route.params.id, (newId, oldId) => {
   gap: 8px;
   margin-bottom: 16px;
   flex-wrap: wrap;
+}
+
+.post-tags :deep(.el-tag) {
+  font-weight: 500;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  border: none;
+}
+
+.post-tags :deep(.el-tag--dark) {
+  color: #fff !important;
+  border-color: transparent !important;
+}
+
+.post-tags :deep(.el-tag--dark.el-tag--primary) {
+  background-color: #409eff !important;
+  color: #fff !important;
+}
+
+.post-tags :deep(.el-tag--dark.el-tag--success) {
+  background-color: #67c23a !important;
+  color: #fff !important;
+}
+
+.post-tags :deep(.el-tag--dark.el-tag--warning) {
+  background-color: #e6a23c !important;
+  color: #fff !important;
+}
+
+.post-tags :deep(.el-tag--dark.el-tag--danger) {
+  background-color: #f56c6c !important;
+  color: #fff !important;
+}
+
+.post-tags :deep(.el-tag--dark.el-tag--info) {
+  background-color: #909399 !important;
+  color: #fff !important;
 }
 
 /* 交互按钮 */
@@ -748,14 +798,18 @@ watch(() => route.params.id, (newId, oldId) => {
   display: flex;
   gap: 12px;
   padding: 12px;
-  background: #f8fafc;
+  background: rgba(248, 250, 252, 0.8);
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
   border-radius: 12px;
   cursor: pointer;
   transition: all 0.2s;
 }
 
 .similar-item:hover {
-  background: #f1f5f9;
+  background: rgba(241, 245, 249, 0.8);
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
   transform: translateX(4px);
 }
 
@@ -777,7 +831,9 @@ watch(() => route.params.id, (newId, oldId) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #e2e8f0;
+  background: rgba(226, 232, 240, 0.8);
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(0, 0, 0, 0.05);
   color: #94a3b8;
 }
 

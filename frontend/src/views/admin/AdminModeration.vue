@@ -35,6 +35,16 @@
           <p>审核用户提交的酒吧申请</p>
         </div>
       </el-card>
+
+      <el-card class="review-card" shadow="hover" @click="goToSellerReview">
+        <div class="card-content">
+          <el-icon class="card-icon" :size="48" color="#F56C6C">
+            <UserFilled />
+          </el-icon>
+          <h3 class="art-heading-h3">商家审核</h3>
+          <p>审核用户提交的商家认证申请</p>
+        </div>
+      </el-card>
     </div>
 
     <!-- 内容审核管理 -->
@@ -81,7 +91,7 @@
           <template #default="scope">
             <el-tag
               :type="getRiskType(scope.row.riskLevel)"
-              effect="dark"
+              size="small"
             >
               {{ scope.row.riskLevel }}
             </el-tag>
@@ -109,7 +119,7 @@
 
         <el-table-column label="举报原因" width="120">
           <template #default="scope">
-            <el-tag type="warning" size="small">
+            <el-tag :type="getReasonType(scope.row.reason)" size="small">
               {{ getReasonLabel(scope.row.reason) }}
             </el-tag>
           </template>
@@ -195,7 +205,7 @@
           </div>
           <div class="detail-item">
             <span class="label">风险等级：</span>
-            <el-tag :type="getRiskType(currentReport.riskLevel)" effect="dark">
+            <el-tag :type="getRiskType(currentReport.riskLevel)" size="small">
               {{ currentReport.riskLevel }}
             </el-tag>
           </div>
@@ -218,7 +228,7 @@
           <h3 class="art-heading-h3">举报信息</h3>
           <div class="detail-item">
             <span class="label">举报原因：</span>
-            <el-tag type="warning">{{ getReasonLabel(currentReport.reason) }}</el-tag>
+            <el-tag :type="getReasonType(currentReport.reason)">{{ getReasonLabel(currentReport.reason) }}</el-tag>
           </div>
           <div class="detail-item" v-if="currentReport.description">
             <span class="label">详细说明：</span>
@@ -371,7 +381,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { Calendar, Document, Shop } from '@element-plus/icons-vue'
+import { Calendar, Document, Shop, UserFilled } from '@element-plus/icons-vue'
 import { adminApi, REPORT_STATUS } from '@/api/admin'
 
 const router = useRouter()
@@ -573,11 +583,12 @@ const parseViolations = (autoModerationResult) => {
   }
 }
 
-// 获取风险等级类型
+// 获取风险等级类型，使用不同颜色避免重合
 const getRiskType = (level) => {
-  if (level >= 80) return 'danger'
-  if (level >= 60) return 'warning'
-  return 'info'
+  if (!level) return 'info'
+  if (level >= 80) return 'danger'   // 红色 - 高风险
+  if (level >= 60) return 'warning'  // 橙色 - 中风险
+  return 'success'                    // 绿色 - 低风险
 }
 
 // 获取状态类型
@@ -619,6 +630,21 @@ const getReasonLabel = (reason) => {
   return labels[reason] || reason
 }
 
+// 获取原因标签颜色类型，根据严重程度分配颜色
+const getReasonType = (reason) => {
+  const typeMap = {
+    'SPAM': 'danger',         // 红色 - 垃圾广告（严重）
+    'ABUSE': 'danger',        // 红色 - 辱骂攻击（严重）
+    'PORNOGRAPHY': 'danger',  // 红色 - 色情低俗（严重）
+    'ILLEGAL': 'danger',      // 红色 - 违法违规（严重）
+    'FRAUD': 'warning',       // 橙色 - 欺诈信息（中等）
+    'MISINFORMATION': 'warning', // 橙色 - 虚假信息（中等）
+    'HARASSMENT': 'info',     // 灰色 - 骚扰行为（一般）
+    'OTHER': 'info'           // 灰色 - 其他原因（一般）
+  }
+  return typeMap[reason] || 'info'
+}
+
 // 格式化日期
 const formatDate = (dateStr) => {
   if (!dateStr) return '-'
@@ -643,6 +669,10 @@ const goToWikiReview = () => {
 
 const goToBarReview = () => {
   router.push('/admin/bars/review')
+}
+
+const goToSellerReview = () => {
+  router.push('/admin/seller-review')
 }
 
 onMounted(() => {
@@ -721,11 +751,13 @@ onMounted(() => {
 }
 
 .filter-bar {
-  background: white;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-lg);
   padding: 20px;
   margin-bottom: 20px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .filter-bar .filter-options {
@@ -747,10 +779,12 @@ onMounted(() => {
 }
 
 .reports-table {
-  background: white;
-  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-lg);
   padding: 20px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .content-preview .content-text {
@@ -844,6 +878,83 @@ onMounted(() => {
 
 :deep(.el-dialog__body) {
   padding: 20px;
+}
+
+/* 确保标签颜色正确显示，覆盖全局样式 */
+:deep(.el-tag--primary) {
+  background: #409eff !important;
+  background-color: #409eff !important;
+  color: #fff !important;
+  border-color: #409eff !important;
+  backdrop-filter: none !important;
+}
+
+:deep(.el-tag--success) {
+  background: #67c23a !important;
+  background-color: #67c23a !important;
+  color: #fff !important;
+  border-color: #67c23a !important;
+  backdrop-filter: none !important;
+}
+
+:deep(.el-tag--warning) {
+  background: #e6a23c !important;
+  background-color: #e6a23c !important;
+  color: #fff !important;
+  border-color: #e6a23c !important;
+  backdrop-filter: none !important;
+}
+
+:deep(.el-tag--danger) {
+  background: #f56c6c !important;
+  background-color: #f56c6c !important;
+  color: #fff !important;
+  border-color: #f56c6c !important;
+  backdrop-filter: none !important;
+}
+
+:deep(.el-tag--info) {
+  background: #909399 !important;
+  background-color: #909399 !important;
+  color: #fff !important;
+  border-color: #909399 !important;
+  backdrop-filter: none !important;
+}
+
+/* 确保dark模式的标签颜色正确 */
+:deep(.el-tag--dark.el-tag--primary) {
+  background: #409eff !important;
+  background-color: #409eff !important;
+  color: #fff !important;
+  backdrop-filter: none !important;
+}
+
+:deep(.el-tag--dark.el-tag--success) {
+  background: #67c23a !important;
+  background-color: #67c23a !important;
+  color: #fff !important;
+  backdrop-filter: none !important;
+}
+
+:deep(.el-tag--dark.el-tag--warning) {
+  background: #e6a23c !important;
+  background-color: #e6a23c !important;
+  color: #fff !important;
+  backdrop-filter: none !important;
+}
+
+:deep(.el-tag--dark.el-tag--danger) {
+  background: #f56c6c !important;
+  background-color: #f56c6c !important;
+  color: #fff !important;
+  backdrop-filter: none !important;
+}
+
+:deep(.el-tag--dark.el-tag--info) {
+  background: #909399 !important;
+  background-color: #909399 !important;
+  color: #fff !important;
+  backdrop-filter: none !important;
 }
 </style>
 

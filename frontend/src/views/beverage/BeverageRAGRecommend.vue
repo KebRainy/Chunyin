@@ -45,6 +45,7 @@
             v-for="example in queryExamples"
             :key="example"
             class="example-tag"
+            :class="{ 'is-selected': query === example }"
             @click="query = example"
           >
             {{ example }}
@@ -360,11 +361,27 @@ const getImageUrl = (imageId) => {
 .example-tag {
   cursor: pointer;
   transition: all 0.3s;
+  border: 1px solid #dcdfe6 !important;
+  background-color: #fff !important;
+  color: #409eff !important;
 }
 
 .example-tag:hover {
-  background-color: #409eff;
-  color: #fff;
+  background-color: #ecf5ff !important;
+  border-color: #409eff !important;
+  color: #409eff !important;
+}
+
+.example-tag.is-selected {
+  background-color: #409eff !important;
+  border-color: #409eff !important;
+  color: #fff !important;
+}
+
+.example-tag.is-selected:hover {
+  background-color: #66b1ff !important;
+  border-color: #66b1ff !important;
+  color: #fff !important;
 }
 
 .search-actions {

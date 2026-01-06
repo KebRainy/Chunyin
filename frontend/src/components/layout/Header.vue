@@ -64,6 +64,7 @@
           <span @click="goToCollections">收藏</span>
           <span @click="goToHistory">足迹</span>
           <span v-if="userStore.isLoggedIn && !userStore.isSeller && !userStore.isAdmin" @click="goToUserActivity">活动</span>
+          <span v-if="userStore.isLoggedIn && !userStore.isSeller && !userStore.isAdmin" @click="goToSellerRegister">商家认证</span>
           <span v-if="userStore.isSeller" @click="goToSellerActivity">管理</span>
         </div>
         <el-button
@@ -110,7 +111,8 @@ const navItems = computed(() => {
     baseItems.splice(1, 0, 
       { path: '/admin/activities/review', label: '活动审核' },
       { path: '/admin/wiki/review', label: 'Wiki审核' },
-      { path: '/admin/bars/review', label: '酒吧审核' }
+      { path: '/admin/bars/review', label: '酒吧审核' },
+      { path: '/admin/seller-review', label: '商家审核' }
     )
   } else if (userStore.isSeller) {
     // seller用户显示"管理"，指向商家活动管理页面
@@ -171,6 +173,17 @@ const handleNavClick = (path) => {
       return
     }
     router.push('/admin/activities/review')
+  } else if (path === '/admin/seller-review') {
+    if (!userStore.isLoggedIn) {
+      ElMessage.warning('请先登录')
+      router.push('/login')
+      return
+    }
+    if (!userStore.isAdmin) {
+      ElMessage.warning('此功能仅限管理员')
+      return
+    }
+    router.push('/admin/seller-review')
   } else {
     router.push(path)
   }
@@ -223,6 +236,14 @@ const goToSellerActivity = () => {
     return
   }
   router.push('/seller/activity')
+}
+const goToSellerRegister = () => {
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return
+  }
+  router.push('/seller/register')
 }
 const goLogin = () => router.push('/login')
 const goRegister = () => router.push('/register')

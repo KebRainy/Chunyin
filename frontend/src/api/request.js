@@ -32,6 +32,22 @@ const shouldSilentRetry = (config) => {
   return silentRetryUrls.some(path => url.includes(path))
 }
 
+// 安全的错误消息显示函数，避免显示"????"
+const safeShowError = (message) => {
+  if (!message || typeof message !== 'string') {
+    return
+  }
+  // 检查消息是否包含无效字符或乱码
+  if (message.includes('�') || message === '????' || /^\?+$/.test(message)) {
+    return // 不显示包含乱码的消息
+  }
+  try {
+    ElMessage.error(message)
+  } catch (e) {
+    // 静默处理，避免显示"????"
+  }
+}
+
 // 请求拦截器：添加重试逻辑
 request.interceptors.request.use(
   (config) => {
@@ -51,9 +67,10 @@ request.interceptors.response.use(
   (response) => {
     const res = response.data
     if (res.code !== 200) {
-      ElMessage.error(res.message || '请求失败')
-      // 保留完整的响应体，便于前端根据业务码处理（如409重复词条跳转）
-      return Promise.reject(res)
+      // 确保消息是字符串，避免编码问题
+      const errorMsg = res.message || '请求失败'
+      safeShowError(errorMsg)
+      return Promise.reject(new Error(errorMsg || 'Error'))
     }
     return res
   },
@@ -74,8 +91,7 @@ request.interceptors.response.use(
         await new Promise(resolve => setTimeout(resolve, delay))
         return request(config)
       } else {
-        // 非静默重试：显示重试消息
-        console.log(`请求失败，${delay}ms后重试 (${config.__retryCount}/${MAX_RETRIES}):`, config.url)
+        // 非静默重试：静默重试，不输出日志
         await new Promise(resolve => setTimeout(resolve, delay))
         return request(config)
       }
@@ -94,7 +110,9 @@ request.interceptors.response.use(
         case 400:
           // 400错误通常是参数错误，不应该导致退出登录
           // 只显示错误消息，不清空登录状态
-          ElMessage.error(serverMessage || '请求参数错误')
+          // 确保消息是字符串，避免编码问题
+          const msg400 = serverMessage || '请求参数错误'
+          safeShowError(msg400)
           // 不reject，避免触发其他错误处理
           return Promise.reject(error)
         case 401:
@@ -125,30 +143,34 @@ request.interceptors.response.use(
           
           // 其他接口的401错误：可能是权限问题，不清空登录状态
           // 只显示错误消息，让用户知道需要权限
-          ElMessage.error(serverMessage || '没有权限访问此资源')
+          const msg401 = serverMessage || '没有权限访问此资源'
+          safeShowError(msg401)
           break
         case 403:
-          ElMessage.error(serverMessage || '没有访问权限')
+          const msg403 = serverMessage || '没有访问权限'
+          safeShowError(msg403)
           break
         case 404:
-          ElMessage.error(serverMessage || '请求的资源不存在')
+          const msg404 = serverMessage || '请求的资源不存在'
+          safeShowError(msg404)
           break
         default:
           // 连接错误且已重试多次，才显示错误
           if (!isConnectionError(error)) {
-            ElMessage.error(serverMessage || error.message || '请求失败')
+            const msgDefault = serverMessage || error.message || '请求失败'
+            safeShowError(msgDefault)
           } else if (!shouldSilentRetry(config)) {
-            ElMessage.error('无法连接到服务器，请检查后端服务是否已启动')
+            safeShowError('无法连接到服务器，请检查后端服务是否已启动')
           }
       }
     } else {
       // 连接错误且已重试多次
       if (isConnectionError(error) && config.__retryCount >= MAX_RETRIES) {
         if (!shouldSilentRetry(config)) {
-          ElMessage.error('无法连接到服务器，请检查后端服务是否已启动')
+          safeShowError('无法连接到服务器，请检查后端服务是否已启动')
         }
       } else if (!isConnectionError(error)) {
-        ElMessage.error('网络错误，请稍后再试')
+        safeShowError('网络错误，请稍后再试')
       }
     }
     return Promise.reject(error)

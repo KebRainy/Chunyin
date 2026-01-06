@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.example.demo1.algorithm.BarRankingAlgorithm;
 import com.example.demo1.common.enums.BarSortStrategy;
 import com.example.demo1.common.enums.BarStatus;
+import com.example.demo1.common.enums.UserRole;
 import com.example.demo1.common.exception.BusinessException;
 import com.example.demo1.dto.request.BarRegisterRequest;
 import com.example.demo1.dto.request.BarReviewRequest;
@@ -23,6 +24,7 @@ import com.example.demo1.mapper.BarMapper;
 import com.example.demo1.mapper.BarReviewMapper;
 import com.example.demo1.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BarService {
@@ -41,6 +44,7 @@ public class BarService {
     private final UserMapper userMapper;
     private final AlcoholMapper alcoholMapper;
     private final ContentModerationService contentModerationService;
+    private final GeocodingService geocodingService;
 
     /**
      * 注册酒吧（提交申请）
@@ -253,6 +257,19 @@ public class BarService {
     }
 
     /**
+     * 获取待审核的酒吧申请列表（管理员功能）
+     */
+    public List<BarApplicationVO> getPendingApplications() {
+        LambdaQueryWrapper<BarApplication> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(BarApplication::getStatus, BarStatus.PENDING)
+                .eq(BarApplication::getIsActive, true)
+                .orderByDesc(BarApplication::getCreatedAt);
+
+        List<BarApplication> applications = barApplicationMapper.selectList(wrapper);
+        return applications.stream().map(this::convertToApplicationVO).collect(Collectors.toList());
+    }
+
+    /**
      * 审核酒吧申请（管理员功能）
      */
     @Transactional
@@ -288,7 +305,42 @@ public class BarService {
             bar.setMainBeverages(application.getMainBeverages());
             bar.setOwnerId(application.getApplicantId());
 
+            // 根据地址获取经纬度
+            try {
+                Map<String, Double> coordinates = geocodingService.geocodeAddress(
+                        application.getProvince(),
+                        application.getCity(),
+                        application.getDistrict(),
+                        application.getAddress()
+                );
+                
+                if (coordinates != null && coordinates.containsKey("latitude") && coordinates.containsKey("longitude")) {
+                    bar.setLatitude(coordinates.get("latitude"));
+                    bar.setLongitude(coordinates.get("longitude"));
+                    log.info("酒吧审核通过，已获取经纬度: ({}, {})", bar.getLatitude(), bar.getLongitude());
+                } else {
+                    log.warn("酒吧审核通过，但无法获取经纬度，地址: {} {} {} {}", 
+                            application.getProvince(), application.getCity(), 
+                            application.getDistrict(), application.getAddress());
+                }
+            } catch (Exception e) {
+                log.error("获取酒吧经纬度失败，地址: {} {} {} {}", 
+                        application.getProvince(), application.getCity(), 
+                        application.getDistrict(), application.getAddress(), e);
+                // 即使获取经纬度失败，也继续创建酒吧记录
+            }
+
             barMapper.insert(bar);
+            
+            // 检查申请者角色，如果是 USER 则提升为 SELLER
+            User applicant = userMapper.selectById(application.getApplicantId());
+            if (applicant != null && applicant.getRole() == UserRole.USER) {
+                LambdaUpdateWrapper<User> userWrapper = new LambdaUpdateWrapper<>();
+                userWrapper.eq(User::getId, application.getApplicantId())
+                           .set(User::getRole, UserRole.SELLER);
+                userMapper.update(null, userWrapper);
+                log.info("申请者 {} 角色已从 USER 提升为 SELLER", application.getApplicantId());
+            }
         }
     }
 

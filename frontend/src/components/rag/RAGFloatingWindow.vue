@@ -1,14 +1,16 @@
 <template>
   <Teleport to="body">
-    <!-- 触发按钮 -->
-    <div
-      v-if="!visible"
-      class="rag-trigger-button"
-      @click="openWindow"
-    >
-      <el-icon><ChatDotRound /></el-icon>
-      <span>智能荐酒</span>
-    </div>
+    <!-- 只在登录后显示 -->
+    <template v-if="isLoggedIn">
+      <!-- 触发按钮 -->
+      <div
+        v-if="!visible"
+        class="rag-trigger-button"
+        @click="openWindow"
+      >
+        <el-icon><ChatDotRound /></el-icon>
+        <span>智能荐酒</span>
+      </div>
 
     <!-- 悬浮窗 -->
     <div
@@ -186,6 +188,7 @@
         </div>
       </div>
     </div>
+    </template>
   </Teleport>
 </template>
 
@@ -195,8 +198,13 @@ import { useRouter } from 'vue-router'
 import { ChatDotRound, Close, Minus, FullScreen, Search, Picture, User, Document, Delete } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { recommendApi } from '@/api/recommend'
+import { useUserStore } from '@/store/modules/user'
 
 const router = useRouter()
+const userStore = useUserStore()
+
+// 检查是否已登录
+const isLoggedIn = computed(() => userStore.isLoggedIn)
 
 const visible = ref(false)
 const query = ref('')

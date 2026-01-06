@@ -74,25 +74,78 @@
           </el-button>
 
           <el-button
-            v-if="activity.isFinished && activity.isParticipated"
+            v-if="activity.isOrganizer && activity.status !== 'CANCELLED' && activity.status !== 'FINISHED' && activity.reviewStatus !== 'REJECTED'"
+            type="danger"
+            @click="handleCancelActivity"
+            :loading="actionLoading"
+          >
+            取消活动
+          </el-button>
+
+          <el-button
+            v-if="activity.isFinished && activity.isParticipated && activity.barId && !activity.hasReviewed"
             type="success"
-            @click="goToReview"
+            @click="showReviewDialog = true"
           >
             写评价
           </el-button>
+          <el-alert
+            v-if="activity.isFinished && activity.isParticipated && activity.hasReviewed"
+            type="success"
+            :closable="false"
+            style="margin-top: 10px"
+          >
+            您已评价过此活动
+          </el-alert>
         </div>
       </el-card>
+
+      <!-- 评价对话框 -->
+      <el-dialog
+        v-model="showReviewDialog"
+        title="活动评价"
+        width="500px"
+        @close="resetReviewForm"
+      >
+        <el-form :model="reviewForm" :rules="reviewRules" ref="reviewFormRef" label-width="100px">
+          <el-form-item label="评分" prop="rating">
+            <el-rate
+              v-model="reviewForm.rating"
+              :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
+            />
+          </el-form-item>
+          <el-form-item label="评价内容" prop="content">
+            <el-input
+              v-model="reviewForm.content"
+              type="textarea"
+              :rows="5"
+              placeholder="分享您对这次活动的体验..."
+              maxlength="500"
+              show-word-limit
+            />
+          </el-form-item>
+        </el-form>
+        <template #footer>
+          <el-button @click="showReviewDialog = false">取消</el-button>
+          <el-button type="primary" @click="submitReview" :loading="submittingReview">
+            提交
+          </el-button>
+        </template>
+      </el-dialog>
 
       <el-card v-if="activity && activity.reviewStatus === 'APPROVED'" class="participants-card">
         <template #header>
           <h3>参与者列表（{{ activity.currentParticipants }}人）</h3>
         </template>
         <div class="participants-list">
+          <div v-if="participants.length === 0" class="empty-participants">
+            <el-empty description="暂无参与者" :image-size="60" />
+          </div>
           <div v-for="participant in participants" :key="participant.id" class="participant-item">
-            <el-avatar :src="participant.avatar" :size="40">
-              {{ participant.name?.charAt(0) }}
+            <el-avatar :src="participant.avatarUrl" :size="40">
+              {{ participant.username?.charAt(0) }}
             </el-avatar>
-            <span class="participant-name">{{ participant.name }}</span>
+            <span class="participant-name">{{ participant.username }}</span>
             <el-tag v-if="participant.id === activity.organizerId" type="primary" size="small">
               发起者
             </el-tag>
@@ -108,7 +161,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Clock, LocationFilled, User, UserFilled } from '@element-plus/icons-vue'
-import { getActivityById, joinActivity, cancelJoinActivity } from '@/api/activity'
+import { getActivityById, joinActivity, cancelJoinActivity, cancelActivity, getActivityParticipants, reviewActivityBar } from '@/api/activity'
 
 const route = useRoute()
 const router = useRouter()
@@ -118,6 +171,21 @@ const actionLoading = ref(false)
 const activity = ref(null)
 const participants = ref([])
 
+// 评价相关
+const showReviewDialog = ref(false)
+const submittingReview = ref(false)
+const reviewFormRef = ref(null)
+const reviewForm = ref({
+  rating: 5,
+  content: ''
+})
+
+const reviewRules = {
+  rating: [
+    { required: true, message: '请选择评分', trigger: 'change' }
+  ]
+}
+
 // 加载活动详情
 const loadActivityDetail = async () => {
   loading.value = true
@@ -125,13 +193,27 @@ const loadActivityDetail = async () => {
     const res = await getActivityById(route.params.id)
     if (res.code === 200) {
       activity.value = res.data
-      // TODO: 加载参与者列表
-      // loadParticipants()
+      // 加载参与者列表
+      if (activity.value.reviewStatus === 'APPROVED') {
+        loadParticipants()
+      }
     }
   } catch (error) {
     ElMessage.error('加载活动详情失败')
   } finally {
     loading.value = false
+  }
+}
+
+// 加载参与者列表
+const loadParticipants = async () => {
+  try {
+    const res = await getActivityParticipants(route.params.id)
+    if (res.code === 200) {
+      participants.value = res.data || []
+    }
+  } catch (error) {
+    console.error('加载参与者列表失败:', error)
   }
 }
 
@@ -187,10 +269,70 @@ const handleCancel = async () => {
   }
 }
 
-// 跳转到评价页面
-const goToReview = () => {
-  // TODO: 实现评价功能
-  ElMessage.info('评价功能开发中')
+// 取消活动（发起者）
+const handleCancelActivity = async () => {
+  try {
+    await ElMessageBox.confirm('确定要取消此活动吗？取消后无法恢复，已参与的用户将收到通知。', '取消活动', {
+      confirmButtonText: '确定取消',
+      cancelButtonText: '我再想想',
+      type: 'warning'
+    })
+
+    actionLoading.value = true
+    try {
+      const res = await cancelActivity(route.params.id)
+      if (res.code === 200) {
+        ElMessage.success('活动已取消')
+        await loadActivityDetail()
+      }
+    } catch (error) {
+      ElMessage.error(error.response?.data?.message || '取消活动失败')
+    } finally {
+      actionLoading.value = false
+    }
+  } catch {
+    // 用户取消
+  }
+}
+
+// 重置评价表单
+const resetReviewForm = () => {
+  reviewForm.value = {
+    rating: 5,
+    content: ''
+  }
+  reviewFormRef.value?.resetFields()
+}
+
+// 提交评价
+const submitReview = async () => {
+  if (!reviewFormRef.value) return
+  
+  await reviewFormRef.value.validate(async (valid) => {
+    if (!valid) return
+    
+    if (!activity.value || !activity.value.barId) {
+      ElMessage.error('该活动没有关联酒吧，无法评价')
+      return
+    }
+    
+    submittingReview.value = true
+    try {
+      const res = await reviewActivityBar(activity.value.id, {
+        rating: reviewForm.value.rating,
+        content: reviewForm.value.content || null
+      })
+      if (res.code === 200) {
+        ElMessage.success('评价提交成功')
+        showReviewDialog.value = false
+        await loadActivityDetail()
+      }
+    } catch (error) {
+      ElMessage.error(error.response?.data?.message || '评价提交失败')
+    } finally {
+      submittingReview.value = false
+    }
+  })
 }
 
 // 格式化日期时间
@@ -240,7 +382,7 @@ onMounted(() => {
 <style scoped>
 .activity-detail {
   padding: 20px;
-  max-width: 1000px;
+  max-width: 1200px;
   margin: 0 auto;
 }
 
@@ -321,6 +463,11 @@ onMounted(() => {
 .participant-name {
   flex: 1;
   font-weight: 500;
+}
+
+.empty-participants {
+  padding: 20px;
+  text-align: center;
 }
 </style>
 

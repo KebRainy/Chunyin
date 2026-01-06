@@ -19,25 +19,21 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(BusinessException.class)
     @ResponseStatus(HttpStatus.OK)
     public Result<?> handleBusinessException(BusinessException e) {
-        log.error("业务异常: {}", e.getMessage());
-        // 如果有data字段，将其包含在Result中
-        if (e.getData() != null) {
-            return new Result<>(e.getCode(), e.getMessage(), e.getData());
-        }
+        log.error("Business exception: code={}, message={}", e.getCode(), e.getMessage());
         return Result.error(e.getCode(), e.getMessage());
     }
 
     @ExceptionHandler(BadCredentialsException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
     public Result<?> handleBadCredentialsException(BadCredentialsException e) {
-        log.error("认证失败: {}", e.getMessage());
+        log.error("Authentication failed: {}", e.getMessage());
         return Result.error(401, "用户名或密码错误");
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     @ResponseStatus(HttpStatus.FORBIDDEN)
     public Result<?> handleAccessDeniedException(AccessDeniedException e) {
-        log.error("权限不足: {}", e.getMessage());
+        log.error("Access denied: {}", e.getMessage());
         return Result.error(403, "权限不足");
     }
 
@@ -54,7 +50,7 @@ public class GlobalExceptionHandler {
                 message = ex.getBindingResult().getAllErrors().get(0).getDefaultMessage();
             }
         }
-        log.error("参数校验失败: {}", message);
+        log.error("Validation failed: {}", message);
         return Result.error(400, message);
     }
 
@@ -63,23 +59,23 @@ public class GlobalExceptionHandler {
     public Result<?> handleMissingParameterException(MissingServletRequestParameterException e) {
         String parameterName = e.getParameterName();
         String message = String.format("缺少必需参数: %s", parameterName);
-        log.error("缺少请求参数: {}", parameterName);
+        log.error("Missing required parameter: {}", parameterName);
         return Result.error(400, message);
     }
 
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public Result<?> handleException(Exception e) {
-        log.error("系统异常: ", e);
+        log.error("System exception: ", e);
         // 记录详细的错误信息到日志
         String errorMessage = e.getMessage();
         String className = e.getClass().getName();
         
         // 记录异常堆栈
-        log.error("异常类型: {}", className);
+        log.error("Exception type: {}", className);
         if (e.getCause() != null) {
-            log.error("异常原因: {}", e.getCause().getMessage());
-            log.error("原因堆栈: ", e.getCause());
+            log.error("Exception cause: {}", e.getCause().getMessage());
+            log.error("Cause stack trace: ", e.getCause());
         }
         
         // 对于数据库相关异常，返回更友好的错误信息
@@ -91,17 +87,17 @@ public class GlobalExceptionHandler {
                 return Result.error("数据保存失败，请检查数据格式是否正确");
             }
             if (errorMessage.contains("Unknown column") || errorMessage.contains("doesn't exist")) {
-                log.error("数据库字段不存在，请检查数据库结构");
+                log.error("Database column does not exist, please check database structure");
                 return Result.error("数据库结构错误，请联系管理员检查数据库");
             }
             if (errorMessage.contains("JSON") || errorMessage.contains("json")) {
-                log.error("JSON序列化/反序列化错误");
+                log.error("JSON serialization/deserialization error");
                 return Result.error("数据格式错误，请检查输入数据");
             }
         }
         
         // 记录完整的错误信息
-        log.error("完整错误信息: {}", errorMessage);
+        log.error("Full error message: {}", errorMessage);
         return Result.error("系统异常，请联系管理员。错误类型: " + className);
     }
 }

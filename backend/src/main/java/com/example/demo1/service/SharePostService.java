@@ -193,75 +193,76 @@ public class SharePostService {
         if (comments.isEmpty()) {
             return Collections.emptyList();
         }
-        
-        // 收集所有用户ID（包括评论作者和被回复的用户）
+
+        Map<Long, SharePostComment> commentMap = comments.stream()
+            .collect(Collectors.toMap(SharePostComment::getId, c -> c, (a, b) -> a, LinkedHashMap::new));
+
         Set<Long> userIds = comments.stream()
             .map(SharePostComment::getUserId)
             .collect(Collectors.toSet());
-        // 添加所有父评论的用户ID（被回复的用户）
-        comments.stream()
-            .filter(c -> c.getParentId() != null)
-            .forEach(c -> {
-                SharePostComment parent = comments.stream()
-                    .filter(p -> Objects.equals(p.getId(), c.getParentId()))
-                    .findFirst()
-                    .orElse(null);
-                if (parent != null) {
-                    userIds.add(parent.getUserId());
-                }
-            });
-        
         Map<Long, User> userMap = userService.mapByIds(new ArrayList<>(userIds));
+
         Map<Long, SharePostCommentVO> voMap = new LinkedHashMap<>();
-        
-        // 创建所有评论的VO，并填充replyToUser信息
+
+        // 仅输出两层评论：
+        // - 一级：parentId 为 null
+        // - 二级：统一挂在一级下（parentId=一级ID），并且仅当“回复二级评论”时才带 @（replyToUser）
         for (SharePostComment comment : comments) {
+            SharePostComment parent = comment.getParentId() != null ? commentMap.get(comment.getParentId()) : null;
+
+            Long outputParentId = null;
             SimpleUserVO replyToUser = null;
-            if (comment.getParentId() != null) {
-                // 查找父评论
-                SharePostComment parent = comments.stream()
-                    .filter(p -> Objects.equals(p.getId(), comment.getParentId()))
-                    .findFirst()
-                    .orElse(null);
-                if (parent != null) {
+            if (parent != null) {
+                // 深度为 1：回复一级评论，不展示 @
+                if (parent.getParentId() == null) {
+                    outputParentId = parent.getId();
+                } else {
+                    // 深度 >= 2：回复二级及以下评论，输出为二级评论（挂在一级下），并展示 @ 被回复的用户
+                    SharePostComment root = parent;
+                    while (root.getParentId() != null) {
+                        SharePostComment next = commentMap.get(root.getParentId());
+                        if (next == null || Objects.equals(next.getId(), root.getId())) {
+                            break;
+                        }
+                        root = next;
+                    }
+                    outputParentId = root.getId();
                     User parentAuthor = userMap.get(parent.getUserId());
                     if (parentAuthor != null) {
                         replyToUser = userService.buildSimpleUser(parentAuthor);
                     }
                 }
             }
-            
+
             SharePostCommentVO vo = SharePostCommentVO.builder()
                 .id(comment.getId())
                 .content(comment.getContent())
                 .createdAt(comment.getCreatedAt())
-                .parentId(comment.getParentId())
+                .parentId(outputParentId)
                 .author(userService.buildSimpleUser(userMap.get(comment.getUserId())))
                 .replyToUser(replyToUser)
                 .replies(new ArrayList<>())
                 .build();
             voMap.put(comment.getId(), vo);
         }
-        
-        // 构建评论树：将所有子评论添加到父评论的replies中
+
         List<SharePostCommentVO> roots = new ArrayList<>();
-        for (SharePostComment comment : comments) {
-            SharePostCommentVO current = voMap.get(comment.getId());
-            if (comment.getParentId() == null) {
-                // 一级评论，直接添加到根列表
-                roots.add(current);
+        for (SharePostCommentVO vo : voMap.values()) {
+            if (vo.getParentId() == null) {
+                roots.add(vo);
+                continue;
+            }
+            SharePostCommentVO root = voMap.get(vo.getParentId());
+            if (root != null) {
+                root.safeReplies().add(vo);
             } else {
-                // 子评论，查找父评论并添加到父评论的replies中
-                SharePostCommentVO parent = voMap.get(comment.getParentId());
-                if (parent != null) {
-                    // 父评论存在，添加到父评论的replies中
-                    parent.safeReplies().add(current);
-                } else {
-                    // 父评论不存在（可能已被删除），将其作为根评论
-                    roots.add(current);
-                }
+                // 异常数据：找不到一级评论，则作为一级评论返回
+                vo.setParentId(null);
+                vo.setReplyToUser(null);
+                roots.add(vo);
             }
         }
+
         return roots;
     }
 

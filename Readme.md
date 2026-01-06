@@ -10,7 +10,7 @@
 
 **重要**：后端启动前必须先初始化 MySQL 数据库（Navicat 不是必需，只是一个可视化客户端）。
 
-你可以用以下任意一种方式导入 `database/beverage_platform.sql`：
+你可以用以下任意一种方式导入 `data/beverage_platform.sql`：
 
 **方式 A：命令行（无需 Navicat）**
 
@@ -23,7 +23,7 @@ mysql -uroot -p -e "CREATE DATABASE IF NOT EXISTS beverage_platform DEFAULT CHAR
 2) 再导入表结构/数据：
 
 ```bash
-mysql -uroot -p beverage_platform < database/beverage_platform.sql
+mysql -uroot -p beverage_platform < data/beverage_platform.sql
 ```
 
 如果你之前已经导入过旧版数据库，且维基编辑/统计报 500（或提示“数据库结构错误”），再执行一次：
@@ -35,7 +35,7 @@ mysql -uroot -p beverage_platform < database/patch_add_wiki_revision.sql
 如果是 PowerShell，可以改用（有可能出现二进制字符不兼容问题，推荐使用 msys2）：
 
 ```powershell
-Get-Content database/beverage_platform.sql | mysql -uroot -p beverage_platform
+Get-Content data/beverage_platform.sql | mysql -uroot -p beverage_platform
 ```
 
 **方式 B：Docker（无需本机安装 MySQL）**

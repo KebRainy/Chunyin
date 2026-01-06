@@ -10,22 +10,29 @@ import com.example.demo1.mapper.DailyQuestionAnswerMapper;
 import com.example.demo1.mapper.DailyQuestionMapper;
 import lombok.RequiredArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class DailyQuestionService {
 
+    private static final ZoneId ZONE_ID = ZoneId.of("Asia/Shanghai");
+
     private final DailyQuestionMapper dailyQuestionMapper;
     private final DailyQuestionAnswerMapper answerMapper;
+    private final DailyQuestionAutoGenerator dailyQuestionAutoGenerator;
 
+    @Transactional
     public DailyQuestionVO getTodayQuestion(Long userId) {
-        DailyQuestion question = ensureTodayQuestionExists();
+        DailyQuestion question = ensureQuestionExistsForDate(LocalDate.now(ZONE_ID));
         DailyQuestionAnswer existingAnswer = null;
         if (userId != null) {
             existingAnswer = answerMapper.selectOne(new LambdaQueryWrapper<DailyQuestionAnswer>()
@@ -33,6 +40,30 @@ public class DailyQuestionService {
                 .eq(DailyQuestionAnswer::getUserId, userId));
         }
         return toVo(question, existingAnswer);
+    }
+
+    @Transactional
+    public DailyQuestion ensureQuestionExistsForDate(LocalDate date) {
+        DailyQuestion existing = dailyQuestionMapper.selectOne(new LambdaQueryWrapper<DailyQuestion>()
+            .eq(DailyQuestion::getQuestionDate, date));
+        if (existing != null) {
+            return existing;
+        }
+
+        Optional<DailyQuestion> generatedOpt = dailyQuestionAutoGenerator.generate(date);
+        DailyQuestion toInsert = generatedOpt.orElseGet(() -> buildDefaultQuestion(date));
+
+        try {
+            dailyQuestionMapper.insert(toInsert);
+            return toInsert;
+        } catch (DuplicateKeyException e) {
+            DailyQuestion createdByOther = dailyQuestionMapper.selectOne(new LambdaQueryWrapper<DailyQuestion>()
+                .eq(DailyQuestion::getQuestionDate, date));
+            if (createdByOther != null) {
+                return createdByOther;
+            }
+            throw e;
+        }
     }
 
     @Transactional
@@ -78,31 +109,6 @@ public class DailyQuestionService {
         return value == null ? 0 : value;
     }
 
-    private DailyQuestion ensureTodayQuestionExists() {
-        LocalDate today = LocalDate.now();
-        DailyQuestion question = dailyQuestionMapper.selectOne(new LambdaQueryWrapper<DailyQuestion>()
-            .eq(DailyQuestion::getQuestionDate, today));
-        if (question != null) {
-            return question;
-        }
-        DailyQuestion defaultQuestion = new DailyQuestion();
-        defaultQuestion.setQuestionDate(today);
-        defaultQuestion.setQuestion("今天你想探索哪一种饮品知识？");
-        defaultQuestion.setOptionA("葡萄酒的酿造工艺");
-        defaultQuestion.setOptionB("威士忌的熟成秘诀");
-        defaultQuestion.setOptionC("精酿啤酒的风味");
-        defaultQuestion.setOptionD("无酒精饮品的调配技巧");
-        defaultQuestion.setCorrectOption(0);
-        defaultQuestion.setCountA(0);
-        defaultQuestion.setCountB(0);
-        defaultQuestion.setCountC(0);
-        defaultQuestion.setCountD(0);
-        defaultQuestion.setExplanation("葡萄酒酿造涵盖葡萄采摘、发酵、陈酿等步骤，是理解饮品风味的基础。");
-        defaultQuestion.setWikiLink("/wiki/classic-wine");
-        dailyQuestionMapper.insert(defaultQuestion);
-        return defaultQuestion;
-    }
-
     private DailyQuestionVO toVo(DailyQuestion question, DailyQuestionAnswer answer) {
         int[] counts = {
             defaultCount(question.getCountA()),
@@ -141,5 +147,23 @@ public class DailyQuestionService {
             .explanation(question.getExplanation())
             .wikiLink(question.getWikiLink())
             .build();
+    }
+
+    private DailyQuestion buildDefaultQuestion(LocalDate date) {
+        DailyQuestion defaultQuestion = new DailyQuestion();
+        defaultQuestion.setQuestionDate(date);
+        defaultQuestion.setQuestion("今天你想探索哪一种饮品知识？");
+        defaultQuestion.setOptionA("葡萄酒的酿造工艺");
+        defaultQuestion.setOptionB("威士忌的熟成秘诀");
+        defaultQuestion.setOptionC("精酿啤酒的风味");
+        defaultQuestion.setOptionD("无酒精饮品的调配技巧");
+        defaultQuestion.setCorrectOption(0);
+        defaultQuestion.setCountA(0);
+        defaultQuestion.setCountB(0);
+        defaultQuestion.setCountC(0);
+        defaultQuestion.setCountD(0);
+        defaultQuestion.setExplanation("葡萄酒酿造涵盖葡萄采摘、发酵、陈酿等步骤，是理解饮品风味的基础。");
+        defaultQuestion.setWikiLink("/wiki/classic-wine");
+        return defaultQuestion;
     }
 }

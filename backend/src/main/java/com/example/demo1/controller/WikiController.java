@@ -1,8 +1,10 @@
 package com.example.demo1.controller;
 
+import com.example.demo1.common.enums.UserRole;
 import com.example.demo1.common.exception.BusinessException;
 import com.example.demo1.common.response.PageResult;
 import com.example.demo1.common.response.Result;
+import com.example.demo1.dto.request.ReviewWikiPageRequest;
 import com.example.demo1.dto.request.WikiDiscussionRequest;
 import com.example.demo1.dto.request.WikiPageRequest;
 import com.example.demo1.dto.response.WikiDiscussionVO;
@@ -115,5 +117,40 @@ public class WikiController {
             throw new BusinessException(401, "请先登录");
         }
         return Result.success(wikiService.toggleFavorite(id, principal.getId()));
+    }
+
+    /**
+     * 获取待审核的Wiki页面列表（管理员）
+     */
+    @GetMapping("/pending")
+    public Result<PageResult<WikiPageVO>> getPendingPages(
+            @AuthenticationPrincipal UserPrincipal principal,
+            @RequestParam(defaultValue = "1") Integer page,
+            @RequestParam(defaultValue = "10") Integer pageSize) {
+        if (principal == null) {
+            throw new BusinessException(401, "请先登录");
+        }
+        if (!UserRole.ADMIN.equals(principal.getRole())) {
+            throw new BusinessException(403, "需要管理员权限");
+        }
+        return Result.success(wikiService.getPendingPages(page, pageSize));
+    }
+
+    /**
+     * 审核Wiki页面（管理员）
+     */
+    @PostMapping("/{id}/review")
+    public Result<Void> reviewWikiPage(
+            @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal,
+            @Valid @RequestBody ReviewWikiPageRequest request) {
+        if (principal == null) {
+            throw new BusinessException(401, "请先登录");
+        }
+        if (!UserRole.ADMIN.equals(principal.getRole())) {
+            throw new BusinessException(403, "需要管理员权限");
+        }
+        wikiService.reviewWikiPage(id, request.getStatus(), principal.getId());
+        return Result.success();
     }
 }

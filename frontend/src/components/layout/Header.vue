@@ -107,8 +107,11 @@ const navItems = computed(() => {
   
   // 根据用户角色添加不同的菜单项
   if (userStore.isAdmin) {
-    // 管理员显示"活动审核"，使用ActivityList组件
-    baseItems.splice(1, 0, { path: '/admin/activities/review', label: '活动审核' })
+    // 管理员显示"活动审核"和"Wiki审核"
+    baseItems.splice(1, 0, 
+      { path: '/admin/activities/review', label: '活动审核' },
+      { path: '/admin/wiki/review', label: 'Wiki审核' }
+    )
   } else if (userStore.isSeller) {
     // seller用户显示"管理"，指向商家活动管理页面
     baseItems.splice(1, 0, { path: '/seller/activity', label: '管理' })

@@ -20,6 +20,10 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.OK)
     public Result<?> handleBusinessException(BusinessException e) {
         log.error("业务异常: {}", e.getMessage());
+        // 如果有data字段，将其包含在Result中
+        if (e.getData() != null) {
+            return new Result<>(e.getCode(), e.getMessage(), e.getData());
+        }
         return Result.error(e.getCode(), e.getMessage());
     }
 

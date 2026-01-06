@@ -7,22 +7,22 @@
         <p class="subtitle">社区共建 · 实时更新 · 支持多端访问</p>
       </div>
       <div class="hero-search">
-        <el-input
-          v-model="keyword"
-          placeholder="输入关键词查找条目，如“IPA”“威士忌调和”"
-          size="large"
-          @keyup.enter="searchPages"
-          clearable
-        >
+        <el-input v-model="keyword" placeholder="输入关键词查找条目，如“IPA”“威士忌调和”" size="large" @keyup.enter="searchPages"
+          clearable>
           <template #append>
             <el-button type="primary" @click="searchPages">
-              <el-icon><Search /></el-icon>
+              <el-icon>
+                <Search />
+              </el-icon>
             </el-button>
           </template>
         </el-input>
         <div class="hero-actions">
           <el-button v-if="userStore.isLoggedIn" type="primary" plain @click="goEditor">
             + 新建条目
+          </el-button>
+          <el-button v-if="userStore.isLoggedIn" type="warning" @click="handleBatchImport">
+            ! 一键导入测试数据
           </el-button>
         </div>
       </div>
@@ -52,12 +52,8 @@
           <el-skeleton :rows="4" animated />
         </div>
         <div v-else class="wiki-list">
-          <div
-            v-for="item in pages"
-            :key="item.id"
-            :class="['wiki-item', { active: currentPage?.id === item.id }]"
-            @click="selectPage(item)"
-          >
+          <div v-for="item in pages" :key="item.id" :class="['wiki-item', { active: currentPage?.id === item.id }]"
+            @click="selectPage(item)">
             <h4>{{ item.title }}</h4>
             <p>{{ item.summary || '这是一条等待补充的条目' }}</p>
             <small>更新 · {{ formatTime(item.updatedAt) }}</small>
@@ -65,13 +61,8 @@
           </div>
         </div>
         <div class="pager" v-if="total > pageSize">
-          <el-pagination
-            layout="prev, pager, next"
-            :current-page="currentPageNum"
-            :page-size="pageSize"
-            :total="total"
-            @current-change="handlePageChange"
-          />
+          <el-pagination layout="prev, pager, next" :current-page="currentPageNum" :page-size="pageSize" :total="total"
+            @current-change="handlePageChange" />
         </div>
       </div>
 
@@ -83,19 +74,15 @@
           </div>
           <div class="preview-actions">
             <el-button size="small" @click="viewDetail(currentPage)">查看详情</el-button>
-            <el-button
-              size="small"
-              type="primary"
-              v-if="canEdit && currentPage"
-              @click="editCurrent"
-            >
+            <el-button size="small" type="primary" v-if="canEdit && currentPage" @click="editCurrent">
               编辑
             </el-button>
           </div>
         </div>
         <p class="preview-summary">{{ currentPage.summary || '这条词条尚未填写摘要' }}</p>
         <div class="preview-content" v-html="formatContent(currentPage.content)"></div>
-        <p class="preview-meta">最后编辑：{{ currentPage.lastEditorName || '系统' }} · {{ formatTime(currentPage.updatedAt) }}</p>
+        <p class="preview-meta">最后编辑：{{ currentPage.lastEditorName || '系统' }} · {{ formatTime(currentPage.updatedAt) }}
+        </p>
       </div>
     </section>
   </div>
@@ -106,7 +93,8 @@ import { ref, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { Search } from '@element-plus/icons-vue'
 import dayjs from 'dayjs'
-import { fetchWikiPages, fetchWikiStats } from '@/api/wiki'
+import { fetchWikiPages, fetchWikiStats, createWikiPage } from '@/api/wiki'
+import { importData } from "../../assets/WikiListData.js"
 import { useUserStore } from '@/store/modules/user'
 import MarkdownIt from 'markdown-it'
 import DOMPurify from 'dompurify'
@@ -192,6 +180,75 @@ const formatContent = (content) => {
   const snippet = content.split('\n').slice(0, 8).join('\n')
   return DOMPurify.sanitize(md.render(snippet))
 }
+
+// 不添加数据需要隐藏按钮：
+// <el-button v-if="userStore.isLoggedIn" type="warning" @click="handleBatchImport">
+//  ! 一键导入测试数据
+//  </el-button>
+
+const handleBatchImport = async () => {
+  const dataList = importData;
+  console.log(`开始批量导入，共 ${dataList.length} 条数据...`);
+  
+  // 先获取所有现有的wiki页面，用于检查重复
+  let existingTitles = new Set();
+  try {
+    console.log('正在检查现有词条...');
+    // 获取足够多的页面来检查重复（假设不超过1000条）
+    const res = await fetchWikiPages({
+      page: 1,
+      pageSize: 1000,
+      keyword: undefined
+    });
+    if (res.data && res.data.items) {
+      existingTitles = new Set(res.data.items.map(page => page.title));
+      console.log(`已找到 ${existingTitles.size} 个现有词条`);
+    }
+  } catch (error) {
+    console.warn('获取现有词条列表失败，将跳过重复检查', error);
+  }
+
+  let successCount = 0;
+  let skipCount = 0;
+  let failCount = 0;
+
+  for (const item of dataList) {
+    try {
+      // 检查是否已存在（通过title判断）
+      if (existingTitles.has(item.title)) {
+        console.warn(`⚠️ 跳过: [${item.title}] 已存在`);
+        skipCount++;
+        continue;
+      }
+
+      // 构建符合API接口的 payload
+      // 注意：status、slug、last_editor_name、last_editor_id 由后端自动处理
+      // - status 会设置为 UNDER_REVIEW（需要审核）
+      // - slug 会基于 title 自动生成
+      // - last_editor_id 和 last_editor_name 会使用当前登录用户
+      const payload = {
+        title: item.title,
+        summary: item.description,  // 将 description 映射到 summary
+        content: item.content,
+      };
+
+      await createWikiPage(payload);
+      console.log(`✅ 成功: [${item.title}]`);
+      successCount++;
+      // 添加到已存在列表，避免同一次导入中重复
+      existingTitles.add(item.title);
+    } catch (e) {
+      console.error(`❌ 失败: [${item.title}]`, e);
+      failCount++;
+    }
+  }
+
+  console.log(`批量导入完成！成功: ${successCount} 条，跳过: ${skipCount} 条，失败: ${failCount} 条。`);
+  
+  // 刷新列表和统计
+  await loadPages();
+  await loadStats();
+};
 
 const formatTime = (time) => dayjs(time).format('YYYY.MM.DD')
 

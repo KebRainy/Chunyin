@@ -80,3 +80,25 @@ export const favoriteWikiPage = (id) => {
     method: 'post'
   })
 }
+
+/**
+ * 获取待审核的Wiki页面列表（管理员）
+ */
+export const getPendingWikiPages = (page = 1, pageSize = 10) => {
+  return request({
+    url: '/wiki/pages/pending',
+    method: 'get',
+    params: { page, pageSize }
+  })
+}
+
+/**
+ * 审核Wiki页面（管理员）
+ */
+export const reviewWikiPage = (id, data) => {
+  return request({
+    url: `/wiki/pages/${id}/review`,
+    method: 'post',
+    data
+  })
+}

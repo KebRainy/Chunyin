@@ -71,6 +71,14 @@
       <el-tab-pane label="推荐活动" name="recommended">
         <el-card class="filter-card">
           <el-form :inline="true">
+            <el-form-item label="时间范围">
+              <el-radio-group v-model="filters.timeRange" @change="loadRecommendedActivities">
+                <el-radio-button label="THREE_DAYS">最近三天</el-radio-button>
+                <el-radio-button label="ONE_MONTH">最近一个月</el-radio-button>
+                <el-radio-button label="ONE_YEAR">最近一年</el-radio-button>
+                <el-radio-button label="ALL">全部</el-radio-button>
+              </el-radio-group>
+            </el-form-item>
             <el-form-item label="筛选">
               <el-select v-model="filters.barId" placeholder="选择酒吧" clearable style="width: 200px">
                 <el-option
@@ -141,6 +149,96 @@
           :total="recommendedTotal"
           layout="total, prev, pager, next"
           @current-change="loadRecommendedActivities"
+        />
+
+        <!-- 显示更多按钮 -->
+        <div v-if="recommendedActivities.length > 0" class="show-more-section">
+          <el-button type="primary" plain @click="showAllActivities">显示更多</el-button>
+        </div>
+      </el-tab-pane>
+
+      <!-- 全部活动 -->
+      <el-tab-pane label="全部活动" name="all">
+        <el-card class="filter-card">
+          <el-form :inline="true">
+            <el-form-item label="时间范围">
+              <el-radio-group v-model="filters.timeRange" @change="loadAllActivities">
+                <el-radio-button label="THREE_DAYS">最近三天</el-radio-button>
+                <el-radio-button label="ONE_MONTH">最近一个月</el-radio-button>
+                <el-radio-button label="ONE_YEAR">最近一年</el-radio-button>
+                <el-radio-button label="ALL">全部</el-radio-button>
+              </el-radio-group>
+            </el-form-item>
+            <el-form-item label="筛选">
+              <el-select v-model="filters.barId" placeholder="选择酒吧" clearable style="width: 200px">
+                <el-option
+                  v-for="bar in barList"
+                  :key="bar.id"
+                  :label="bar.name"
+                  :value="bar.id"
+                />
+              </el-select>
+              <el-select v-model="filters.beverageId" placeholder="选择酒类" clearable style="width: 200px; margin-left: 10px">
+                <el-option
+                  v-for="beverage in beverageList"
+                  :key="beverage.id"
+                  :label="beverage.name"
+                  :value="beverage.id"
+                />
+              </el-select>
+              <el-button type="primary" @click="loadAllActivities" style="margin-left: 10px">
+                筛选
+              </el-button>
+              <el-button @click="resetFilters">重置</el-button>
+            </el-form-item>
+          </el-form>
+        </el-card>
+
+        <div v-loading="loading" class="activity-grid">
+          <el-empty v-if="allActivities.length === 0 && !loading" description="暂无活动" />
+          <el-card
+            v-for="activity in allActivities"
+            :key="activity.id"
+            class="activity-card"
+            shadow="hover"
+            @click="goToDetail(activity.id)"
+          >
+            <div class="activity-info">
+              <div class="activity-header">
+                <h3 class="activity-title">{{ activity.beverageName }} 组局</h3>
+                <el-tag :type="getStatusType(activity.status)">
+                  {{ getStatusText(activity.status) }}
+                </el-tag>
+              </div>
+              <div class="activity-meta">
+                <p class="activity-time">
+                  <el-icon><Clock /></el-icon>
+                  {{ formatDateTime(activity.activityTime) }}
+                </p>
+                <p v-if="activity.barName" class="activity-bar">
+                  <el-icon><LocationFilled /></el-icon>
+                  {{ activity.barName }}
+                </p>
+                <p class="activity-participants">
+                  <el-icon><User /></el-icon>
+                  {{ activity.currentParticipants }} / {{ activity.maxParticipants }} 人
+                </p>
+                <p v-if="activity.organizerName" class="activity-organizer">
+                  发起者：{{ activity.organizerName }}
+                </p>
+              </div>
+              <p v-if="activity.remark" class="activity-remark">{{ activity.remark }}</p>
+            </div>
+          </el-card>
+        </div>
+
+        <el-pagination
+          v-if="allTotal > 0"
+          v-model:current-page="allPage"
+          v-model:page-size="pageSize"
+          :total="allTotal"
+          layout="total, prev, pager, next"
+          @current-change="loadAllActivities"
         />
       </el-tab-pane>
 
@@ -225,6 +323,11 @@ const recommendedActivities = ref([])
 const recommendedPage = ref(1)
 const recommendedTotal = ref(0)
 
+// 全部活动
+const allActivities = ref([])
+const allPage = ref(1)
+const allTotal = ref(0)
+
 // 我参与的活动
 const participatedActivities = ref([])
 const participatedPage = ref(1)
@@ -242,6 +345,7 @@ const pageSize = ref(10)
 
 // 筛选条件
 const filters = ref({
+  timeRange: 'THREE_DAYS', // 默认最近三天
   barId: null,
   beverageId: null
 })
@@ -256,6 +360,7 @@ const loadRecommendedActivities = async () => {
     const res = await getRecommendedActivities(
       filters.value.barId,
       filters.value.beverageId,
+      filters.value.timeRange,
       recommendedPage.value,
       pageSize.value
     )
@@ -264,7 +369,6 @@ const loadRecommendedActivities = async () => {
       recommendedTotal.value = res.data?.total || 0
     }
   } catch (error) {
-    console.error('加载推荐活动失败:', error)
     // 401错误不应该导致退出登录，只显示错误消息
     if (error.response?.status === 401) {
       ElMessage.warning('请先登录')
@@ -286,7 +390,6 @@ const loadParticipatedActivities = async () => {
       participatedTotal.value = res.data?.total || 0
     }
   } catch (error) {
-    console.error('加载我参与的活动失败:', error)
     // 401错误不应该导致退出登录，只显示错误消息
     if (error.response?.status === 401) {
       ElMessage.warning('请先登录')
@@ -307,10 +410,9 @@ const loadBarList = async () => {
       barList.value = res.data || []
     }
   } catch (error) {
-    console.error('加载酒吧列表失败', error)
-    // 400错误不应该导致退出登录，只记录错误
-    if (error.response?.status === 400) {
-      console.warn('参数错误，但不影响登录状态:', error.response?.data?.message)
+    // 400错误不应该导致退出登录，静默处理
+    if (error.response?.status !== 400) {
+      // 非400错误才记录，避免控制台输出过多信息
     }
   }
 }
@@ -323,8 +425,40 @@ const loadBeverageList = async () => {
       beverageList.value = res.data?.items || res.data || []
     }
   } catch (error) {
-    console.error('加载酒类列表失败', error)
+    // 静默处理错误，不影响页面功能
   }
+}
+
+// 加载全部活动
+const loadAllActivities = async () => {
+  loading.value = true
+  try {
+    const res = await getRecommendedActivities(
+      filters.value.barId,
+      filters.value.beverageId,
+      filters.value.timeRange || 'ALL',
+      allPage.value,
+      pageSize.value
+    )
+    if (res.code === 200) {
+      allActivities.value = res.data?.items || []
+      allTotal.value = res.data?.total || 0
+    }
+  } catch (error) {
+    if (error.response?.status === 401) {
+      ElMessage.warning('请先登录')
+    } else {
+      ElMessage.error(error.response?.data?.message || '加载全部活动失败')
+    }
+  } finally {
+    loading.value = false
+  }
+}
+
+// 显示全部活动
+const showAllActivities = () => {
+  activeTab.value = 'all'
+  loadAllActivities()
 }
 
 // Tab切换
@@ -333,6 +467,8 @@ const handleTabChange = (tab) => {
     loadRecommendedActivities()
   } else if (tab === 'participated') {
     loadParticipatedActivities()
+  } else if (tab === 'all') {
+    loadAllActivities()
   }
 }
 
@@ -346,7 +482,6 @@ const loadPendingActivities = async () => {
       pendingTotal.value = res.data?.total || 0
     }
   } catch (error) {
-    console.error('加载待审核活动失败:', error)
     // 401/403错误不应该导致退出登录，只显示错误消息
     if (error.response?.status === 401) {
       ElMessage.warning('请先登录')
@@ -421,10 +556,15 @@ const confirmReject = async () => {
 // 重置筛选
 const resetFilters = () => {
   filters.value = {
+    timeRange: 'THREE_DAYS',
     barId: null,
     beverageId: null
   }
-  loadRecommendedActivities()
+  if (activeTab.value === 'recommended') {
+    loadRecommendedActivities()
+  } else if (activeTab.value === 'all') {
+    loadAllActivities()
+  }
 }
 
 // 跳转到详情页
@@ -505,6 +645,8 @@ onMounted(() => {
 <style scoped>
 .activity-list {
   padding: 20px;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .page-header {
@@ -571,6 +713,12 @@ onMounted(() => {
   margin-top: 10px;
   color: #999;
   font-size: 14px;
+}
+
+.show-more-section {
+  text-align: center;
+  margin-top: 20px;
+  padding: 20px 0;
 }
 
 .activity-review-status {

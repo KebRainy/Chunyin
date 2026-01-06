@@ -13,13 +13,7 @@
           <div class="search-form">
             <el-form :inline="true">
               <el-form-item label="搜索半径">
-                <el-input-number 
-                  v-model="searchRadius" 
-                  :min="1" 
-                  :max="100" 
-                  :step="5"
-                  style="width: 150px"
-                />
+                <el-input-number v-model="searchRadius" :min="1" :max="100" :step="5" style="width: 150px" />
                 <span style="margin-left: 8px;">公里</span>
               </el-form-item>
               <el-form-item>
@@ -27,7 +21,9 @@
                   搜索附近
                 </el-button>
                 <el-button @click="getCurrentLocation" :loading="locating">
-                  <el-icon><Location /></el-icon>
+                  <el-icon>
+                    <Location />
+                  </el-icon>
                   获取当前位置
                 </el-button>
               </el-form-item>
@@ -45,13 +41,8 @@
           <div class="search-form">
             <el-form :inline="true">
               <el-form-item label="城市名称">
-                <el-input 
-                  v-model="searchCity" 
-                  placeholder="支持模糊搜索，如：上海、北京"
-                  style="width: 250px"
-                  clearable
-                  @keyup.enter="searchByCity"
-                />
+                <el-input v-model="searchCity" placeholder="支持模糊搜索，如：上海、北京" style="width: 250px" clearable
+                  @keyup.enter="searchByCity" />
               </el-form-item>
               <el-form-item>
                 <el-button type="primary" @click="searchByCity" :loading="loading">
@@ -66,13 +57,8 @@
           <div class="search-form">
             <el-form :inline="true">
               <el-form-item label="关键词">
-                <el-input 
-                  v-model="searchName" 
-                  placeholder="搜索名称/城市/地址/酒类"
-                  style="width: 250px"
-                  clearable
-                  @keyup.enter="searchByName"
-                />
+                <el-input v-model="searchName" placeholder="搜索名称/城市/地址/酒类" style="width: 250px" clearable
+                  @keyup.enter="searchByName" />
               </el-form-item>
               <el-form-item>
                 <el-button type="primary" @click="searchByName" :loading="loading">
@@ -98,27 +84,18 @@
 
     <div v-loading="loading" class="bar-grid">
       <el-empty v-if="bars.length === 0 && !loading" description="暂无酒吧信息" />
-      
-      <el-card 
-        v-for="bar in bars" 
-        :key="bar.id" 
-        class="bar-card"
-        shadow="hover"
-        @click="goToDetail(bar.id)"
-      >
+
+      <el-card v-for="bar in bars" :key="bar.id" class="bar-card" shadow="hover" @click="goToDetail(bar.id)">
         <div class="bar-info">
           <h3 class="bar-name">{{ bar.name }}</h3>
           <div class="bar-rating">
-            <el-rate 
-              v-model="bar.avgRating" 
-              disabled 
-              show-score 
-              :colors="['#99A9BF', '#F7BA2A', '#FF9900']"
-            />
+            <el-rate v-model="bar.avgRating" disabled show-score :colors="['#99A9BF', '#F7BA2A', '#FF9900']" />
             <span class="review-count">({{ bar.reviewCount }}条评价)</span>
           </div>
           <p class="bar-address">
-            <el-icon><LocationFilled /></el-icon>
+            <el-icon>
+              <LocationFilled />
+            </el-icon>
             {{ bar.address }}
           </p>
           <p v-if="bar.distance" class="bar-distance">
@@ -128,7 +105,9 @@
             主营: {{ bar.mainBeverages }}
           </p>
           <div v-if="bar.openingTime && bar.closingTime" class="bar-time">
-            <el-icon><Clock /></el-icon>
+            <el-icon>
+              <Clock />
+            </el-icon>
             {{ formatTime(bar.openingTime) }} - {{ formatTime(bar.closingTime) }}
           </div>
         </div>
@@ -163,7 +142,7 @@ export default {
       markers: [],
       userMarker: null,
       // 高德地图配置 - Web端JS API只需要key
-      amapKey: 'f0a59cbd6ac9131a3b2d338932a82bca'
+      amapKey: '7a2b2596584bc3c9e8f37903befb61f7'
     }
   },
   mounted() {
@@ -211,7 +190,7 @@ export default {
     handleTabChange() {
       // 标签切换时不清空搜索结果，让用户可以看到之前的搜索
     },
-    
+
     // 获取当前位置
     getCurrentLocation() {
       if (!navigator.geolocation) {
@@ -223,13 +202,18 @@ export default {
       navigator.geolocation.getCurrentPosition(
         (position) => {
           this.userLocation = {
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude
-          }
-          this.locating = false
-          ElMessage.success('位置获取成功')
-          
-          // 如果地图已经初始化，更新地图中心点和标记
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude
+              }
+              this.locating = false
+              ElMessage.success('位置获取成功')
+              
+              // 获取位置后自动搜索附近酒吧
+              if (this.searchType === 'nearby') {
+                this.searchNearby()
+              }
+
+              // 如果地图已经初始化，更新地图中心点和标记
           if (this.map) {
             const center = [this.userLocation.longitude, this.userLocation.latitude]
             this.map.setCenter(center)
@@ -269,7 +253,7 @@ export default {
       }
 
       // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/2be73884-0cc8-4c48-bb93-e298599f041c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BarList.vue:searchNearby',message:'search nearby called',data:{lat:this.userLocation.latitude,lng:this.userLocation.longitude,radius:this.searchRadius},timestamp:Date.now(),sessionId:'debug-session',runId:'nearby-frontend',hypothesisId:'I'})}).catch(()=>{});
+      fetch('http://127.0.0.1:7242/ingest/2be73884-0cc8-4c48-bb93-e298599f041c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'BarList.vue:searchNearby', message: 'search nearby called', data: { lat: this.userLocation.latitude, lng: this.userLocation.longitude, radius: this.searchRadius }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'nearby-frontend', hypothesisId: 'I' }) }).catch(() => { });
       // #endregion
 
       this.loading = true
@@ -279,11 +263,11 @@ export default {
           longitude: this.userLocation.longitude,
           radiusKm: this.searchRadius
         })
-        
+
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/2be73884-0cc8-4c48-bb93-e298599f041c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BarList.vue:searchNearby:result',message:'search result',data:{count:data?data.length:0,isArray:Array.isArray(data)},timestamp:Date.now(),sessionId:'debug-session',runId:'nearby-frontend',hypothesisId:'J'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/2be73884-0cc8-4c48-bb93-e298599f041c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'BarList.vue:searchNearby:result', message: 'search result', data: { count: data ? data.length : 0, isArray: Array.isArray(data) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'nearby-frontend', hypothesisId: 'J' }) }).catch(() => { });
         // #endregion
-        
+
         this.bars = data || []
         if (this.bars.length === 0) {
           ElMessage.info(`附近${this.searchRadius}公里内没有找到酒吧`)
@@ -296,20 +280,20 @@ export default {
         }
       } catch (error) {
         // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/2be73884-0cc8-4c48-bb93-e298599f041c',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'BarList.vue:searchNearby:error',message:'search error',data:{errorMsg:error.message,errorType:error.constructor.name},timestamp:Date.now(),sessionId:'debug-session',runId:'nearby-frontend',hypothesisId:'K'})}).catch(()=>{});
+        fetch('http://127.0.0.1:7242/ingest/2be73884-0cc8-4c48-bb93-e298599f041c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'BarList.vue:searchNearby:error', message: 'search error', data: { errorMsg: error.message, errorType: error.constructor.name }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'nearby-frontend', hypothesisId: 'K' }) }).catch(() => { });
         // #endregion
         ElMessage.error(error.message || '搜索失败')
       } finally {
         this.loading = false
       }
     },
-    
+
     async searchByCity() {
       if (!this.searchCity.trim()) {
         ElMessage.warning('请输入城市名称')
         return
       }
-      
+
       this.loading = true
       try {
         const { data } = await searchBarsByCity(this.searchCity)
@@ -324,13 +308,13 @@ export default {
         this.loading = false
       }
     },
-    
+
     async searchByName() {
       if (!this.searchName.trim()) {
         ElMessage.warning('请输入搜索关键词')
         return
       }
-      
+
       this.loading = true
       try {
         const { data } = await searchBarsByName({ name: this.searchName })
@@ -345,11 +329,11 @@ export default {
         this.loading = false
       }
     },
-    
+
     goToDetail(barId) {
       this.$router.push(`/bars/${barId}`)
     },
-    
+
     formatTime(time) {
       if (!time) return ''
       // time 格式为 HH:mm:ss，我们只需要 HH:mm
@@ -397,7 +381,7 @@ export default {
       script.async = true
       // 只加载基础插件，不加载路线规划（避免key平台不匹配问题）
       script.src = `https://webapi.amap.com/maps?v=2.0&key=${this.amapKey}&plugin=AMap.Geolocation,AMap.Marker,AMap.CitySearch`
-      
+
       script.onload = () => {
         // API加载完成后初始化地图 - 延迟一下确保DOM完全准备好
         setTimeout(() => {
@@ -408,11 +392,11 @@ export default {
           }
         }, 300)
       }
-      
+
       script.onerror = () => {
         ElMessage.error('高德地图脚本加载失败，请检查网络连接或key配置')
       }
-      
+
       document.head.appendChild(script)
     },
 
@@ -475,7 +459,7 @@ export default {
             // 如果没有用户位置，尝试获取IP位置
             this.updateMapCenterByIP()
           }
-          
+
           // 如果有酒吧数据，添加标记
           if (this.bars.length > 0) {
             this.updateMapMarkers()
@@ -718,4 +702,3 @@ h2 {
   position: relative;
 }
 </style>
-

@@ -50,6 +50,17 @@
                   已拒绝：{{ activity.rejectReason || '无原因' }}
                 </el-alert>
               </div>
+              <div class="activity-actions" @click.stop>
+                <el-button
+                  v-if="activity.status !== 'CANCELLED' && activity.status !== 'FINISHED' && activity.reviewStatus !== 'REJECTED'"
+                  type="danger"
+                  size="small"
+                  @click="handleCancelActivity(activity.id)"
+                  :loading="cancellingId === activity.id"
+                >
+                  取消活动
+                </el-button>
+              </div>
             </div>
           </el-card>
         </div>
@@ -147,11 +158,12 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { Clock, LocationFilled, User, Plus } from '@element-plus/icons-vue'
 import {
   getRecommendedActivities,
-  getMyCreatedActivities
+  getMyCreatedActivities,
+  cancelActivity
 } from '@/api/activity'
 import { getBeverageList } from '@/api/beverage'
 import { searchBarsByName } from '@/api/bar'
@@ -160,6 +172,7 @@ const router = useRouter()
 
 const activeTab = ref('created')
 const loading = ref(false)
+const cancellingId = ref(null)
 
 // 我发布的活动
 const createdActivities = ref([])
@@ -192,7 +205,6 @@ const loadCreatedActivities = async () => {
       createdTotal.value = res.data?.total || 0
     }
   } catch (error) {
-    console.error('加载我发布的活动失败:', error)
     ElMessage.error(error.response?.data?.message || '加载我发布的活动失败')
   } finally {
     loading.value = false
@@ -206,6 +218,7 @@ const loadAllActivities = async () => {
     const res = await getRecommendedActivities(
       filters.value.barId,
       filters.value.beverageId,
+      'ALL', // 显示全部活动
       allPage.value,
       pageSize.value
     )
@@ -214,7 +227,6 @@ const loadAllActivities = async () => {
       allTotal.value = res.data?.total || 0
     }
   } catch (error) {
-    console.error('加载全部活动失败:', error)
     ElMessage.error(error.response?.data?.message || '加载全部活动失败')
   } finally {
     loading.value = false
@@ -230,10 +242,9 @@ const loadBarList = async () => {
       barList.value = res.data || []
     }
   } catch (error) {
-    console.error('加载酒吧列表失败', error)
-    // 400错误不应该导致退出登录，只记录错误
-    if (error.response?.status === 400) {
-      console.warn('参数错误，但不影响登录状态:', error.response?.data?.message)
+    // 400错误不应该导致退出登录，静默处理
+    if (error.response?.status !== 400) {
+      // 非400错误才记录，避免控制台输出过多信息
     }
   }
 }
@@ -246,7 +257,7 @@ const loadBeverageList = async () => {
       beverageList.value = res.data?.items || res.data || []
     }
   } catch (error) {
-    console.error('加载酒类列表失败', error)
+    // 静默处理错误，不影响页面功能
   }
 }
 
@@ -271,6 +282,32 @@ const resetFilters = () => {
 // 跳转到详情页
 const goToDetail = (id) => {
   router.push(`/activities/${id}`)
+}
+
+// 取消活动
+const handleCancelActivity = async (id) => {
+  try {
+    await ElMessageBox.confirm('确定要取消此活动吗？取消后无法恢复，已参与的用户将收到通知。', '取消活动', {
+      confirmButtonText: '确定取消',
+      cancelButtonText: '我再想想',
+      type: 'warning'
+    })
+
+    cancellingId.value = id
+    try {
+      const res = await cancelActivity(id)
+      if (res.code === 200) {
+        ElMessage.success('活动已取消')
+        await loadCreatedActivities()
+      }
+    } catch (error) {
+      ElMessage.error(error.response?.data?.message || '取消活动失败')
+    } finally {
+      cancellingId.value = null
+    }
+  } catch {
+    // 用户取消
+  }
 }
 
 // 格式化日期时间
@@ -405,5 +442,12 @@ onMounted(() => {
 .activity-organizer {
   color: #909399;
   font-size: 12px;
+}
+
+.activity-actions {
+  margin-top: 15px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 </style>

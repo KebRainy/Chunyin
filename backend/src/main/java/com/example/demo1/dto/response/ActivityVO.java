@@ -29,7 +29,12 @@ public class ActivityVO {
     private ReviewStatus reviewStatus;
     private ActivityStatus status;
     private LocalDateTime createdAt;
-    
+
+    /**
+     * 拒绝原因（当审核状态为REJECTED时）
+     */
+    private String rejectReason;
+
     /**
      * 当前用户是否已参与
      */
@@ -44,5 +49,10 @@ public class ActivityVO {
      * 活动是否已结束
      */
     private Boolean isFinished;
+
+    /**
+     * 当前用户是否已评价（仅当用户已参与且活动已结束时有效）
+     */
+    private Boolean hasReviewed;
 }
 

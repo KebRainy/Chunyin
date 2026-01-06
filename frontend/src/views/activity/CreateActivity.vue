@@ -316,7 +316,7 @@ const submitForm = async () => {
 
       if (res.code === 200) {
         ElMessage.success('活动创建成功，等待管理员审核')
-        router.push('/activities')
+        router.push('/seller/activity')
       }
     } catch (error) {
       console.error('创建活动失败:', error)
@@ -367,7 +367,7 @@ onMounted(() => {
 }
 
 .bar-select-section {
-  max-height: 400px;
+  max-height: 1500px;
   overflow-y: auto;
   padding: 10px;
   border: 1px solid #dcdfe6;

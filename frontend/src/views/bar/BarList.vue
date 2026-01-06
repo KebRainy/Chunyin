@@ -163,7 +163,7 @@ export default {
       markers: [],
       userMarker: null,
       // 高德地图配置 - Web端JS API只需要key
-      amapKey: 'f0a59cbd6ac9131a3b2d338932a82bca'
+      amapKey: '7a2b2596584bc3c9e8f37903befb61f7'
     }
   },
   mounted() {

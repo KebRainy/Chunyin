@@ -74,14 +74,14 @@ public class UserService implements UserDetailsService {
 
     @Transactional
     public User register(RegisterRequest request) {
-        log.info("开始注册用户: username={}, email={}", request.getUsername(), request.getEmail());
+        log.info("Starting user registration: username={}, email={}", request.getUsername(), request.getEmail());
         
         if (existsByUsername(request.getUsername())) {
-            log.warn("用户名已存在: {}", request.getUsername());
+            log.warn("Username already exists: {}", request.getUsername());
             throw new BusinessException("用户名已存在，请换一个新的昵称");
         }
         if (existsByEmail(request.getEmail())) {
-            log.warn("邮箱已被注册: {}", request.getEmail());
+            log.warn("Email already registered: {}", request.getEmail());
             throw new BusinessException("邮箱已被注册");
         }
         
@@ -93,29 +93,29 @@ public class UserService implements UserDetailsService {
         user.setBio("欢迎来到饮品圈，我正在持续探索新的佳酿。");
         
         // 插入用户
-        log.debug("准备插入用户到数据库");
+        log.debug("Preparing to insert user into database");
         int result = userMapper.insert(user);
-        log.info("插入用户结果: result={}, userId={}", result, user.getId());
+        log.info("User insert result: result={}, userId={}", result, user.getId());
         
         if (result <= 0) {
-            log.error("用户插入失败: result={}", result);
+            log.error("User insert failed: result={}", result);
             throw new BusinessException("用户注册失败，请稍后重试");
         }
         
         // 验证插入是否成功（通过ID判断）
         if (user.getId() == null) {
-            log.error("用户插入后未获取到ID");
+            log.error("User ID not obtained after insert");
             throw new BusinessException("用户注册失败，未获取到用户ID");
         }
         
         // 再次验证用户是否真的存在于数据库中
         User savedUser = userMapper.selectById(user.getId());
         if (savedUser == null) {
-            log.error("用户插入后查询不到: userId={}", user.getId());
+            log.error("User not found after insert: userId={}", user.getId());
             throw new BusinessException("用户注册失败，数据未正确保存");
         }
         
-        log.info("用户注册成功: userId={}, username={}", savedUser.getId(), savedUser.getUsername());
+        log.info("User registration successful: userId={}, username={}", savedUser.getId(), savedUser.getUsername());
         return savedUser;
     }
 

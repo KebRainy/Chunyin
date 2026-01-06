@@ -8,20 +8,24 @@ import com.example.demo1.common.enums.ActivityStatus;
 import com.example.demo1.common.enums.ReviewStatus;
 import com.example.demo1.common.exception.BusinessException;
 import com.example.demo1.common.response.PageResult;
+import com.example.demo1.dto.request.ActivityBarReviewRequest;
 import com.example.demo1.dto.request.CreateActivityRequest;
 import com.example.demo1.dto.request.ReviewActivityRequest;
 import com.example.demo1.dto.response.ActivityVO;
 import com.example.demo1.dto.response.BarVO;
+import com.example.demo1.dto.response.SimpleUserVO;
 import com.example.demo1.entity.Activity;
 import com.example.demo1.entity.ActivityParticipant;
 import com.example.demo1.entity.Alcohol;
 import com.example.demo1.entity.Bar;
+import com.example.demo1.entity.BarReview;
 import com.example.demo1.entity.Beverage;
 import com.example.demo1.entity.User;
 import com.example.demo1.mapper.ActivityMapper;
 import com.example.demo1.mapper.ActivityParticipantMapper;
 import com.example.demo1.mapper.AlcoholMapper;
 import com.example.demo1.mapper.BarMapper;
+import com.example.demo1.mapper.BarReviewMapper;
 import com.example.demo1.mapper.BeverageMapper;
 import com.example.demo1.mapper.UserMapper;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +48,7 @@ public class ActivityService {
     private final ActivityMapper activityMapper;
     private final ActivityParticipantMapper activityParticipantMapper;
     private final BarMapper barMapper;
+    private final BarReviewMapper barReviewMapper;
     private final BeverageMapper beverageMapper;
     private final AlcoholMapper alcoholMapper;
     private final UserMapper userMapper;
@@ -96,7 +101,7 @@ public class ActivityService {
         participant.setUserId(userId);
         activityParticipantMapper.insert(participant);
 
-        log.info("用户 {} 创建了活动 {}, 选择的酒类标签: {}", userId, activity.getId(), request.getAlcoholIds());
+        log.info("User {} created activity {}, alcoholIds: {}", userId, activity.getId(), request.getAlcoholIds());
         return activity.getId();
     }
 
@@ -290,15 +295,40 @@ public class ActivityService {
 
     /**
      * 获取推荐的活动（已审核通过的活动）
+     * @param timeRange 时间范围：THREE_DAYS(最近三天), ONE_MONTH(最近一个月), ONE_YEAR(最近一年), ALL(全部)
      */
-    public PageResult<ActivityVO> getRecommendedActivities(Long userId, Long barId, Long beverageId, int page, int size) {
+    public PageResult<ActivityVO> getRecommendedActivities(Long userId, Long barId, Long beverageId, String timeRange, int page, int size) {
         Page<Activity> pageParam = new Page<>(page, size);
         LambdaQueryWrapper<Activity> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(Activity::getReviewStatus, ReviewStatus.APPROVED)
                .eq(Activity::getIsActive, true)
-               .ge(Activity::getActivityTime, LocalDateTime.now()) // 只显示未来的活动
-               .ne(Activity::getStatus, ActivityStatus.CANCELLED)
-               .ne(Activity::getStatus, ActivityStatus.FINISHED);
+               .ne(Activity::getStatus, ActivityStatus.CANCELLED);
+        
+        // 根据时间范围筛选（只显示未来活动）
+        LocalDateTime now = LocalDateTime.now();
+        wrapper.ge(Activity::getActivityTime, now); // 只显示未来活动
+        
+        if (timeRange != null && !"ALL".equals(timeRange)) {
+            switch (timeRange) {
+                case "THREE_DAYS":
+                    wrapper.le(Activity::getActivityTime, now.plusDays(3)); // 未来三天内
+                    break;
+                case "ONE_MONTH":
+                    wrapper.le(Activity::getActivityTime, now.plusMonths(1)); // 未来一个月内
+                    break;
+                case "ONE_YEAR":
+                    wrapper.le(Activity::getActivityTime, now.plusYears(1)); // 未来一年内
+                    break;
+                case "ALL":
+                default:
+                    // 显示所有活动（包括已结束的）
+                    break;
+            }
+        } else {
+            // 默认只显示未来的活动
+            wrapper.ge(Activity::getActivityTime, now)
+                   .ne(Activity::getStatus, ActivityStatus.FINISHED);
+        }
         
         if (barId != null) {
             wrapper.eq(Activity::getBarId, barId);
@@ -307,7 +337,7 @@ public class ActivityService {
             wrapper.eq(Activity::getBeverageId, beverageId);
         }
         
-        wrapper.orderByAsc(Activity::getActivityTime); // 按时间升序
+        wrapper.orderByDesc(Activity::getActivityTime); // 按时间降序（最新的在前）
         
         Page<Activity> result = activityMapper.selectPage(pageParam, wrapper);
         List<ActivityVO> vos = result.getRecords().stream()
@@ -399,7 +429,7 @@ public class ActivityService {
         participant.setUserId(userId);
         activityParticipantMapper.insert(participant);
 
-        log.info("用户 {} 参与了活动 {}", userId, activityId);
+        log.info("User {} joined activity {}", userId, activityId);
     }
 
     /**
@@ -427,7 +457,42 @@ public class ActivityService {
 
         activityParticipantMapper.delete(checkWrapper);
 
-        log.info("用户 {} 取消了活动 {} 的参与", userId, activityId);
+        log.info("User {} cancelled participation in activity {}", userId, activityId);
+    }
+
+    /**
+     * 取消活动（发起者）
+     */
+    @Transactional
+    public void cancelActivity(Long activityId, Long userId) {
+        Activity activity = activityMapper.selectById(activityId);
+        if (activity == null || !activity.getIsActive()) {
+            throw new BusinessException("活动不存在");
+        }
+
+        // 只有发起者可以取消活动
+        if (!activity.getOrganizerId().equals(userId)) {
+            throw new BusinessException("只有发起者可以取消活动");
+        }
+
+        // 检查活动状态，已结束或已取消的活动不能再次取消
+        if (ActivityStatus.CANCELLED.equals(activity.getStatus()) || 
+            ActivityStatus.FINISHED.equals(activity.getStatus())) {
+            throw new BusinessException("活动已取消或已结束，无法再次取消");
+        }
+        
+        // 已拒绝的活动也不能取消
+        if (ReviewStatus.REJECTED.equals(activity.getReviewStatus())) {
+            throw new BusinessException("活动已被拒绝，无法取消");
+        }
+
+        // 更新活动状态为已取消
+        LambdaUpdateWrapper<Activity> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(Activity::getId, activityId)
+                .set(Activity::getStatus, ActivityStatus.CANCELLED);
+        activityMapper.update(null, wrapper);
+
+        log.info("User {} cancelled activity {}", userId, activityId);
     }
 
     /**
@@ -464,7 +529,7 @@ public class ActivityService {
 
         activityMapper.update(null, wrapper);
 
-        log.info("管理员 {} 审核了活动 {}, 状态: {}", reviewerId, activityId, request.getStatus());
+        log.info("Admin {} reviewed activity {}, status: {}", reviewerId, activityId, request.getStatus());
     }
 
     /**
@@ -556,11 +621,16 @@ public class ActivityService {
 
         // 检查当前用户是否已参与
         Boolean isParticipated = false;
+        Boolean hasReviewed = false;
         if (currentUserId != null) {
             LambdaQueryWrapper<ActivityParticipant> checkWrapper = new LambdaQueryWrapper<>();
             checkWrapper.eq(ActivityParticipant::getActivityId, activity.getId())
                        .eq(ActivityParticipant::getUserId, currentUserId);
-            isParticipated = activityParticipantMapper.selectCount(checkWrapper) > 0;
+            ActivityParticipant participant = activityParticipantMapper.selectOne(checkWrapper);
+            if (participant != null) {
+                isParticipated = true;
+                hasReviewed = Boolean.TRUE.equals(participant.getHasReviewed());
+            }
         }
 
         // 检查是否是发起者
@@ -588,10 +658,145 @@ public class ActivityService {
                 .reviewStatus(activity.getReviewStatus())
                 .status(activity.getStatus())
                 .createdAt(activity.getCreatedAt())
+                .rejectReason(activity.getRejectReason())
                 .isParticipated(isParticipated)
                 .isOrganizer(isOrganizer)
                 .isFinished(isFinished)
+                .hasReviewed(hasReviewed)
                 .build();
+    }
+
+    /**
+     * 活动结束后评价酒吧
+     */
+    @Transactional
+    public void reviewActivityBar(Long activityId, ActivityBarReviewRequest request, Long userId) {
+        // 检查活动是否存在
+        Activity activity = activityMapper.selectById(activityId);
+        if (activity == null || !activity.getIsActive()) {
+            throw new BusinessException("活动不存在");
+        }
+
+        // 检查活动是否已结束
+        if (!ActivityStatus.FINISHED.equals(activity.getStatus())) {
+            // 检查活动时间是否已过（活动时间后2小时视为结束）
+            LocalDateTime now = LocalDateTime.now();
+            if (activity.getActivityTime() == null || 
+                activity.getActivityTime().plusHours(2).isAfter(now)) {
+                throw new BusinessException("活动尚未结束，无法评价");
+            }
+        }
+
+        // 检查活动是否关联了酒吧
+        if (activity.getBarId() == null) {
+            throw new BusinessException("该活动没有关联酒吧，无法评价");
+        }
+
+        // 检查用户是否参与了该活动
+        LambdaQueryWrapper<ActivityParticipant> participantWrapper = new LambdaQueryWrapper<>();
+        participantWrapper.eq(ActivityParticipant::getActivityId, activityId)
+                         .eq(ActivityParticipant::getUserId, userId);
+        ActivityParticipant participant = activityParticipantMapper.selectOne(participantWrapper);
+        
+        if (participant == null) {
+            throw new BusinessException("您未参与此活动，无法评价");
+        }
+
+        // 检查用户是否已经评价过
+        if (Boolean.TRUE.equals(participant.getHasReviewed())) {
+            throw new BusinessException("您已经评价过此活动");
+        }
+
+        // 检查用户是否已经评价过该酒吧
+        LambdaQueryWrapper<BarReview> barReviewWrapper = new LambdaQueryWrapper<>();
+        barReviewWrapper.eq(BarReview::getBarId, activity.getBarId())
+                       .eq(BarReview::getUserId, userId)
+                       .eq(BarReview::getIsActive, true);
+        BarReview existingBarReview = barReviewMapper.selectOne(barReviewWrapper);
+        
+        if (existingBarReview != null) {
+            // 如果已经评价过酒吧，只更新参与者状态
+            participant.setHasReviewed(true);
+            activityParticipantMapper.updateById(participant);
+            throw new BusinessException("您已经评价过该酒吧");
+        }
+
+        // 创建酒吧评价
+        BarReview barReview = new BarReview();
+        barReview.setBarId(activity.getBarId());
+        barReview.setUserId(userId);
+        barReview.setRating(request.getRating());
+        barReview.setContent(request.getContent());
+        barReviewMapper.insert(barReview);
+
+        // 更新酒吧的平均评分和评价数量
+        updateBarRating(activity.getBarId());
+
+        // 更新参与者评价状态
+        participant.setHasReviewed(true);
+        activityParticipantMapper.updateById(participant);
+
+        log.info("User {} reviewed bar {} after activity {}", userId, activity.getBarId(), activityId);
+    }
+
+    /**
+     * 更新酒吧的平均评分和评价数量
+     */
+    private void updateBarRating(Long barId) {
+        LambdaQueryWrapper<BarReview> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(BarReview::getBarId, barId)
+               .eq(BarReview::getIsActive, true);
+        
+        List<BarReview> reviews = barReviewMapper.selectList(wrapper);
+        
+        if (reviews.isEmpty()) {
+            return;
+        }
+        
+        double avgRating = reviews.stream()
+                .mapToInt(BarReview::getRating)
+                .average()
+                .orElse(0.0);
+        
+        int reviewCount = reviews.size();
+        
+        Bar bar = barMapper.selectById(barId);
+        if (bar != null) {
+            bar.setAvgRating(avgRating);
+            bar.setReviewCount(reviewCount);
+            barMapper.updateById(bar);
+        }
+    }
+
+    /**
+     * 获取活动参与者列表
+     */
+    public List<SimpleUserVO> getActivityParticipants(Long activityId) {
+        Activity activity = activityMapper.selectById(activityId);
+        if (activity == null || !activity.getIsActive()) {
+            throw new BusinessException("活动不存在");
+        }
+
+        LambdaQueryWrapper<ActivityParticipant> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(ActivityParticipant::getActivityId, activityId)
+               .orderByAsc(ActivityParticipant::getJoinedAt);
+        List<ActivityParticipant> participants = activityParticipantMapper.selectList(wrapper);
+
+        return participants.stream()
+                .map(participant -> {
+                    User user = userMapper.selectById(participant.getUserId());
+                    if (user == null) {
+                        return null;
+                    }
+                    return SimpleUserVO.builder()
+                            .id(user.getId())
+                            .username(user.getUsername())
+                            .avatarUrl(user.getAvatarUrl())
+                            .bio(user.getBio())
+                            .build();
+                })
+                .filter(vo -> vo != null)
+                .collect(Collectors.toList());
     }
 
     /**

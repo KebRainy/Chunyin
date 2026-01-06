@@ -69,7 +69,12 @@ export const useUserStore = defineStore('user', {
     },
 
     async logout() {
-      await logoutApi()
+      try {
+        await logoutApi()
+      } catch (error) {
+        // 即使logout接口失败（如403），也继续执行登出逻辑
+        // 因为用户可能已经登出了，但cookie还在
+      }
       this.userInfo = null
       this.initialized = true
     }

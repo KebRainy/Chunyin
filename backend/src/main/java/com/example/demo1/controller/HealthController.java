@@ -17,7 +17,7 @@ public class HealthController {
     public Result<Map<String, Object>> health() {
         Map<String, Object> data = new HashMap<>();
         data.put("status", "UP");
-        data.put("timestamp", LocalDateTime.now());
+        data.put("timestamp", LocalDateTime.now().toString());
         data.put("service", "Beverage Platform API");
         return Result.success(data);
     }

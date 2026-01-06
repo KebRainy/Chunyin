@@ -1,6 +1,8 @@
 module.exports = {
   devServer: {
     port: 8080,
+    host: 'localhost',
+    open: false,
     hot: true,
     liveReload: false, // 禁用 liveReload，使用 HMR
     proxy: {

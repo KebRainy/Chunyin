@@ -43,20 +43,20 @@ export default {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
-  background-color: #fff;
+  background-color: var(--app-bg, #fff);
 }
 
 .el-header {
   padding: 0;
   height: 60px !important;
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
-  background: #fff;
+  background: var(--app-surface, #fff);
 }
 
 .el-main {
   padding: 32px 24px;
   min-height: calc(100vh - 120px);
-  background-color: #fff;
+  background-color: var(--app-bg, #fff);
 }
 
 .el-footer {
@@ -64,7 +64,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #fff;
+  background-color: var(--app-surface, #fff);
   color: #909399;
   border-top: 1px solid #f0f0f0;
 }

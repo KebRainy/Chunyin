@@ -502,10 +502,10 @@ const formatMarkdown = (text) => {
   align-items: center;
   gap: 8px;
   padding: 12px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--app-primary, #2f54eb);
   color: #fff;
   border-radius: 25px;
-  box-shadow: 0 4px 20px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 8px 24px rgba(47, 84, 235, 0.25);
   cursor: pointer;
   transition: all 0.3s;
   font-size: 14px;
@@ -579,7 +579,7 @@ const formatMarkdown = (text) => {
   align-items: center;
   gap: 8px;
   padding: 16px 20px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--app-primary, #2f54eb);
   color: #fff;
   cursor: move;
   user-select: none;

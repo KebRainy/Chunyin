@@ -94,25 +94,43 @@
         <div v-else-if="posts.items.length === 0" class="empty">
           <el-empty description="还没有发布任何动态" />
         </div>
-        <div v-else class="post-list">
-          <div v-for="post in posts.items" :key="post.id" class="post-row">
-            <div class="post-thumbnail">
-              <img
-                v-if="getPostCover(post)"
-                :src="getPostCover(post)"
-                :alt="`${post.author?.username || '用户'}的动态配图`"
-              >
-              <span v-else>文字</span>
-            </div>
-            <div class="post-content">
-              <p class="post-text">{{ truncatePostText(post.content) }}</p>
-              <div class="post-meta">
-                <span>{{ formatTime(post.createdAt) }}</span>
-                <span>浏览 {{ post.viewCount || 0 }}</span>
-                <span>点赞 {{ post.likeCount || 0 }}</span>
+        <div v-else class="footprint-list">
+          <div class="group-items">
+            <div
+              v-for="post in posts.items"
+              :key="post.id"
+              class="footprint-item"
+              @click="goPost(post.id)"
+            >
+              <div class="footprint-cover">
+                <img v-if="getPostCover(post)" :src="getPostCover(post)" :alt="`${userStore.userInfo.username || '用户'}的动态配图`" />
+                <div v-else class="cover-placeholder">
+                  <el-icon><Document /></el-icon>
+                </div>
               </div>
+              <div class="footprint-info">
+                <div class="footprint-title">
+                  <el-tag type="primary" size="small" effect="plain">动态</el-tag>
+                  <span class="title-text">{{ truncatePostText(post.content) || '无标题' }}</span>
+                </div>
+                <p class="footprint-summary">{{ post.content || '暂无内容' }}</p>
+                <div class="footprint-meta">
+                  <span class="visit-time">
+                    <el-icon><Clock /></el-icon>
+                    {{ formatDetailTime(post.createdAt) }}
+                  </span>
+                  <span class="visit-time">
+                    <el-icon><View /></el-icon>
+                    {{ post.viewCount || 0 }}
+                  </span>
+                  <span class="visit-time">
+                    <el-icon><StarFilled /></el-icon>
+                    {{ post.likeCount || 0 }}
+                  </span>
+                </div>
+              </div>
+              <el-icon class="arrow-icon"><ArrowRight /></el-icon>
             </div>
-            <el-button text size="small" @click="goPost(post.id)">查看</el-button>
           </div>
         </div>
       </div>
@@ -257,7 +275,7 @@ import { useUserStore } from '@/store/modules/user'
 import { circleApi } from '@/api/circle'
 import { getCollections, getFootprints, updateProfile } from '@/api/user'
 import { ElMessage } from 'element-plus'
-import { Document, Notebook, Clock, ArrowRight } from '@element-plus/icons-vue'
+import { Document, Notebook, Clock, ArrowRight, View, StarFilled } from '@element-plus/icons-vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -683,7 +701,7 @@ watch(
   bottom: 0;
   left: 0;
   height: 100%;
-  background: rgba(47, 84, 235, 0.1);
+  background: var(--app-primary-soft, rgba(64, 158, 255, 0.12));
   border-radius: 999px;
   transition: transform 0.3s, width 0.3s;
   pointer-events: none;
@@ -717,59 +735,6 @@ watch(
   letter-spacing: 2px;
   font-size: 12px;
   color: #909399;
-}
-
-.post-list {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.post-row {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 16px;
-  border-radius: 18px;
-  border: 1px solid #f0f0f0;
-}
-
-.post-thumbnail {
-  width: 72px;
-  height: 72px;
-  border-radius: 16px;
-  overflow: hidden;
-  background: #f5f5f5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-size: 12px;
-  color: #a0a3ad;
-}
-
-.post-thumbnail img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.post-text {
-  margin: 0 0 8px;
-  color: #1f2d3d;
-  font-weight: 500;
-}
-
-.post-content {
-  flex: 1;
-}
-
-.post-meta {
-  display: flex;
-  gap: 12px;
-  color: #909399;
-  font-size: 12px;
 }
 
 .filter-bar {
@@ -819,7 +784,7 @@ watch(
   font-weight: 600;
   color: #606266;
   padding-left: 4px;
-  border-left: 3px solid #2f54eb;
+  border-left: 3px solid var(--app-primary, #409eff);
   padding-left: 12px;
 }
 
@@ -844,7 +809,7 @@ watch(
 .footprint-item:hover {
   background: #f5f7fa;
   border-color: #e4e7ed;
-  transform: translateX(4px);
+  transform: translateX(2px);
 }
 
 .footprint-cover {
@@ -940,7 +905,7 @@ watch(
 .timeline-item .dot {
   width: 8px;
   height: 8px;
-  background: #2f54eb;
+  background: var(--app-primary, #409eff);
   border-radius: 50%;
   position: absolute;
   left: 0;

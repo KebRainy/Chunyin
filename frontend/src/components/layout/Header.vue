@@ -53,8 +53,9 @@
             </el-dropdown>
           </template>
           <template v-else>
-            <el-button text size="small" @click="goLogin">登录</el-button>
-            <el-button text size="small" @click="goRegister">注册</el-button>
+            <span class="user-avatar" title="登录 / 注册" @click="goLogin">
+              <el-avatar :size="36" :src="defaultAvatar" alt="默认头像" />
+            </span>
           </template>
         </div>
         <div class="quick-links">
@@ -69,7 +70,6 @@
         <el-button
           type="primary"
           class="share-btn"
-          plain
           @click="triggerShare"
         >
           分享此刻
@@ -87,6 +87,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
 import { ElMessage } from 'element-plus'
 import ShareModal from '@/components/ShareModal.vue'
+import defaultAvatar from '@/assets/default-avatar.svg'
 
 const router = useRouter()
 const route = useRoute()
@@ -99,7 +100,7 @@ const navItems = computed(() => {
   const baseItems = [
     { path: '/', label: '广场' },
     { path: '/nearby', label: '附近' },
-    { path: '/ranking', label: '排行榜' },
+    { path: '/ranking', label: '热门' },
     { path: '/bars', label: '酒吧' },
     { path: '/wiki', label: '维基' }
   ]
@@ -225,7 +226,6 @@ const goToSellerActivity = () => {
   router.push('/seller/activity')
 }
 const goLogin = () => router.push('/login')
-const goRegister = () => router.push('/register')
 const goSearch = () => {
   if (!searchKeyword.value) return
   router.push({ path: '/search', query: { q: searchKeyword.value } })
@@ -291,7 +291,7 @@ const handleCommand = async (command) => {
 .logo {
   font-size: 22px;
   font-weight: 700;
-  color: #2f54eb;
+  color: var(--app-primary, #2f54eb);
   cursor: pointer;
   letter-spacing: 2px;
 }
@@ -360,11 +360,18 @@ const handleCommand = async (command) => {
 }
 
 .share-btn {
+  --el-button-bg-color: #ff7a45;
+  --el-button-border-color: #ff7a45;
+  --el-button-text-color: #fff;
+  --el-button-hover-bg-color: #f0652f;
+  --el-button-hover-border-color: #f0652f;
+  --el-button-hover-text-color: #fff;
+  --el-button-active-bg-color: #d95224;
+  --el-button-active-border-color: #d95224;
   border-radius: 999px;
-  border-color: #111;
-  color: #111;
   padding: 0 18px;
   font-weight: 600;
+  box-shadow: 0 10px 22px rgba(255, 122, 69, 0.22);
 }
 
 .user-avatar {

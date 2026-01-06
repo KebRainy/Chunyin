@@ -1,8 +1,21 @@
 <template>
-  <div class="auth-container">
+  <div class="auth-page">
     <el-card class="auth-card">
-      <h2>注册新账号</h2>
-      <el-form :model="form" :rules="rules" ref="formRef" label-width="80px">
+      <div class="auth-brand">
+        <div class="brand-mark">醇饮</div>
+        <div class="brand-meta">
+          <h2>注册</h2>
+          <p>创建账号，开始记录你的味觉故事</p>
+        </div>
+      </div>
+
+      <el-form
+        :model="form"
+        :rules="rules"
+        ref="formRef"
+        label-position="top"
+        class="auth-form"
+      >
         <el-form-item label="用户名" prop="username">
           <el-input v-model="form.username" placeholder="2-50 个字符" />
         </el-form-item>
@@ -12,9 +25,9 @@
         <el-form-item label="密码" prop="password">
           <el-input v-model="form.password" type="password" show-password placeholder="至少 6 个字符" />
         </el-form-item>
-        <el-form-item>
-          <el-button type="primary" :loading="loading" @click="submitForm">注册</el-button>
-          <el-button type="text" @click="goLogin">已有账号，去登录</el-button>
+        <el-form-item class="actions">
+          <el-button class="primary-btn" type="primary" :loading="loading" @click="submitForm">注册</el-button>
+          <el-button text class="link-btn" @click="goLogin">已有账号，去登录</el-button>
         </el-form-item>
       </el-form>
     </el-card>
@@ -79,20 +92,73 @@ const goLogin = () => {
 </script>
 
 <style scoped>
-.auth-container {
+.auth-page {
   display: flex;
   justify-content: center;
   align-items: center;
-  min-height: 70vh;
+  min-height: calc(100vh - 180px);
+  padding: 24px;
+  position: relative;
 }
 
 .auth-card {
-  width: 420px;
-  padding: 30px 20px;
+  width: min(460px, 92vw);
+  padding: 28px 26px;
+  border-radius: 24px;
+  border: 1px solid var(--app-border, #e6e8ef);
+  background: var(--app-surface, #fff);
 }
 
-h2 {
-  text-align: center;
-  margin-bottom: 24px;
+.auth-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.brand-mark {
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  color: #fff;
+  background: var(--app-primary, #2f54eb);
+  letter-spacing: 2px;
+}
+
+.brand-meta h2 {
+  margin: 0;
+  font-size: 20px;
+  color: var(--app-text, #0f172a);
+}
+
+.brand-meta p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--app-muted, #64748b);
+}
+
+.auth-form :deep(.el-form-item__label) {
+  font-weight: 600;
+  color: #334155;
+}
+
+.actions :deep(.el-form-item__content) {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.primary-btn {
+  width: 100%;
+  height: 40px;
+}
+
+.link-btn {
+  width: 100%;
+  justify-content: center;
+  font-weight: 600;
 }
 </style>

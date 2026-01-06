@@ -18,9 +18,7 @@
           </template>
         </el-input>
         <div class="hero-actions">
-          <el-button v-if="userStore.isLoggedIn" type="primary" plain @click="goEditor">
-            + 新建条目
-          </el-button>
+          <el-button v-if="userStore.isLoggedIn" size="small" @click="goEditor">新建条目</el-button>
           <el-button v-if="userStore.isLoggedIn" type="warning" @click="handleBatchImport">
             ! 一键导入测试数据
           </el-button>
@@ -380,8 +378,8 @@ onMounted(() => {
 
 .wiki-item.active,
 .wiki-item:hover {
-  border-color: #2f54eb;
-  box-shadow: 0 10px 22px rgba(47, 84, 235, 0.12);
+  border-color: var(--app-primary, #409eff);
+  box-shadow: 0 10px 22px rgba(64, 158, 255, 0.12);
 }
 
 .wiki-item h4 {

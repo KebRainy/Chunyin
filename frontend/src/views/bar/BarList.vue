@@ -729,7 +729,8 @@ export default {
 
 .bar-card {
   cursor: pointer;
-  transition: transform 0.2s;
+  will-change: transform;
+  transition: transform var(--motion-normal, 220ms) var(--motion-ease, ease);
 }
 
 .bar-card:hover {

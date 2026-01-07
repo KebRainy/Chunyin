@@ -13,35 +13,31 @@
       </div>
 
     <!-- 悬浮窗 -->
-    <div
-      v-if="visible"
-      class="rag-floating-window-wrapper"
-      :style="windowStyle"
-    >
-      <div class="rag-floating-window" :class="{ minimized: isMinimized, 'show-history': showHistory }">
-        <!-- 标题栏 -->
-        <div class="window-header" @mousedown="startDrag">
-          <el-icon><ChatDotRound /></el-icon>
-          <span>智能荐酒</span>
-          <div class="header-actions">
-            <el-button
-              v-if="!isMinimized"
-              text
-              :icon="showHistory ? ChatDotRound : Document"
-              @click="toggleHistory"
-              :title="showHistory ? '返回输入框' : '查看对话历史'"
-            />
-            <el-button
-              text
-              :icon="isMinimized ? FullScreen : Minus"
-              @click="toggleMinimize"
-            />
-            <el-button text :icon="Close" @click="closeWindow" />
+    <Transition name="rag-window">
+      <div
+        v-if="visible"
+        ref="wrapperRef"
+        class="rag-floating-window-wrapper"
+        :style="windowStyle"
+      >
+        <div ref="windowRef" class="rag-floating-window" :class="{ 'show-history': showHistory }">
+          <!-- 标题栏 -->
+          <div class="window-header" @mousedown="startDrag">
+            <el-icon><ChatDotRound /></el-icon>
+            <span>智能荐酒</span>
+            <div class="header-actions">
+              <el-button
+                text
+                :icon="showHistory ? ChatDotRound : Document"
+                @click="toggleHistory"
+                :title="showHistory ? '返回输入框' : '查看对话历史'"
+              />
+              <el-button text :icon="Minus" @click="closeWindow" title="关闭" />
+            </div>
           </div>
-        </div>
 
-        <!-- 内容区域 -->
-        <div v-if="!isMinimized" class="window-body">
+          <!-- 内容区域 -->
+          <div class="window-body">
           <!-- 输入框和推荐结果视图 -->
           <div v-if="!showHistory" class="window-content">
             <div class="search-section">
@@ -188,14 +184,15 @@
         </div>
       </div>
     </div>
+    </Transition>
     </template>
   </Teleport>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount, watch } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { ChatDotRound, Close, Minus, FullScreen, Search, Picture, User, Document, Delete } from '@element-plus/icons-vue'
+import { ChatDotRound, Minus, Search, Picture, User, Document, Delete } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import { recommendApi } from '@/api/recommend'
 import { useUserStore } from '@/store/modules/user'
@@ -210,15 +207,18 @@ const visible = ref(false)
 const query = ref('')
 const loading = ref(false)
 const results = ref(null)
-const isMinimized = ref(false)
 const conversationHistory = ref([]) // 对话历史
 const showHistory = ref(false) // 是否显示侧边栏
+const wrapperRef = ref(null)
+const windowRef = ref(null)
 
 const windowStyle = ref({
   position: 'fixed',
   bottom: '20px',
   right: '20px',
   width: '480px',
+  maxWidth: 'calc(100vw - 40px)',
+  maxHeight: 'calc(100vh - 40px)',
   zIndex: 2000
 })
 
@@ -257,6 +257,8 @@ onMounted(() => {
   if (savedVisible === 'true') {
     visible.value = true
   }
+
+  window.addEventListener('resize', handleResize)
 })
 
 // 保存可见状态
@@ -264,6 +266,9 @@ watch(visible, (newVal) => {
   localStorage.setItem('ragWindowVisible', String(newVal))
   if (newVal) {
     windowStyle.value.zIndex = 2000
+    nextTick(() => {
+      ensureInViewport()
+    })
   }
 })
 
@@ -271,50 +276,46 @@ const openWindow = () => {
   visible.value = true
   // 打开窗口时，默认进入输入页面
   showHistory.value = false
-  if (!windowStyle.value.left) {
-    windowStyle.value = {
-      ...windowStyle.value,
-      bottom: '20px',
-      right: '20px'
-    }
-  } else {
-    // 恢复底部定位
-    const { top, ...rest } = windowStyle.value
-    windowStyle.value = {
-      ...rest,
-      bottom: '20px'
-    }
-  }
 }
 
 const closeWindow = () => {
   visible.value = false
 }
 
-const toggleMinimize = () => {
-  const wasMinimized = isMinimized.value
-  isMinimized.value = !isMinimized.value
-  
-  if (isMinimized.value) {
-    // 最小化时，关闭对话历史
-    showHistory.value = false
-  } else if (wasMinimized) {
-    // 从收起状态展开时，默认进入输入页面
-    showHistory.value = false
-    // 恢复底部定位
-    const { top, ...rest } = windowStyle.value
-    windowStyle.value = {
-      ...rest,
-      bottom: '20px'
-    }
-  }
-  
-  const width = isMinimized.value ? '300px' : '480px'
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max)
+
+const ensureInViewport = () => {
+  const el = windowRef.value
+  if (!el) return
+
+  const rect = el.getBoundingClientRect()
+  const padding = 12
+  const maxX = Math.max(padding, window.innerWidth - rect.width - padding)
+  const maxY = Math.max(padding, window.innerHeight - rect.height - padding)
+
+  const hasLeft = windowStyle.value.left != null
+  const hasTop = windowStyle.value.top != null
+  let x = hasLeft ? parseInt(windowStyle.value.left) : window.innerWidth - rect.width - 20
+  let y = hasTop ? parseInt(windowStyle.value.top) : window.innerHeight - rect.height - 20
+
+  x = clamp(x, padding, maxX)
+  y = clamp(y, padding, maxY)
+
   windowStyle.value = {
     ...windowStyle.value,
-    width
+    left: `${x}px`,
+    top: `${y}px`,
+    bottom: 'auto',
+    right: 'auto'
   }
   savePosition()
+}
+
+const handleResize = () => {
+  if (!visible.value) return
+  nextTick(() => {
+    ensureInViewport()
+  })
 }
 
 // 拖拽功能
@@ -338,12 +339,15 @@ const onDrag = (e) => {
   
   const x = e.clientX - dragOffset.value.x
   const y = e.clientY - dragOffset.value.y
-  const width = parseInt(windowStyle.value.width) || 600
+  const rect = windowRef.value?.getBoundingClientRect()
+  const width = rect?.width || parseInt(windowStyle.value.width) || 480
+  const height = rect?.height || 520
+  const padding = 12
   
   windowStyle.value = {
     ...windowStyle.value,
-    left: `${Math.max(0, Math.min(x, window.innerWidth - width))}px`,
-    top: `${Math.max(0, Math.min(y, window.innerHeight - 200))}px`,
+    left: `${clamp(x, padding, window.innerWidth - width - padding)}px`,
+    top: `${clamp(y, padding, window.innerHeight - height - padding)}px`,
     bottom: 'auto',
     right: 'auto'
   }
@@ -372,6 +376,7 @@ const savePosition = () => {
 onBeforeUnmount(() => {
   document.removeEventListener('mousemove', onDrag)
   document.removeEventListener('mouseup', stopDrag)
+  window.removeEventListener('resize', handleResize)
 })
 
 const handleSearch = async () => {
@@ -437,26 +442,10 @@ const clearHistory = () => {
 }
 
 const toggleHistory = () => {
-  // 收起状态下不允许切换
-  if (isMinimized.value) {
-    return
-  }
   showHistory.value = !showHistory.value
-  // 显示对话历史时，窗口从顶部开始
-  if (showHistory.value) {
-    windowStyle.value = {
-      ...windowStyle.value,
-      top: '0',
-      bottom: 'auto'
-    }
-  } else {
-    // 返回输入页面时，恢复底部定位
-    const { top, ...rest } = windowStyle.value
-    windowStyle.value = {
-      ...rest,
-      bottom: '20px'
-    }
-  }
+  nextTick(() => {
+    ensureInViewport()
+  })
 }
 
 const goToBeverageDetail = (beverageId) => {
@@ -507,7 +496,10 @@ const formatMarkdown = (text) => {
   border-radius: 25px;
   box-shadow: 0 8px 24px rgba(47, 84, 235, 0.25);
   cursor: pointer;
-  transition: all 0.3s;
+  will-change: transform;
+  transition:
+    transform var(--motion-normal, 220ms) var(--motion-ease, ease),
+    box-shadow var(--motion-normal, 220ms) var(--motion-ease, ease);
   font-size: 14px;
   font-weight: 500;
 }
@@ -525,6 +517,8 @@ const formatMarkdown = (text) => {
 .rag-floating-window-wrapper {
   position: fixed;
   z-index: 2000;
+  max-width: calc(100vw - 40px);
+  max-height: calc(100vh - 40px);
 }
 
 .rag-floating-window {
@@ -534,20 +528,10 @@ const formatMarkdown = (text) => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transition: width 0.3s;
+  width: 100%;
 }
 
-.rag-floating-window.minimized {
-  width: 240px;
-}
-
-.rag-floating-window:not(.minimized) {
-  width: 450px;
-  display: flex;
-  flex-direction: column;
-}
-
-.rag-floating-window:not(.minimized).show-history {
+.rag-floating-window.show-history {
   /* 对话历史页面：从页面顶部开始，底部留出空间 */
   height: calc(100vh - 20px);
   max-height: calc(100vh - 20px);
@@ -605,16 +589,6 @@ const formatMarkdown = (text) => {
   flex: 1;
   min-height: 0;
   max-height: 100%;
-  animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
 }
 
 .search-section {
@@ -638,12 +612,17 @@ const formatMarkdown = (text) => {
 
 .example-tag {
   cursor: pointer;
-  transition: all 0.3s;
+  will-change: transform;
+  transition:
+    transform var(--motion-fast, 160ms) var(--motion-ease, ease),
+    background-color var(--motion-fast, 160ms) var(--motion-ease, ease),
+    color var(--motion-fast, 160ms) var(--motion-ease, ease);
 }
 
 .example-tag:hover {
   background-color: #409eff;
   color: #fff;
+  transform: translateY(-1px);
 }
 
 .search-actions {
@@ -706,7 +685,11 @@ const formatMarkdown = (text) => {
   border: 1px solid #e4e7ed;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s;
+  will-change: transform;
+  transition:
+    transform var(--motion-normal, 220ms) var(--motion-ease, ease),
+    box-shadow var(--motion-normal, 220ms) var(--motion-ease, ease),
+    border-color var(--motion-normal, 220ms) var(--motion-ease, ease);
 }
 
 .beverage-item:hover {
@@ -893,12 +876,30 @@ const formatMarkdown = (text) => {
   border: 1px solid #e4e7ed;
   border-radius: 8px;
   cursor: pointer;
-  transition: all 0.3s;
+  will-change: transform;
+  transition:
+    transform var(--motion-normal, 220ms) var(--motion-ease, ease),
+    box-shadow var(--motion-normal, 220ms) var(--motion-ease, ease),
+    border-color var(--motion-normal, 220ms) var(--motion-ease, ease);
 }
 
 .wiki-item:hover {
   border-color: #409eff;
   box-shadow: 0 2px 12px rgba(64, 158, 255, 0.1);
+  transform: translateY(-1px);
+}
+
+.rag-window-enter-active,
+.rag-window-leave-active {
+  transition:
+    opacity var(--motion-normal, 220ms) var(--motion-ease, ease),
+    transform var(--motion-normal, 220ms) var(--motion-ease, ease);
+}
+
+.rag-window-enter-from,
+.rag-window-leave-to {
+  opacity: 0;
+  transform: translateY(10px) scale(0.98);
 }
 
 .wiki-info h5 {

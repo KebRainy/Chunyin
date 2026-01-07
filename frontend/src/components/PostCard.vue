@@ -108,7 +108,10 @@ const formatTime = (value) => {
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  transition: transform 0.2s, box-shadow 0.2s;
+  will-change: transform;
+  transition:
+    transform var(--motion-normal, 220ms) var(--motion-ease, ease),
+    box-shadow var(--motion-normal, 220ms) var(--motion-ease, ease);
   break-inside: avoid;
   position: relative;
 }

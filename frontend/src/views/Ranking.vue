@@ -194,7 +194,12 @@ onMounted(() => {
   background: var(--app-surface-2, #f5f7fa);
   border: 1px solid transparent;
   cursor: pointer;
-  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+  will-change: transform;
+  transition:
+    transform var(--motion-normal, 220ms) var(--motion-ease, ease),
+    background-color var(--motion-normal, 220ms) var(--motion-ease, ease),
+    border-color var(--motion-normal, 220ms) var(--motion-ease, ease),
+    color var(--motion-normal, 220ms) var(--motion-ease, ease);
   font-weight: 500;
   color: var(--app-muted, #666);
 }

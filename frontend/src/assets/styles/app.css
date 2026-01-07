@@ -10,6 +10,11 @@
   --app-primary-soft: rgba(64, 158, 255, 0.12);
   --app-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
 
+  /* Motion */
+  --motion-fast: 160ms;
+  --motion-normal: 220ms;
+  --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
   /* Element Plus theme tokens */
   --el-color-primary: var(--app-primary);
   --el-border-radius-base: 12px;

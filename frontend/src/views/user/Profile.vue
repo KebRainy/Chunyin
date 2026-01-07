@@ -757,6 +757,20 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 12px;
+  cursor: pointer;
+  will-change: transform;
+  transition:
+    transform var(--motion-normal, 220ms) var(--motion-ease, ease),
+    box-shadow var(--motion-normal, 220ms) var(--motion-ease, ease),
+    border-color var(--motion-normal, 220ms) var(--motion-ease, ease),
+    background-color var(--motion-normal, 220ms) var(--motion-ease, ease);
+}
+
+.card:hover {
+  background: #fff;
+  border-color: #e4e7ed;
+  box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
 }
 
 .card-meta {
@@ -803,7 +817,11 @@ watch(
   background: #fafbfc;
   border: 1px solid #f0f2f5;
   cursor: pointer;
-  transition: all 0.2s ease;
+  will-change: transform;
+  transition:
+    transform var(--motion-normal, 220ms) var(--motion-ease, ease),
+    background-color var(--motion-normal, 220ms) var(--motion-ease, ease),
+    border-color var(--motion-normal, 220ms) var(--motion-ease, ease);
 }
 
 .footprint-item:hover {

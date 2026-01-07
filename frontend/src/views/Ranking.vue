@@ -1,8 +1,8 @@
 <template>
   <div class="ranking-container">
     <div class="ranking-header">
-      <h1 class="title">热门</h1>
-      <p class="subtitle">发现平台最受欢迎的精彩内容</p>
+      <h1 class="title art-heading art-heading-h1">热门</h1>
+      <p class="subtitle art-subtitle">发现平台最受欢迎的精彩内容</p>
     </div>
 
     <!-- 时间维度选择 -->
@@ -158,18 +158,17 @@ onMounted(() => {
 .ranking-header {
   text-align: center;
   margin-bottom: 30px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(139, 69, 19, 0.1);
 }
 
 .title {
   font-size: 32px;
-  font-weight: 700;
-  color: var(--app-text, #1a1a1a);
-  margin: 0 0 10px 0;
+  margin: 0 0 12px 0;
 }
 
 .subtitle {
   font-size: 16px;
-  color: var(--app-muted, #666);
   margin: 0;
 }
 

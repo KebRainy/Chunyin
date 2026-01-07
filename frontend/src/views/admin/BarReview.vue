@@ -1,7 +1,7 @@
 <template>
   <div class="bar-review">
     <div class="page-header">
-      <h2>酒吧审核</h2>
+      <h2 class="art-heading art-heading-h2">酒吧审核</h2>
     </div>
 
     <el-card>
@@ -321,7 +321,9 @@ onMounted(() => {
 }
 
 .page-header {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(139, 69, 19, 0.1);
 }
 
 .page-header h2 {

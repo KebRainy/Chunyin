@@ -1,7 +1,7 @@
 <template>
   <div class="seller-activity">
     <div class="page-header">
-      <h2>活动管理</h2>
+      <h2 class="art-heading art-heading-h2">活动管理</h2>
       <el-button type="primary" @click="$router.push('/activities/create')">
         <el-icon><Plus /></el-icon>
         创建活动
@@ -367,7 +367,9 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid rgba(139, 69, 19, 0.1);
 }
 
 .page-header h2 {

@@ -26,11 +26,14 @@ export default {
 
 <style scoped>
 .footer-container {
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(20px);
-  border-top: 1px solid rgba(139, 69, 19, 0.08);
+  width: 100%;
+  background: linear-gradient(135deg, 
+    rgba(250, 248, 245, 0.98) 0%,
+    rgba(255, 255, 255, 0.98) 100%);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid rgba(139, 69, 19, 0.1);
   padding: 32px 24px 24px;
-  margin-top: 40px;
+  margin-top: 0;
   position: relative;
 }
 
@@ -40,6 +43,7 @@ export default {
   top: 0;
   left: 0;
   right: 0;
+  width: 100%;
   height: 1px;
   background: linear-gradient(90deg, 
     transparent 0%, 
@@ -49,6 +53,7 @@ export default {
 }
 
 .footer-content {
+  width: 100%;
   max-width: 1400px;
   margin: 0 auto;
   display: flex;
@@ -57,6 +62,7 @@ export default {
   margin-bottom: 24px;
   flex-wrap: wrap;
   gap: 32px;
+  padding: 0 24px;
 }
 
 .footer-brand {
@@ -121,11 +127,14 @@ export default {
 }
 
 .footer-bottom {
+  width: 100%;
   text-align: center;
   padding-top: 20px;
   border-top: 1px solid rgba(0, 0, 0, 0.04);
   max-width: 1400px;
   margin: 0 auto;
+  padding-left: 24px;
+  padding-right: 24px;
 }
 
 .footer-bottom p {

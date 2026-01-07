@@ -48,29 +48,38 @@ export default {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
-  background-color: var(--app-bg, #fff);
+  background-color: transparent;
+  position: relative;
+  z-index: 1;
 }
 
 .el-header {
-  padding: 0;
-  height: 60px !important;
+  padding: 0 !important;
+  height: auto !important;
+  min-height: 68px !important;
   box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
-  background: var(--app-surface, #fff);
+  background: transparent;
+  position: relative;
+  z-index: 100;
+  width: 100%;
 }
 
 .el-main {
   padding: 32px 24px;
   min-height: calc(100vh - 120px);
-  background-color: var(--app-bg, #fff);
+  background-color: transparent;
+  position: relative;
+  z-index: 1;
 }
 
 .el-footer {
-  height: 60px !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: var(--app-surface, #fff);
-  color: #909399;
-  border-top: 1px solid #f0f0f0;
+  height: auto !important;
+  min-height: auto !important;
+  padding: 0 !important;
+  display: block;
+  background: transparent;
+  position: relative;
+  z-index: 100;
+  width: 100%;
 }
 </style>

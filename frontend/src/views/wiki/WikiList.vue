@@ -19,8 +19,8 @@
         </el-input>
         <div class="hero-actions">
           <el-button v-if="userStore.isLoggedIn" size="small" @click="goEditor">新建条目</el-button>
-          <el-button v-if="userStore.isLoggedIn" type="warning" @click="handleBatchImport">
-            ! 一键导入测试数据
+          <el-button v-if="userStore.isAdmin" type="warning" @click="handleBatchImport">
+            一键导入词条数据
           </el-button>
         </div>
       </div>

@@ -261,17 +261,36 @@ const handleCommand = async (command) => {
 
 <style scoped>
 .header-container {
+  width: 100%;
   height: 68px;
-  background: rgba(255, 255, 255, 0.95);
-  border-bottom: 1px solid #f2f2f2;
+  background: linear-gradient(135deg, 
+    rgba(250, 248, 245, 0.98) 0%,
+    rgba(255, 255, 255, 0.98) 100%);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(139, 69, 19, 0.1);
   position: sticky;
   top: 0;
   z-index: 100;
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
+  position: relative;
+}
+
+.header-container::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent 0%, 
+    rgba(139, 69, 19, 0.2) 20%, 
+    rgba(139, 69, 19, 0.2) 80%, 
+    transparent 100%);
 }
 
 .header-content {
+  width: 100%;
   max-width: 1400px;
   margin: 0 auto;
   height: 100%;
@@ -280,6 +299,8 @@ const handleCommand = async (command) => {
   justify-content: space-between;
   gap: 20px;
   padding: 0 24px;
+  position: relative;
+  z-index: 1;
 }
 
 .header-left {
@@ -291,9 +312,19 @@ const handleCommand = async (command) => {
 .logo {
   font-size: 22px;
   font-weight: 700;
-  color: var(--app-primary, #2f54eb);
+  font-family: var(--font-display);
+  background: var(--gradient-gold);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
   cursor: pointer;
   letter-spacing: 2px;
+  transition: all 0.3s ease;
+}
+
+.logo:hover {
+  transform: scale(1.05);
+  filter: drop-shadow(0 2px 4px rgba(212, 175, 55, 0.3));
 }
 
 .nav-menu {
@@ -307,6 +338,33 @@ const handleCommand = async (command) => {
   cursor: pointer;
   padding: 6px 0;
   position: relative;
+  transition: all 0.3s ease;
+  font-family: var(--font-sans);
+}
+
+.nav-item::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0;
+  height: 2px;
+  background: var(--gradient-gold);
+  transition: width 0.3s ease;
+}
+
+.nav-item:hover {
+  color: var(--primary-color);
+  transform: translateY(-1px);
+}
+
+.nav-item:hover::after {
+  width: 100%;
+}
+
+.nav-item.active {
+  color: var(--primary-color);
+  font-weight: 500;
 }
 
 .nav-item.active::after {
@@ -314,9 +372,10 @@ const handleCommand = async (command) => {
   position: absolute;
   bottom: -2px;
   left: 0;
-  right: 0;
+  width: 100%;
   height: 2px;
-  background: #303133;
+  background: var(--gradient-gold);
+  transition: width 0.3s ease;
 }
 
 .header-center {
@@ -357,6 +416,30 @@ const handleCommand = async (command) => {
 
 .quick-links span {
   cursor: pointer;
+  position: relative;
+  padding-bottom: 2px;
+  transition: all 0.3s ease;
+  font-family: var(--font-sans);
+}
+
+.quick-links span::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 0;
+  height: 1.5px;
+  background: var(--gradient-gold);
+  transition: width 0.3s ease;
+}
+
+.quick-links span:hover {
+  color: var(--primary-color);
+  transform: translateY(-1px);
+}
+
+.quick-links span:hover::after {
+  width: 100%;
 }
 
 .share-btn {

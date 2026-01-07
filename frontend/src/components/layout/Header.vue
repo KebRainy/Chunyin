@@ -65,6 +65,7 @@
           <span @click="goToCollections">收藏</span>
           <span @click="goToHistory">足迹</span>
           <span v-if="userStore.isLoggedIn && !userStore.isSeller && !userStore.isAdmin" @click="goToUserActivity">活动</span>
+          <span v-if="userStore.isLoggedIn && !userStore.isSeller && !userStore.isAdmin" @click="goToSellerRegister">商家认证</span>
           <span v-if="userStore.isSeller" @click="goToSellerActivity">管理</span>
         </div>
         <el-button
@@ -224,6 +225,14 @@ const goToSellerActivity = () => {
     return
   }
   router.push('/seller/activity')
+}
+const goToSellerRegister = () => {
+  if (!userStore.isLoggedIn) {
+    ElMessage.warning('请先登录')
+    router.push('/login')
+    return
+  }
+  router.push('/seller/register')
 }
 const goLogin = () => router.push('/login')
 const goSearch = () => {

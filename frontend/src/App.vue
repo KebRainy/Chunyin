@@ -12,7 +12,7 @@
       </el-footer>
     </el-container>
     <!-- RAG悬浮窗 -->
-    <RAGFloatingWindow />
+    <RAGFloatingWindow v-if="showRAGFloatingWindow" />
   </div>
 </template>
 
@@ -27,6 +27,11 @@ export default {
     Header,
     Footer,
     RAGFloatingWindow
+  },
+  computed: {
+    showRAGFloatingWindow() {
+      return this.$route?.name !== 'WikiEditor'
+    }
   }
 }
 </script>

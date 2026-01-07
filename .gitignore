@@ -33,6 +33,7 @@ build/
 .DS_Store
 node_modules
 /dist
+frontend/dist/
 
 ### VS Code ###
 .vscode/
@@ -61,4 +62,8 @@ pnpm-debug.log*
 .claude
 html-examples
 TODO.md
-/frontend/dist
+
+# Local moderation (Python)
+backend/python/.venv/
+backend/python/models/
+backend/python/__pycache__/

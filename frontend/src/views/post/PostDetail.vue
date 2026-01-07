@@ -803,7 +803,10 @@ watch(() => route.params.id, (newId, oldId) => {
   border: 1px solid rgba(0, 0, 0, 0.05);
   border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s;
+  will-change: transform;
+  transition:
+    transform var(--motion-normal, 220ms) var(--motion-ease, ease),
+    background-color var(--motion-normal, 220ms) var(--motion-ease, ease);
 }
 
 .similar-item:hover {

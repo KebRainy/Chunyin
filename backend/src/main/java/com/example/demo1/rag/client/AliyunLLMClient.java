@@ -22,6 +22,7 @@ public class AliyunLLMClient {
     
     private final RAGConfig ragConfig;
     private final Generation generation = new Generation();
+    private static final int DAILY_QUESTION_MAX_CONTEXT_CHARS = 2500;
     
     /**
      * 生成推荐理由
@@ -29,58 +30,95 @@ public class AliyunLLMClient {
     public String generateRecommendationReason(String query, String context, String userPreference, String conversationHistory) {
         try {
             List<Message> messages = new ArrayList<>();
-            
-            // 系统提示词
-            String systemPrompt = buildSystemPrompt();
             messages.add(Message.builder()
-                    .role(Role.SYSTEM.getValue())
-                    .content(systemPrompt)
-                    .build());
-            
-            // 用户查询和上下文
-            String userContent = buildUserPrompt(query, context, userPreference, conversationHistory);
+                .role(Role.SYSTEM.getValue())
+                .content(buildSystemPrompt())
+                .build());
             messages.add(Message.builder()
-                    .role(Role.USER.getValue())
-                    .content(userContent)
-                    .build());
-            
-            QwenParam param = QwenParam.builder()
-                    .apiKey(ragConfig.getAliyun().getAccessKeySecret())
-                    .model(ragConfig.getAliyun().getLlmModel())
-                    .messages(messages)
-                    .temperature(ragConfig.getTemperature().floatValue())
-                    .resultFormat(QwenParam.ResultFormat.MESSAGE)
-                    .build();
-            
-            Object resultObj = generation.call(param);
-            
-            // 使用反射访问结果
-            try {
-                java.lang.reflect.Method getOutputMethod = resultObj.getClass().getMethod("getOutput");
-                Object output = getOutputMethod.invoke(resultObj);
-                
-                if (output != null) {
-                    java.lang.reflect.Method getChoicesMethod = output.getClass().getMethod("getChoices");
-                    List<?> choices = (List<?>) getChoicesMethod.invoke(output);
-                    
-                    if (choices != null && !choices.isEmpty()) {
-                        Object firstChoice = choices.get(0);
-                        java.lang.reflect.Method getMessageMethod = firstChoice.getClass().getMethod("getMessage");
-                        Object message = getMessageMethod.invoke(firstChoice);
-                        java.lang.reflect.Method getContentMethod = message.getClass().getMethod("getContent");
-                        String content = (String) getContentMethod.invoke(message);
-                        return content;
-                    }
-                }
-            } catch (Exception e) {
-                log.error("使用反射访问结果失败", e);
+                .role(Role.USER.getValue())
+                .content(buildUserPrompt(query, context, userPreference, conversationHistory))
+                .build());
+
+            String content = call(messages);
+            if (content != null) {
+                return content;
             }
-            
             return "根据您的需求，我为您推荐了以下酒类。";
         } catch (Exception e) {
             log.error("调用通义千问API失败", e);
             return "根据您的需求，我为您推荐了以下酒类。";
         }
+    }
+
+    /**
+     * 生成每日一题（返回严格JSON字符串）
+     */
+    public String generateDailyQuestionJson(String context, String wikiTitle) {
+        try {
+            String normalizedContext = context == null ? "" : context.trim();
+            if (normalizedContext.length() > DAILY_QUESTION_MAX_CONTEXT_CHARS) {
+                normalizedContext = normalizedContext.substring(0, DAILY_QUESTION_MAX_CONTEXT_CHARS);
+            }
+
+            List<Message> messages = new ArrayList<>();
+            messages.add(Message.builder()
+                .role(Role.SYSTEM.getValue())
+                .content(buildDailyQuestionSystemPrompt())
+                .build());
+            messages.add(Message.builder()
+                .role(Role.USER.getValue())
+                .content(buildDailyQuestionUserPrompt(normalizedContext, wikiTitle))
+                .build());
+
+            return call(messages);
+        } catch (Exception e) {
+            log.error("调用通义千问API失败（每日一题）", e);
+            return null;
+        }
+    }
+
+    private String call(List<Message> messages) {
+        try {
+            QwenParam param = QwenParam.builder()
+                .apiKey(ragConfig.getAliyun().getAccessKeySecret())
+                .model(ragConfig.getAliyun().getLlmModel())
+                .messages(messages)
+                .temperature(ragConfig.getTemperature().floatValue())
+                .resultFormat(QwenParam.ResultFormat.MESSAGE)
+                .build();
+
+            Object resultObj = generation.call(param);
+            return extractContentFromResult(resultObj);
+        } catch (Exception e) {
+            log.error("调用通义千问失败", e);
+            return null;
+        }
+    }
+
+    private String extractContentFromResult(Object resultObj) {
+        if (resultObj == null) {
+            return null;
+        }
+        try {
+            java.lang.reflect.Method getOutputMethod = resultObj.getClass().getMethod("getOutput");
+            Object output = getOutputMethod.invoke(resultObj);
+
+            if (output != null) {
+                java.lang.reflect.Method getChoicesMethod = output.getClass().getMethod("getChoices");
+                List<?> choices = (List<?>) getChoicesMethod.invoke(output);
+
+                if (choices != null && !choices.isEmpty()) {
+                    Object firstChoice = choices.get(0);
+                    java.lang.reflect.Method getMessageMethod = firstChoice.getClass().getMethod("getMessage");
+                    Object message = getMessageMethod.invoke(firstChoice);
+                    java.lang.reflect.Method getContentMethod = message.getClass().getMethod("getContent");
+                    return (String) getContentMethod.invoke(message);
+                }
+            }
+        } catch (Exception e) {
+            log.error("使用反射访问结果失败", e);
+        }
+        return null;
     }
     
     private String buildSystemPrompt() {
@@ -113,5 +151,29 @@ public class AliyunLLMClient {
         prompt.append("如果上下文中没有提供具体品牌，可以基于酒类类型推荐知名品牌，但必须明确说明品牌名称。");
         
         return prompt.toString();
+    }
+
+    private String buildDailyQuestionSystemPrompt() {
+        return "你是一位严谨的酒类维基知识出题专家。"
+            + "你只输出一段可被JSON解析的内容，不能包含任何额外解释、Markdown或代码块。"
+            + "题目必须是单选题，必须能从给定上下文中直接推导出唯一正确答案。"
+            + "错误选项要具有迷惑性，但不能与上下文明显矛盾或出现无法验证的信息。";
+    }
+
+    private String buildDailyQuestionUserPrompt(String context, String wikiTitle) {
+        String titleHint = (wikiTitle == null || wikiTitle.trim().isEmpty()) ? "" : ("主题词条：" + wikiTitle.trim() + "\n");
+        return titleHint
+            + "请基于以下上下文出一道“每日一题”单选题，并返回严格JSON：\n"
+            + "上下文：\n"
+            + context
+            + "\n\n"
+            + "输出JSON格式要求（只能输出JSON，不要输出多余内容）：\n"
+            + "{"
+            + "\"question\":\"...\","
+            + "\"options\":[\"...\",\"...\",\"...\",\"...\"],"
+            + "\"correctIndex\":0,"
+            + "\"explanation\":\"...\""
+            + "}\n"
+            + "约束：question不超过80字；每个option不超过60字；options必须正好4个且互不相同；correctIndex只能是0-3整数；explanation用1-2句话解释（不超过120字）。";
     }
 }

@@ -3,7 +3,7 @@
     <section class="wiki-hero">
       <div class="hero-content">
         <p class="eyebrow">醇饮百科</p>
-        <h1 class="art-heading">搜一搜，就能找到任何关于酒饮的答案</h1>
+        <h1>搜一搜，就能找到任何关于酒饮的答案</h1>
         <p class="subtitle">社区共建 · 实时更新 · 支持多端访问</p>
       </div>
       <div class="hero-search">
@@ -18,11 +18,9 @@
           </template>
         </el-input>
         <div class="hero-actions">
-          <el-button v-if="userStore.isLoggedIn" type="primary" plain @click="goEditor">
-            + 新建条目
-          </el-button>
-          <el-button v-if="userStore.isAdmin" type="warning" @click="handleBatchImport">
-            一键导入词条数据
+          <el-button v-if="userStore.isLoggedIn" size="small" @click="goEditor">新建条目</el-button>
+          <el-button v-if="userStore.isLoggedIn" type="warning" @click="handleBatchImport">
+            ! 一键导入测试数据
           </el-button>
         </div>
       </div>
@@ -45,7 +43,7 @@
     <section class="wiki-content">
       <div class="list-panel">
         <div class="section-header">
-          <h3 class="art-heading-h3">{{ keyword ? '搜索结果' : '精选词条' }}</h3>
+          <h3>{{ keyword ? '搜索结果' : '精选词条' }}</h3>
           <span class="count">共 {{ total }} 条</span>
         </div>
         <div v-if="loading" class="loading">
@@ -143,8 +141,12 @@ const loadPages = async () => {
 }
 
 const loadStats = async () => {
-  const res = await fetchWikiStats()
-  wikiStats.value = res.data || wikiStats.value
+  try {
+    const res = await fetchWikiStats()
+    wikiStats.value = res.data || wikiStats.value
+  } catch {
+    // ignore
+  }
 }
 
 const searchPages = () => {
@@ -189,7 +191,7 @@ const formatContent = (content) => {
 const handleBatchImport = async () => {
   const dataList = importData;
   console.log(`开始批量导入，共 ${dataList.length} 条数据...`);
-
+  
   // 先获取所有现有的wiki页面，用于检查重复
   let existingTitles = new Set();
   try {
@@ -244,7 +246,7 @@ const handleBatchImport = async () => {
   }
 
   console.log(`批量导入完成！成功: ${successCount} 条，跳过: ${skipCount} 条，失败: ${failCount} 条。`);
-
+  
   // 刷新列表和统计
   await loadPages();
   await loadStats();
@@ -269,12 +271,11 @@ onMounted(() => {
 }
 
 .wiki-hero {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
+  background: #fff;
   padding: 32px;
-  border-radius: var(--radius-xl);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: var(--shadow-lg);
+  border-radius: 32px;
+  border: 1px solid #eceff5;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.07);
 }
 
 .hero-content h1 {
@@ -309,20 +310,11 @@ onMounted(() => {
 }
 
 .stat-card {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(8px);
-  border-radius: var(--radius-lg);
+  background: #fafafa;
+  border-radius: 18px;
   padding: 16px;
   text-align: center;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: var(--shadow-sm);
-  transition: all 0.3s ease;
-}
-
-.stat-card:hover {
-  background: rgba(255, 255, 255, 0.95);
-  box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  border: 1px solid #f0f2f5;
 }
 
 .stat-card .value {
@@ -346,12 +338,11 @@ onMounted(() => {
 
 .list-panel,
 .preview-panel {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: var(--radius-xl);
+  background: #fff;
+  border-radius: 28px;
   padding: 24px;
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  box-shadow: var(--shadow-lg);
+  border: 1px solid #eceff5;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.05);
 }
 
 .section-header {
@@ -382,15 +373,13 @@ onMounted(() => {
   border-radius: 18px;
   cursor: pointer;
   transition: border-color 0.2s, box-shadow 0.2s;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(5px);
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  background: #fafafa;
 }
 
 .wiki-item.active,
 .wiki-item:hover {
-  border-color: #2f54eb;
-  box-shadow: 0 10px 22px rgba(47, 84, 235, 0.12);
+  border-color: var(--app-primary, #409eff);
+  box-shadow: 0 10px 22px rgba(64, 158, 255, 0.12);
 }
 
 .wiki-item h4 {
@@ -424,11 +413,9 @@ onMounted(() => {
   line-height: 1.8;
   color: #303133;
   border-radius: 12px;
-  background: rgba(250, 250, 250, 0.8);
-  backdrop-filter: blur(5px);
+  background: #f9fafb;
   padding: 16px;
   margin-bottom: 12px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 .preview-meta {

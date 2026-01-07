@@ -45,11 +45,8 @@ public class MessageService {
             throw new BusinessException("您已被该用户屏蔽，无法发送私信");
         }
         
-        // 2. 检查接收者的私信接收策略
-        checkMessagePolicy(senderId, receiver);
-        
-        // 3. 检查私信频次限制（未互相关注时，限制最多一条）
-        checkMessageFrequencyLimit(senderId, receiverId);
+        // 2. 检查接收者的私信接收策略（含频次限制）
+        checkMessagePolicy(senderId, receiverId, receiver);
         
         PrivateMessage message = new PrivateMessage();
         message.setSenderId(senderId);
@@ -72,67 +69,63 @@ public class MessageService {
     /**
      * 检查接收者的私信接收策略
      */
-    private void checkMessagePolicy(Long senderId, User receiver) {
+    private void checkMessagePolicy(Long senderId, Long receiverId, User receiver) {
         MessagePolicy policy = receiver.getMessagePolicy();
         if (policy == null) {
-            policy = MessagePolicy.ALL; // 默认为接受所有人
+            policy = MessagePolicy.LIMIT_ONE_BEFORE_REPLY_OR_FOLLOW; // 默认为限制一条
         }
         
         switch (policy) {
             case NONE:
                 throw new BusinessException("该用户不接受任何私信");
-            case FOLLOWERS_ONLY:
-                // 检查发送者是否关注了接收者
-                boolean isFollowing = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
+            case FOLLOWEES_ONLY: {
+                // 仅我关注的人：接收者必须关注发送者
+                boolean receiverFollowsSender = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
+                    .eq(UserFollow::getFollowerId, receiverId)
+                    .eq(UserFollow::getFolloweeId, senderId)) > 0;
+                if (!receiverFollowsSender) {
+                    throw new BusinessException("该用户仅接受其关注对象的私信");
+                }
+                return;
+            }
+            case LIMIT_ONE_BEFORE_REPLY_OR_FOLLOW: {
+                // 如果接收者已关注发送者，或已回复过，则不限制
+                boolean receiverFollowsSender = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
+                    .eq(UserFollow::getFollowerId, receiverId)
+                    .eq(UserFollow::getFolloweeId, senderId)) > 0;
+                if (receiverFollowsSender) {
+                    return;
+                }
+
+                boolean hasReceiverReply = privateMessageMapper.selectCount(new LambdaQueryWrapper<PrivateMessage>()
+                    .eq(PrivateMessage::getSenderId, receiverId)
+                    .eq(PrivateMessage::getReceiverId, senderId)) > 0;
+                if (hasReceiverReply) {
+                    return;
+                }
+
+                long sentCount = privateMessageMapper.selectCount(new LambdaQueryWrapper<PrivateMessage>()
+                    .eq(PrivateMessage::getSenderId, senderId)
+                    .eq(PrivateMessage::getReceiverId, receiverId));
+                if (sentCount >= 1) {
+                    throw new BusinessException("在对方回复或关注你前，你最多只能发送一条私信");
+                }
+                return;
+            }
+            case FOLLOWERS_ONLY: {
+                // 兼容旧值：Ta关注我：发送者必须关注接收者
+                boolean senderFollowsReceiver = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
                     .eq(UserFollow::getFollowerId, senderId)
-                    .eq(UserFollow::getFolloweeId, receiver.getId())) > 0;
-                if (!isFollowing) {
+                    .eq(UserFollow::getFolloweeId, receiverId)) > 0;
+                if (!senderFollowsReceiver) {
                     throw new BusinessException("该用户仅接受关注者的私信");
                 }
-                break;
+                return;
+            }
             case ALL:
             default:
                 // 允许发送
-                break;
-        }
-    }
-    
-    /**
-     * 检查私信频次限制
-     * 在尚未建立互相关注或互动关系前，限制某用户对另一用户的私信条数（如最多一条）
-     */
-    private void checkMessageFrequencyLimit(Long senderId, Long receiverId) {
-        // 检查是否互相关注
-        boolean mutualFollow = userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
-            .eq(UserFollow::getFollowerId, senderId)
-            .eq(UserFollow::getFolloweeId, receiverId)) > 0
-            && userFollowMapper.selectCount(new LambdaQueryWrapper<UserFollow>()
-            .eq(UserFollow::getFollowerId, receiverId)
-            .eq(UserFollow::getFolloweeId, senderId)) > 0;
-        
-        // 如果已互相关注，不限制频次
-        if (mutualFollow) {
-            return;
-        }
-        
-        // 检查是否已有历史对话（接收者回复过发送者）
-        boolean hasReceiverReply = privateMessageMapper.selectCount(new LambdaQueryWrapper<PrivateMessage>()
-            .eq(PrivateMessage::getSenderId, receiverId)
-            .eq(PrivateMessage::getReceiverId, senderId)) > 0;
-        
-        // 如果有回复，说明已建立互动关系，不限制频次
-        if (hasReceiverReply) {
-            return;
-        }
-        
-        // 如果未互相关注且无回复，检查发送者已发送的私信数量
-        long sentCount = privateMessageMapper.selectCount(new LambdaQueryWrapper<PrivateMessage>()
-            .eq(PrivateMessage::getSenderId, senderId)
-            .eq(PrivateMessage::getReceiverId, receiverId));
-        
-        // 限制最多一条
-        if (sentCount >= 1) {
-            throw new BusinessException("在未建立互相关注或互动关系前，您最多只能发送一条私信");
+                return;
         }
     }
 

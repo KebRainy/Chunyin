@@ -1,6 +1,5 @@
 ## 启动程序
-访问chunyin123.top或本地启动。
-## 本地启动 
+
 #### 环境要求
 - MySQL 8.0+ (端口 3306)
 - JDK 21
@@ -9,9 +8,21 @@
 
 ### 1. 初始化数据库
 
-**重要**：后端启动前必须先手动初始化数据库！
+**重要**：后端启动前必须先初始化 MySQL 数据库。
 
-在Navicat中导入beverage_platform.sql
+```bash
+mysql -uroot -p -e "CREATE DATABASE IF NOT EXISTS beverage_platform DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+mysql -uroot -p beverage_platform < data/beverage_platform.sql
+mysql -uroot -p beverage_platform < data/patch_add_wiki_revision.sql
+```
+
+如果是 PowerShell，可以改用（有可能出现二进制字符不兼容问题，推荐使用 MSYS2）：
+
+```powershell
+mysql -uroot -p -e "CREATE DATABASE IF NOT EXISTS beverage_platform DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+Get-Content data/beverage_platform.sql | mysql -uroot -p beverage_platform
+Get-Content data/patch_add_wiki_revision.sql | mysql -uroot -p beverage_platform
+```
 
 ### 2. 配置数据库连接
 
@@ -23,7 +34,35 @@ spring.datasource.username=root
 spring.datasource.password=your_password
 ```
 
-### 3. 启动后端
+### 3. 配置内容审核（可选）
+
+
+在 `backend/src/main/resources/application.properties` 添加/修改：
+
+```properties
+moderation.python.enabled=true
+moderation.python.base-url=http://127.0.0.1:8099
+moderation.python.timeout-ms=800
+moderation.python.fail-open=true
+```
+
+建议使用 Python 3.10+ 执行以下命令：
+
+```bash
+cd backend/python
+bash run_python_server.sh
+```
+
+或在 Windows 上
+
+```powershell
+cd backend\python
+.\run_python_server.bat
+```
+
+更多说明与排查见：`docs/内容审核功能说明.md`。
+
+### 4. 启动后端
 
 ```bash
 cd backend
@@ -31,7 +70,7 @@ mvn install
 mvn spring-boot:run
 ```
 
-### 4. 启动前端
+### 5. 启动前端
 
 ```bash
 cd frontend
@@ -39,35 +78,15 @@ npm install
 npm run serve
 ```
 
-访问：http://localhost:8080
+如果启动时报 `The project seems to require yarn but it's not installed`，说明目录里存在 `yarn.lock`，删掉它或安装 yarn 即可。
 
+如果前端启动端口不在 `8080`，访问权限问题，请留意。
 
-## 实现情况
+访问：
+- 前端：http://localhost:8080
+- 后端：http://localhost:8081/api
+- 内容审核模型接口：http://localhost:8099
 
-**已经实现**:
-- SF-1
-- SF-2
-- SF-3
-- SF-4
-- SF-5
-- SF-6
-- SF-7
-- SF-8
-- SF-9
-- SF-10
-- SF-11
-- SF-12
-- SF-13
-
-**仍需优化**:
-- 无 
-
-**未实现**:
-- 无
-
-在有限的时间内**可能无需实现**:
-- SF-14
-- SF-15
 
 ## SRS 的 System Features 部分
 
@@ -197,3 +216,10 @@ npm run serve
     - 在页面关键位置预留广告展示区域，并设计后端接口以支持基本广告配置（如链接、图片、展示时间）。
     - 为会员系统预留数据结构（如会员等级、到期时间）和权限控制点，以便未来引入会员专属内容或功能。
     
+
+**SF-16** 向微信小程序等多端扩展的接口支持
+- 功能概述：支持平台从 Web 端扩展至微信小程序等其他前端形态。
+- 功能要点：
+    - 后端服务需提供与前端解耦的 RESTful API，确保业务功能可被多终端复用。
+    - 为小程序等前端形式预留必要的鉴权方式（如基于 Token 的接口访问），并保证核心业务接口的稳定性与兼容性。
+    - 当前阶段仅在后端接口和数据模型层面进行预留，具体小程序前端实现可在后续迭代中完成。

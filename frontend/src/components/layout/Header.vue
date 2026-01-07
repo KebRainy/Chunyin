@@ -53,8 +53,9 @@
             </el-dropdown>
           </template>
           <template v-else>
-            <el-button text size="small" @click="goLogin">登录</el-button>
-            <el-button text size="small" @click="goRegister">注册</el-button>
+            <span class="user-avatar" title="登录 / 注册" @click="goLogin">
+              <el-avatar :size="36" :src="defaultAvatar" alt="默认头像" />
+            </span>
           </template>
         </div>
         <div class="quick-links">
@@ -64,13 +65,11 @@
           <span @click="goToCollections">收藏</span>
           <span @click="goToHistory">足迹</span>
           <span v-if="userStore.isLoggedIn && !userStore.isSeller && !userStore.isAdmin" @click="goToUserActivity">活动</span>
-          <span v-if="userStore.isLoggedIn && !userStore.isSeller && !userStore.isAdmin" @click="goToSellerRegister">商家认证</span>
           <span v-if="userStore.isSeller" @click="goToSellerActivity">管理</span>
         </div>
         <el-button
           type="primary"
           class="share-btn"
-          plain
           @click="triggerShare"
         >
           分享此刻
@@ -88,6 +87,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/store/modules/user'
 import { ElMessage } from 'element-plus'
 import ShareModal from '@/components/ShareModal.vue'
+import defaultAvatar from '@/assets/default-avatar.svg'
 
 const router = useRouter()
 const route = useRoute()
@@ -100,7 +100,7 @@ const navItems = computed(() => {
   const baseItems = [
     { path: '/', label: '广场' },
     { path: '/nearby', label: '附近' },
-    { path: '/ranking', label: '排行榜' },
+    { path: '/ranking', label: '热门' },
     { path: '/bars', label: '酒吧' },
     { path: '/wiki', label: '维基' }
   ]
@@ -111,8 +111,7 @@ const navItems = computed(() => {
     baseItems.splice(1, 0, 
       { path: '/admin/activities/review', label: '活动审核' },
       { path: '/admin/wiki/review', label: 'Wiki审核' },
-      { path: '/admin/bars/review', label: '酒吧审核' },
-      { path: '/admin/seller-review', label: '商家审核' }
+      { path: '/admin/bars/review', label: '酒吧审核' }
     )
   } else if (userStore.isSeller) {
     // seller用户显示"管理"，指向商家活动管理页面
@@ -173,17 +172,6 @@ const handleNavClick = (path) => {
       return
     }
     router.push('/admin/activities/review')
-  } else if (path === '/admin/seller-review') {
-    if (!userStore.isLoggedIn) {
-      ElMessage.warning('请先登录')
-      router.push('/login')
-      return
-    }
-    if (!userStore.isAdmin) {
-      ElMessage.warning('此功能仅限管理员')
-      return
-    }
-    router.push('/admin/seller-review')
   } else {
     router.push(path)
   }
@@ -237,16 +225,7 @@ const goToSellerActivity = () => {
   }
   router.push('/seller/activity')
 }
-const goToSellerRegister = () => {
-  if (!userStore.isLoggedIn) {
-    ElMessage.warning('请先登录')
-    router.push('/login')
-    return
-  }
-  router.push('/seller/register')
-}
 const goLogin = () => router.push('/login')
-const goRegister = () => router.push('/register')
 const goSearch = () => {
   if (!searchKeyword.value) return
   router.push({ path: '/search', query: { q: searchKeyword.value } })
@@ -284,13 +263,12 @@ const handleCommand = async (command) => {
 .header-container {
   height: 68px;
   background: rgba(255, 255, 255, 0.95);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  border-bottom: 1px solid #f2f2f2;
   position: sticky;
   top: 0;
   z-index: 100;
-  -webkit-backdrop-filter: blur(20px);
-  backdrop-filter: blur(20px);
-  box-shadow: 0 2px 20px rgba(0, 0, 0, 0.05);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
 }
 
 .header-content {
@@ -311,37 +289,11 @@ const handleCommand = async (command) => {
 }
 
 .logo {
-  font-family: var(--font-display);
-  font-size: 28px;
-  font-weight: 900;
-  background: var(--gradient-gold);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--app-primary, #2f54eb);
   cursor: pointer;
-  letter-spacing: 3px;
-  text-shadow: 0 2px 4px rgba(212, 175, 55, 0.3);
-  transition: all 0.3s ease;
-  position: relative;
-}
-
-.logo::after {
-  content: '';
-  position: absolute;
-  bottom: -4px;
-  left: 0;
-  width: 0;
-  height: 2px;
-  background: var(--gradient-gold);
-  transition: width 0.3s ease;
-}
-
-.logo:hover::after {
-  width: 100%;
-}
-
-.logo:hover {
-  transform: scale(1.05);
+  letter-spacing: 2px;
 }
 
 .nav-menu {
@@ -408,11 +360,18 @@ const handleCommand = async (command) => {
 }
 
 .share-btn {
+  --el-button-bg-color: #ff7a45;
+  --el-button-border-color: #ff7a45;
+  --el-button-text-color: #fff;
+  --el-button-hover-bg-color: #f0652f;
+  --el-button-hover-border-color: #f0652f;
+  --el-button-hover-text-color: #fff;
+  --el-button-active-bg-color: #d95224;
+  --el-button-active-border-color: #d95224;
   border-radius: 999px;
-  border-color: #111;
-  color: #111;
   padding: 0 18px;
   font-weight: 600;
+  box-shadow: 0 10px 22px rgba(255, 122, 69, 0.22);
 }
 
 .user-avatar {

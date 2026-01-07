@@ -49,17 +49,20 @@
           </el-button>
         </div>
       </div>
-      <!-- 子评论显示逻辑 -->
-      <!-- level 0: 一级评论的子评论（二级评论）有缩进 -->
-      <!-- level >= 1: 二级及以下的子评论无缩进，都在同一竖列 -->
-      <div v-if="comment.replies?.length" :class="['reply-list', { 'no-indent': level >= 1 }]">
-        <!-- 如果当前层级小于1，直接显示子评论（一级评论显示二级评论） -->
-        <template v-if="level < 1">
+      <!-- 子评论显示逻辑：仅两层（一级评论 -> 二级评论），二级评论默认折叠，由一级评论展开 -->
+      <template v-if="level === 0 && comment.replies?.length">
+        <div class="collapse-control">
+          <el-button text size="small" type="primary" @click="isExpanded = !isExpanded">
+            <el-icon><ArrowDown v-if="!isExpanded" /><ArrowUp v-else /></el-icon>
+            {{ isExpanded ? '收起回复' : `展开 ${comment.replies.length} 条回复` }}
+          </el-button>
+        </div>
+        <div v-if="isExpanded" class="reply-list">
           <CommentItem
             v-for="reply in comment.replies"
             :key="reply.id"
             :comment="reply"
-            :level="level + 1"
+            :level="1"
             :avatar-size="24"
             :can-delete="canDeleteComment(reply)"
             :can-report="canReportComment(reply)"
@@ -73,42 +76,8 @@
             @submit-reply="$emit('submit-reply', $event)"
             @cancel-reply="$emit('cancel-reply')"
           />
-        </template>
-        <!-- 如果当前层级>=1，显示折叠/展开按钮（二级评论的子评论需要折叠） -->
-        <template v-else>
-          <div class="collapse-control">
-            <el-button 
-              text 
-              size="small" 
-              type="primary"
-              @click="isExpanded = !isExpanded"
-            >
-              <el-icon><ArrowDown v-if="!isExpanded" /><ArrowUp v-else /></el-icon>
-              {{ isExpanded ? '收起' : `展开 ${getTotalRepliesCount(comment)} 条回复` }}
-            </el-button>
-          </div>
-          <div v-if="isExpanded" class="expanded-replies">
-            <CommentItem
-              v-for="reply in comment.replies"
-              :key="reply.id"
-              :comment="reply"
-              :level="level + 1"
-              :avatar-size="24"
-              :can-delete="canDeleteComment(reply)"
-              :can-report="canReportComment(reply)"
-              :format-time="formatTime"
-              :can-delete-comment="canDeleteComment"
-              :can-report-comment="canReportComment"
-              :reply-target-id="replyTargetId"
-              @reply="handleReply"
-              @delete="$emit('delete', $event)"
-              @report="$emit('report', $event)"
-              @submit-reply="$emit('submit-reply', $event)"
-              @cancel-reply="$emit('cancel-reply')"
-            />
-          </div>
-        </template>
-      </div>
+        </div>
+      </template>
     </div>
   </div>
 </template>
@@ -194,18 +163,6 @@ const submitReply = async () => {
 const cancelReply = () => {
   replyText.value = ''
   emit('cancel-reply')
-}
-
-// 递归计算总回复数（包括所有层级的子评论）
-const getTotalRepliesCount = (comment) => {
-  if (!comment.replies || comment.replies.length === 0) {
-    return 0
-  }
-  let count = comment.replies.length
-  comment.replies.forEach(reply => {
-    count += getTotalRepliesCount(reply)
-  })
-  return count
 }
 </script>
 

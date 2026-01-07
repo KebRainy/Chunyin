@@ -31,11 +31,10 @@
       <p class="content">{{ snippet(post.content) }}</p>
       <div class="tags" v-if="post.tags?.length">
         <el-tag
-          v-for="(tag, index) in post.tags.slice(0, 2)"
+          v-for="tag in post.tags.slice(0, 2)"
           :key="tag"
           size="small"
           effect="light"
-          :type="getTagType(index)"
         >
           # {{ tag }}
         </el-tag>
@@ -98,46 +97,38 @@ const formatTime = (value) => {
   }
   return date.format('YYYY年M月D日')
 }
-
-// 根据索引返回标签颜色类型，避免颜色重合
-const getTagType = (index) => {
-  const types = ['primary', 'success', 'warning', 'danger', 'info']
-  return types[index % types.length]
-}
 </script>
 
 <style scoped>
 .post-card {
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: var(--radius-lg);
+  background: #fff;
+  border-radius: 18px;
   overflow: hidden;
-  border: 1px solid rgba(139, 69, 19, 0.1);
+  border: 1px solid #f1f1f1;
   cursor: pointer;
   display: flex;
   flex-direction: column;
-  transition: all 0.3s ease;
+  will-change: transform;
+  transition:
+    transform var(--motion-normal, 220ms) var(--motion-ease, ease),
+    box-shadow var(--motion-normal, 220ms) var(--motion-ease, ease);
   break-inside: avoid;
   position: relative;
-  box-shadow: var(--shadow-sm);
 }
 
 .post-card:hover {
-  box-shadow: var(--shadow-lg);
-  transform: translateY(-4px);
-  border-color: rgba(139, 69, 19, 0.2);
+  box-shadow: 0 18px 28px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
 }
 
 /* 推荐卡片样式 */
 .post-card.is-recommended {
-  border: 2px solid rgba(212, 175, 55, 0.3);
-  background: linear-gradient(135deg, rgba(255, 253, 245, 0.95) 0%, rgba(255, 255, 255, 0.95) 100%);
-  box-shadow: var(--shadow-md);
+  border: 1px solid #e6d9f7;
+  background: linear-gradient(135deg, #fdfbff 0%, #fff 100%);
 }
 
 .post-card.is-recommended:hover {
-  box-shadow: var(--shadow-xl);
-  border-color: rgba(212, 175, 55, 0.5);
+  box-shadow: 0 18px 28px rgba(139, 92, 246, 0.12);
 }
 
 .recommend-badge {
@@ -244,10 +235,9 @@ const getTagType = (index) => {
 .content {
   margin: 0;
   color: #1f2d3d;
-  line-height: 1.7;
-  font-size: 15px;
-  font-weight: 400;
-  font-family: var(--font-serif);
+  line-height: 1.6;
+  font-size: 16px;
+  font-weight: 500;
 }
 
 .tags {
@@ -276,7 +266,6 @@ const getTagType = (index) => {
   font-weight: 600;
   font-size: 13px;
   color: #1f2d3d;
-  font-family: var(--font-sans);
 }
 
 .card-meta .time {

@@ -44,6 +44,14 @@ export const getFollowees = () => {
   })
 }
 
+export const updateMessagePolicy = (data) => {
+  return request({
+    url: '/users/message-policy',
+    method: 'put',
+    data
+  })
+}
+
 export const getCollections = (params) => {
   return request({
     url: '/collections',

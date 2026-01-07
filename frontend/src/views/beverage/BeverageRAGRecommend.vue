@@ -464,7 +464,11 @@ const getImageUrl = (imageId) => {
   border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
-  transition: all 0.3s;
+  will-change: transform;
+  transition:
+    transform var(--motion-normal, 220ms) var(--motion-ease, ease),
+    box-shadow var(--motion-normal, 220ms) var(--motion-ease, ease),
+    border-color var(--motion-normal, 220ms) var(--motion-ease, ease);
 }
 
 .beverage-card:hover {

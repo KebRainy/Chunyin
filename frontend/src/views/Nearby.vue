@@ -426,7 +426,12 @@ onMounted(async () => {
   border: 1px solid #eceff5;
   border-radius: 12px;
   cursor: pointer;
-  transition: all 0.3s;
+  will-change: transform;
+  transition:
+    transform var(--motion-normal, 220ms) var(--motion-ease, ease),
+    box-shadow var(--motion-normal, 220ms) var(--motion-ease, ease),
+    border-color var(--motion-normal, 220ms) var(--motion-ease, ease),
+    background-color var(--motion-normal, 220ms) var(--motion-ease, ease);
 }
 
 .bar-item:hover {

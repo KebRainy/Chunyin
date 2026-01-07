@@ -1,88 +1,36 @@
 <template>
   <div class="bar-list">
-    <div class="page-header">
-      <h2 class="art-heading-h2">附近酒吧</h2>
-      <el-button type="primary" @click="$router.push('/bars/register')">
-        注册酒吧
-      </el-button>
+    <div class="map-wrapper">
+      <div id="amap-container" class="amap-container"></div>
+
+      <div class="map-overlay map-overlay-left">
+        <div class="search-row">
+          <el-input
+            v-model="searchKeyword"
+            class="search-input"
+            placeholder="综合搜索：名称/城市/地址/酒类"
+            clearable
+            @keyup.enter="handleSearch"
+            @clear="handleSearch"
+          />
+          <el-button type="primary" :loading="loading" @click="handleSearch">搜索</el-button>
+        </div>
+        <div class="search-meta">
+          <el-text size="small" type="info">中心：{{ formatLngLat(searchCenter) }}</el-text>
+          <el-text size="small" type="info">半径：{{ searchRadius.toFixed(1) }} km</el-text>
+        </div>
+      </div>
+
+      <div class="map-overlay map-overlay-right">
+        <el-button type="primary" @click="$router.push('/bars/register')">注册酒吧</el-button>
+        <el-button @click="getCurrentLocation" :loading="locating">
+          <el-icon><Location /></el-icon>
+          获取位置
+        </el-button>
+      </div>
     </div>
 
-    <el-card class="search-card">
-      <el-tabs v-model="searchType" @tab-change="handleTabChange">
-        <el-tab-pane label="附近搜索" name="nearby">
-          <div class="search-form">
-            <el-form :inline="true">
-              <el-form-item label="搜索半径">
-                <el-input-number v-model="searchRadius" :min="1" :max="100" :step="5" style="width: 150px" />
-                <span style="margin-left: 8px;">公里</span>
-              </el-form-item>
-              <el-form-item>
-                <el-button type="primary" @click="searchNearby" :loading="loading">
-                  搜索附近
-                </el-button>
-                <el-button @click="getCurrentLocation" :loading="locating">
-                  <el-icon>
-                    <Location />
-                  </el-icon>
-                  获取当前位置
-                </el-button>
-              </el-form-item>
-            </el-form>
-            <el-text v-if="userLocation" type="success" size="small">
-              当前位置：经度 {{ userLocation.longitude.toFixed(6) }}，纬度 {{ userLocation.latitude.toFixed(6) }}
-            </el-text>
-            <el-text v-else type="info" size="small">
-              点击"获取当前位置"按钮获取您的地理位置，然后点击"搜索附近"查找周边酒吧
-            </el-text>
-          </div>
-        </el-tab-pane>
-
-        <el-tab-pane label="按城市搜索" name="city">
-          <div class="search-form">
-            <el-form :inline="true">
-              <el-form-item label="城市名称">
-                <el-input v-model="searchCity" placeholder="支持模糊搜索，如：上海、北京" style="width: 250px" clearable
-                  @keyup.enter="searchByCity" />
-              </el-form-item>
-              <el-form-item>
-                <el-button type="primary" @click="searchByCity" :loading="loading">
-                  搜索
-                </el-button>
-              </el-form-item>
-            </el-form>
-          </div>
-        </el-tab-pane>
-
-        <el-tab-pane label="综合搜索" name="name">
-          <div class="search-form">
-            <el-form :inline="true">
-              <el-form-item label="关键词">
-                <el-input v-model="searchName" placeholder="搜索名称/城市/地址/酒类" style="width: 250px" clearable
-                  @keyup.enter="searchByName" />
-              </el-form-item>
-              <el-form-item>
-                <el-button type="primary" @click="searchByName" :loading="loading">
-                  搜索
-                </el-button>
-              </el-form-item>
-            </el-form>
-            <el-text type="info" size="small">
-              可搜索酒吧名称、城市、地址或主营酒类，如：鸡尾酒、威士忌、黄浦区等
-            </el-text>
-          </div>
-        </el-tab-pane>
-      </el-tabs>
-    </el-card>
-
-    <!-- 高德地图容器 -->
-    <el-card class="map-card">
-      <template #header>
-        <span>地图</span>
-      </template>
-      <div id="amap-container" class="amap-container"></div>
-    </el-card>
-
-    <div v-loading="loading" class="bar-grid">
+    <div v-loading="loading" class="bar-grid bar-grid-below-map">
       <el-empty v-if="bars.length === 0 && !loading" description="暂无酒吧信息" />
 
       <el-card v-for="bar in bars" :key="bar.id" class="bar-card" shadow="hover" @click="goToDetail(bar.id)">
@@ -117,7 +65,7 @@
 </template>
 
 <script>
-import { searchNearbyBars, searchBarsByCity, searchBarsByName } from '@/api/bar'
+import { searchNearbyBars, searchBarsByName } from '@/api/bar'
 import { LocationFilled, Clock, Location } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 
@@ -130,17 +78,17 @@ export default {
   },
   data() {
     return {
-      searchType: 'nearby',
-      searchCity: '',
-      searchName: '',
+      searchKeyword: '',
       searchRadius: 10,
       userLocation: null,
+      searchCenter: null,
       bars: [],
       loading: false,
       locating: false,
       map: null,
       markers: [],
       userMarker: null,
+      viewportAutoSearchTimer: null,
       // 高德地图配置 - Web端JS API只需要key
       amapKey: '7a2b2596584bc3c9e8f37903befb61f7'
     }
@@ -156,10 +104,16 @@ export default {
     })
   },
   beforeUnmount() {
+    if (this.viewportAutoSearchTimer) {
+      clearTimeout(this.viewportAutoSearchTimer)
+      this.viewportAutoSearchTimer = null
+    }
 
     // 清理地图实例
     if (this.map) {
       try {
+        this.map.off('moveend', this.handleViewportChanged)
+        this.map.off('zoomend', this.handleViewportChanged)
         this.map.destroy()
       } catch (e) {
         // 忽略错误
@@ -187,8 +141,16 @@ export default {
     this.markers = []
   },
   methods: {
-    handleTabChange() {
-      // 标签切换时不清空搜索结果，让用户可以看到之前的搜索
+    formatLngLat(center) {
+      if (!center) {
+        return '—'
+      }
+      const lng = Number(center.longitude)
+      const lat = Number(center.latitude)
+      if (Number.isNaN(lng) || Number.isNaN(lat)) {
+        return '—'
+      }
+      return `${lng.toFixed(5)}, ${lat.toFixed(5)}`
     },
 
     // 获取当前位置
@@ -205,13 +167,9 @@ export default {
                 latitude: position.coords.latitude,
                 longitude: position.coords.longitude
               }
+              this.searchCenter = { ...this.userLocation }
               this.locating = false
               ElMessage.success('位置获取成功')
-              
-              // 获取位置后自动搜索附近酒吧
-              if (this.searchType === 'nearby') {
-                this.searchNearby()
-              }
 
               // 如果地图已经初始化，更新地图中心点和标记
           if (this.map) {
@@ -219,7 +177,10 @@ export default {
             this.map.setCenter(center)
             this.map.setZoom(13)
             this.addUserMarker(center)
+            this.handleViewportChanged()
           }
+
+          this.handleSearch()
         },
         (error) => {
           this.locating = false
@@ -245,33 +206,35 @@ export default {
       )
     },
 
+    async handleSearch() {
+      const keyword = (this.searchKeyword || '').trim()
+      if (keyword) {
+        this.tryMoveMapToCity(keyword)
+        return this.searchByKeyword(keyword)
+      }
+      return this.searchNearby()
+    },
+
     // 搜索附近的酒吧
-    async searchNearby() {
-      if (!this.userLocation) {
-        ElMessage.warning('请先获取当前位置')
+    async searchNearby(options = {}) {
+      if (!this.searchCenter) {
+        ElMessage.warning('请先获取位置或移动地图选择中心点')
         return
       }
-
-      // #region agent log
-      fetch('http://127.0.0.1:7242/ingest/2be73884-0cc8-4c48-bb93-e298599f041c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'BarList.vue:searchNearby', message: 'search nearby called', data: { lat: this.userLocation.latitude, lng: this.userLocation.longitude, radius: this.searchRadius }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'nearby-frontend', hypothesisId: 'I' }) }).catch(() => { });
-      // #endregion
+      const silent = !!options.silent
 
       this.loading = true
       try {
         const { data } = await searchNearbyBars({
-          latitude: this.userLocation.latitude,
-          longitude: this.userLocation.longitude,
+          latitude: this.searchCenter.latitude,
+          longitude: this.searchCenter.longitude,
           radiusKm: this.searchRadius
         })
 
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/2be73884-0cc8-4c48-bb93-e298599f041c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'BarList.vue:searchNearby:result', message: 'search result', data: { count: data ? data.length : 0, isArray: Array.isArray(data) }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'nearby-frontend', hypothesisId: 'J' }) }).catch(() => { });
-        // #endregion
-
         this.bars = data || []
-        if (this.bars.length === 0) {
+        if (!silent && this.bars.length === 0) {
           ElMessage.info(`附近${this.searchRadius}公里内没有找到酒吧`)
-        } else {
+        } else if (!silent) {
           ElMessage.success(`找到${this.bars.length}家附近的酒吧`)
           // 更新地图标记
           this.$nextTick(() => {
@@ -279,26 +242,19 @@ export default {
           })
         }
       } catch (error) {
-        // #region agent log
-        fetch('http://127.0.0.1:7242/ingest/2be73884-0cc8-4c48-bb93-e298599f041c', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ location: 'BarList.vue:searchNearby:error', message: 'search error', data: { errorMsg: error.message, errorType: error.constructor.name }, timestamp: Date.now(), sessionId: 'debug-session', runId: 'nearby-frontend', hypothesisId: 'K' }) }).catch(() => { });
-        // #endregion
-        ElMessage.error(error.message || '搜索失败')
+        if (!silent) {
+          ElMessage.error(error.message || '搜索失败')
+        }
       } finally {
         this.loading = false
       }
     },
 
-    async searchByCity() {
-      if (!this.searchCity.trim()) {
-        ElMessage.warning('请输入城市名称')
-        return
-      }
-
+    async searchByKeyword(keyword) {
       this.loading = true
       try {
-        const { data } = await searchBarsByCity(this.searchCity)
+        const { data } = await searchBarsByName({ name: keyword })
         this.bars = data || []
-        // 更新地图标记
         this.$nextTick(() => {
           this.updateMapMarkers()
         })
@@ -309,25 +265,37 @@ export default {
       }
     },
 
-    async searchByName() {
-      if (!this.searchName.trim()) {
-        ElMessage.warning('请输入搜索关键词')
+    async tryMoveMapToCity(keyword) {
+      if (!this.map || !window.AMap || !window.AMap.Geocoder) {
         return
       }
-
-      this.loading = true
-      try {
-        const { data } = await searchBarsByName({ name: this.searchName })
-        this.bars = data || []
-        // 更新地图标记
-        this.$nextTick(() => {
-          this.updateMapMarkers()
-        })
-      } catch (error) {
-        ElMessage.error(error.message || '搜索失败')
-      } finally {
-        this.loading = false
+      if (!keyword || keyword.length > 12) {
+        return
       }
+      const normalized = keyword.endsWith('市') ? keyword : `${keyword}市`
+
+      await Promise.race([new Promise((resolve) => {
+        try {
+          const geocoder = new window.AMap.Geocoder({})
+          geocoder.getLocation(normalized, (status, result) => {
+            if (status === 'complete' && result && result.geocodes && result.geocodes.length > 0) {
+              const geocode = result.geocodes[0]
+              const level = geocode.level
+              if (level === '省' || level === '市' || level === '区县' || level === '区') {
+                const location = geocode.location
+                if (location) {
+                  this.map.setCenter([location.lng, location.lat])
+                  this.map.setZoom(11)
+                  this.handleViewportChanged()
+                }
+              }
+            }
+            resolve()
+          })
+        } catch (e) {
+          resolve()
+        }
+      }), new Promise((resolve) => setTimeout(resolve, 800))])
     },
 
     goToDetail(barId) {
@@ -380,7 +348,7 @@ export default {
       script.type = 'text/javascript'
       script.async = true
       // 只加载基础插件，不加载路线规划（避免key平台不匹配问题）
-      script.src = `https://webapi.amap.com/maps?v=2.0&key=${this.amapKey}&plugin=AMap.Geolocation,AMap.Marker,AMap.CitySearch`
+      script.src = `https://webapi.amap.com/maps?v=2.0&key=${this.amapKey}&plugin=AMap.Geolocation,AMap.Marker,AMap.CitySearch,AMap.Geocoder`
 
       script.onload = () => {
         // API加载完成后初始化地图 - 延迟一下确保DOM完全准备好
@@ -414,7 +382,7 @@ export default {
       }
 
       // 确保容器有高度和宽度
-      container.style.height = '500px'
+      container.style.height = '100%'
       container.style.width = '100%'
       container.style.display = 'block'
       container.style.visibility = 'visible'
@@ -455,6 +423,7 @@ export default {
             this.map.setCenter(center)
             this.map.setZoom(13)
             this.addUserMarker(center)
+            this.handleViewportChanged()
           } else {
             // 如果没有用户位置，尝试获取IP位置
             this.updateMapCenterByIP()
@@ -465,6 +434,9 @@ export default {
             this.updateMapMarkers()
           }
         })
+
+        this.map.on('moveend', this.handleViewportChanged)
+        this.map.on('zoomend', this.handleViewportChanged)
 
       } catch (error) {
         ElMessage.error('地图初始化失败：' + (error.message || '未知错误'))
@@ -492,9 +464,85 @@ export default {
             this.map.setZoom(13)
             // 添加用户位置标记
             this.addUserMarker([center.lng, center.lat])
+            this.handleViewportChanged()
           }
         })
       })
+    },
+
+    handleViewportChanged() {
+      if (!this.map) {
+        return
+      }
+
+      const center = this.map.getCenter && this.map.getCenter()
+      if (center && typeof center.getLng === 'function' && typeof center.getLat === 'function') {
+        this.searchCenter = {
+          longitude: center.getLng(),
+          latitude: center.getLat()
+        }
+      }
+
+      const computedRadius = this.computeViewportRadiusKm()
+      if (computedRadius && computedRadius > 0) {
+        this.searchRadius = computedRadius
+      }
+
+      const keyword = (this.searchKeyword || '').trim()
+      if (keyword) {
+        return
+      }
+      this.scheduleViewportAutoSearch()
+    },
+
+    scheduleViewportAutoSearch() {
+      if (this.viewportAutoSearchTimer) {
+        clearTimeout(this.viewportAutoSearchTimer)
+        this.viewportAutoSearchTimer = null
+      }
+      this.viewportAutoSearchTimer = setTimeout(() => {
+        this.viewportAutoSearchTimer = null
+        this.searchNearby({ silent: true })
+      }, 450)
+    },
+
+    computeViewportRadiusKm() {
+      if (!this.map || !this.map.getBounds || !this.map.getCenter) {
+        return null
+      }
+      try {
+        const bounds = this.map.getBounds()
+        const center = this.map.getCenter()
+        if (!bounds || !center) {
+          return null
+        }
+
+        const ne = bounds.getNorthEast && bounds.getNorthEast()
+        if (!ne) {
+          return null
+        }
+
+        const km = this.haversineKm(center.getLat(), center.getLng(), ne.getLat(), ne.getLng())
+        if (!km || Number.isNaN(km)) {
+          return null
+        }
+
+        return Math.max(0.8, km * 0.9)
+      } catch (e) {
+        return null
+      }
+    },
+
+    haversineKm(lat1, lon1, lat2, lon2) {
+      const toRad = (deg) => (deg * Math.PI) / 180
+      const R = 6371
+      const dLat = toRad(lat2 - lat1)
+      const dLon = toRad(lon2 - lon1)
+      const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2)
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+      return R * c
     },
 
     // 添加用户位置标记
@@ -516,9 +564,11 @@ export default {
         this.userMarker = new AMap.Marker({
           position: position,
           title: '我的位置',
+          anchor: 'bottom-center',
           icon: new AMap.Icon({
-            size: new AMap.Size(32, 32),
-            image: 'https://webapi.amap.com/theme/v1.3/markers/n/mid.png'
+            size: new AMap.Size(34, 34),
+            image: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_b.png',
+            imageSize: new AMap.Size(34, 34)
           })
         })
         this.userMarker.setMap(this.map)
@@ -541,30 +591,42 @@ export default {
       // 添加酒吧标记
       this.bars.forEach(bar => {
         if (bar.longitude && bar.latitude) {
+          const router = this.$router
           const marker = new AMap.Marker({
             position: [bar.longitude, bar.latitude],
             title: bar.name,
+            anchor: 'bottom-center',
             label: {
               content: bar.name,
               direction: 'right'
             },
             icon: new AMap.Icon({
-              size: new AMap.Size(32, 32),
-              image: 'https://webapi.amap.com/theme/v1.3/markers/n/mid.png',
+              size: new AMap.Size(44, 44),
+              image: 'https://webapi.amap.com/theme/v1.3/markers/n/mark_r.png',
+              imageSize: new AMap.Size(44, 44),
               imageOffset: new AMap.Pixel(0, 0)
             })
           })
 
           // 添加信息窗口 - 包含查看路线按钮
+          const content = document.createElement('div')
+          content.className = 'bar-infowindow'
+          content.innerHTML = `
+              <div class="bar-infowindow__title">${bar.name}</div>
+              <div class="bar-infowindow__row">${bar.address || ''}</div>
+              ${bar.distance ? `<div class="bar-infowindow__row bar-infowindow__distance">距离: ${bar.distance.toFixed(2)} 公里</div>` : ''}
+              ${bar.avgRating ? `<div class="bar-infowindow__row">评分: ${bar.avgRating.toFixed(1)}</div>` : ''}
+              <a class="bar-infowindow__link" href="/bars/${bar.id}">查看酒吧详情</a>
+            `
+          const link = content.querySelector('.bar-infowindow__link')
+          if (link && router) {
+            link.addEventListener('click', (e) => {
+              e.preventDefault()
+              router.push(`/bars/${bar.id}`)
+            })
+          }
           const infoWindow = new AMap.InfoWindow({
-            content: `
-              <div style="padding: 10px; min-width: 200px;">
-                <h3 style="margin: 0 0 8px 0; font-size: 16px; color: #333;">${bar.name}</h3>
-                <p style="margin: 4px 0; color: #666; font-size: 14px;">${bar.address}</p>
-                ${bar.distance ? `<p style="margin: 4px 0; color: #409EFF; font-size: 14px;">距离: ${bar.distance.toFixed(2)} 公里</p>` : ''}
-                ${bar.avgRating ? `<p style="margin: 4px 0; color: #666; font-size: 14px;">评分: ${bar.avgRating.toFixed(1)}</p>` : ''}
-              </div>
-            `,
+            content,
             offset: new AMap.Pixel(0, -30)
           })
 
@@ -597,28 +659,62 @@ export default {
 
 <style scoped>
 .bar-list {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
+  width: 100%;
 }
 
-.page-header {
+.map-wrapper {
+  position: relative;
+  width: 100%;
+  height: calc(100vh - 72px);
+  min-height: 560px;
+  background: #f5f5f5;
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.map-overlay {
+  position: absolute;
+  top: 16px;
+  z-index: 10;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(236, 239, 245, 0.9);
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.12);
+  border-radius: 14px;
+  padding: 12px;
+  backdrop-filter: blur(10px);
+}
+
+.map-overlay-left {
+  left: 16px;
+  width: min(360px, calc(100% - 32px));
+}
+
+.map-overlay-right {
+  right: 16px;
   display: flex;
-  justify-content: space-between;
+  gap: 10px;
   align-items: center;
-  margin-bottom: 20px;
 }
 
-h2 {
-  margin: 0;
+.search-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
 }
 
-.search-card {
-  margin-bottom: 20px;
+.search-row :deep(.el-input) {
+  flex: 1;
 }
 
-.search-form {
-  padding: 10px 0;
+.search-input :deep(.el-input__wrapper) {
+  border-radius: 12px;
+}
+
+.search-meta {
+  margin-top: 8px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .bar-grid {
@@ -627,9 +723,14 @@ h2 {
   gap: 20px;
 }
 
+.bar-grid-below-map {
+  padding: 18px 20px 20px;
+}
+
 .bar-card {
   cursor: pointer;
-  transition: transform 0.2s;
+  will-change: transform;
+  transition: transform var(--motion-normal, 220ms) var(--motion-ease, ease);
 }
 
 .bar-card:hover {
@@ -688,17 +789,60 @@ h2 {
   margin-top: 8px;
 }
 
-.map-card {
-  margin-bottom: 20px;
-}
-
 .amap-container {
   width: 100% !important;
-  height: 500px !important;
-  min-height: 500px !important;
+  height: 100% !important;
+  min-height: 100% !important;
   background-color: #f5f5f5;
   display: block !important;
   visibility: visible !important;
   position: relative;
+}
+
+.bar-infowindow {
+  padding: 10px 12px;
+  min-width: 220px;
+  font-size: 13px;
+  color: #1f2d3d;
+}
+
+.bar-infowindow__title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.bar-infowindow__row {
+  margin: 3px 0;
+  color: #606266;
+}
+
+.bar-infowindow__distance {
+  color: #409eff;
+}
+
+.bar-infowindow__link {
+  display: inline-block;
+  margin-top: 8px;
+  color: #409eff;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.bar-infowindow__link:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 768px) {
+  .map-wrapper {
+    height: calc(100vh - 64px);
+    border-radius: 0;
+  }
+
+  .map-overlay-right {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
 }
 </style>

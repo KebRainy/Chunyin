@@ -1,7 +1,7 @@
 <template>
   <div class="ranking-container">
     <div class="ranking-header">
-      <h1 class="title art-heading">热门排行榜</h1>
+      <h1 class="title">热门</h1>
       <p class="subtitle">发现平台最受欢迎的精彩内容</p>
     </div>
 
@@ -14,7 +14,7 @@
         :class="{ active: currentTimeDimension === tab.value }"
         @click="changeTimeDimension(tab.value)"
       >
-        <span class="tab-icon">{{ tab.icon }}</span>
+        <el-icon class="tab-icon"><component :is="tab.icon" /></el-icon>
         <span class="tab-label">{{ tab.label }}</span>
       </div>
     </div>
@@ -37,8 +37,11 @@
           class="post-item"
         >
           <div class="rank-badge" :class="getRankClass(index)">
-            <span v-if="index < 3" class="rank-icon">{{ getRankIcon(index) }}</span>
-            <span v-else class="rank-number">{{ index + 1 }}</span>
+            <!-- <template v-if="index < 3">
+              <el-icon class="rank-icon"><component :is="getRankIcon(index)" /></el-icon>
+            </template>
+            <span v-else class="rank-number">{{ index + 1 }}</span> -->
+            <span class="rank-number">{{ index + 1 }}</span>
           </div>
           <PostCard :post="post" @select="goToPost(post.id)" />
         </div>
@@ -59,17 +62,17 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { Loading } from '@element-plus/icons-vue'
+import { Loading, Calendar, Timer, TrendCharts, Trophy, GoldMedal, Medal } from '@element-plus/icons-vue'
 import { circleApi } from '@/api/circle'
 import PostCard from '@/components/PostCard.vue'
 
 const router = useRouter()
 
 const timeTabs = [
-  { value: 'DAY', label: '今日', icon: '📅' },
-  { value: 'WEEK', label: '本周', icon: '📆' },
-  { value: 'MONTH', label: '本月', icon: '📊' },
-  { value: 'ALL', label: '全部', icon: '🏆' }
+  { value: 'DAY', label: '今日', icon: Calendar },
+  { value: 'WEEK', label: '本周', icon: Timer },
+  { value: 'MONTH', label: '本月', icon: TrendCharts },
+  { value: 'ALL', label: '全部', icon: Trophy }
 ]
 
 const currentTimeDimension = ref('WEEK')
@@ -135,8 +138,9 @@ const getRankClass = (index) => {
 }
 
 const getRankIcon = (index) => {
-  const icons = ['🥇', '🥈', '🥉']
-  return icons[index] || ''
+  if (index === 0) return GoldMedal
+  if (index === 1) return Medal
+  return Trophy
 }
 
 onMounted(() => {
@@ -159,13 +163,13 @@ onMounted(() => {
 .title {
   font-size: 32px;
   font-weight: 700;
-  color: #1a1a1a;
+  color: var(--app-text, #1a1a1a);
   margin: 0 0 10px 0;
 }
 
 .subtitle {
   font-size: 16px;
-  color: #666;
+  color: var(--app-muted, #666);
   margin: 0;
 }
 
@@ -176,11 +180,9 @@ onMounted(() => {
   gap: 12px;
   margin-bottom: 30px;
   padding: 20px;
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-md);
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: var(--app-surface, #fff);
+  border-radius: 16px;
+  border: 1px solid var(--app-border, #e6e8ef);
 }
 
 .time-tab {
@@ -189,26 +191,34 @@ onMounted(() => {
   gap: 8px;
   padding: 12px 24px;
   border-radius: 12px;
-  background: #f5f7fa;
+  background: var(--app-surface-2, #f5f7fa);
+  border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.3s ease;
+  will-change: transform;
+  transition:
+    transform var(--motion-normal, 220ms) var(--motion-ease, ease),
+    background-color var(--motion-normal, 220ms) var(--motion-ease, ease),
+    border-color var(--motion-normal, 220ms) var(--motion-ease, ease),
+    color var(--motion-normal, 220ms) var(--motion-ease, ease);
   font-weight: 500;
-  color: #666;
+  color: var(--app-muted, #666);
 }
 
 .time-tab:hover {
-  background: #e8ecf1;
-  transform: translateY(-2px);
+  background: #f2f4fa;
+  border-color: rgba(64, 158, 255, 0.25);
+  color: var(--app-text, #1a1a1a);
+  transform: translateY(-1px);
 }
 
 .time-tab.active {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  background: var(--app-primary-soft, rgba(64, 158, 255, 0.12));
+  border-color: rgba(64, 158, 255, 0.45);
+  color: var(--app-primary, #409eff);
 }
 
 .tab-icon {
-  font-size: 20px;
+  font-size: 18px;
 }
 
 .tab-label {
@@ -263,27 +273,28 @@ onMounted(() => {
   font-weight: 700;
   font-size: 14px;
   z-index: 10;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
 }
 
 .rank-badge.rank-1 {
-  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-  color: #8b6914;
+  background: #f5c542;
+  color: #5a3a00;
 }
 
 .rank-badge.rank-2 {
-  background: linear-gradient(135deg, #c0c0c0 0%, #e8e8e8 100%);
-  color: #5a5a5a;
+  background: #cbd5e1;
+  color: #334155;
 }
 
 .rank-badge.rank-3 {
-  background: linear-gradient(135deg, #cd7f32 0%, #e8a87c 100%);
-  color: #5c3a1f;
+  background: #d99058;
+  color: #4a2a16;
 }
 
 .rank-badge.rank-other {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: rgba(64, 158, 255, 0.14);
+  color: var(--app-primary, #409eff);
 }
 
 .rank-icon {

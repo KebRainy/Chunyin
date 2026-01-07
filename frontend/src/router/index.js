@@ -24,7 +24,7 @@ const routes = [
     path: '/ranking',
     name: 'Ranking',
     component: () => import('@/views/Ranking.vue'),
-    meta: { title: '热门排行' }
+    meta: { title: '热门' }
   },
   {
     path: '/beverages',

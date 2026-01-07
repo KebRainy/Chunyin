@@ -1,0 +1,110 @@
+:root {
+  --app-bg: #f6f7fb;
+  --app-surface: #ffffff;
+  --app-surface-2: #fbfcfe;
+  --app-text: #0f172a;
+  --app-muted: #64748b;
+  --app-border: #e6e8ef;
+  --app-primary: #409eff;
+  --app-primary-hover: #337ecc;
+  --app-primary-soft: rgba(64, 158, 255, 0.12);
+  --app-shadow: 0 10px 30px rgba(15, 23, 42, 0.06);
+
+  /* Motion */
+  --motion-fast: 160ms;
+  --motion-normal: 220ms;
+  --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
+  /* Element Plus theme tokens */
+  --el-color-primary: var(--app-primary);
+  --el-border-radius-base: 12px;
+  --el-border-color: var(--app-border);
+  --el-text-color-primary: var(--app-text);
+  --el-text-color-regular: #334155;
+  --el-text-color-secondary: var(--app-muted);
+}
+
+html,
+body {
+  background: var(--app-bg);
+  color: var(--app-text);
+}
+
+/* Typography + layout */
+#app {
+  background: var(--app-bg);
+}
+
+/* Element Plus - surfaces */
+.el-card {
+  border-radius: 16px;
+  border-color: var(--app-border);
+  box-shadow: var(--app-shadow);
+}
+
+.el-card__header {
+  border-bottom-color: var(--app-border);
+}
+
+/* Element Plus - buttons */
+.el-button {
+  border-radius: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.el-button--primary {
+  --el-button-bg-color: var(--app-primary);
+  --el-button-border-color: var(--app-primary);
+  --el-button-text-color: #ffffff;
+  --el-button-hover-bg-color: var(--app-primary-hover);
+  --el-button-hover-border-color: var(--app-primary-hover);
+  --el-button-active-bg-color: #2b74bf;
+  --el-button-active-border-color: #2b74bf;
+}
+
+.el-button--primary.is-plain {
+  --el-button-bg-color: transparent;
+  --el-button-border-color: var(--app-primary);
+  --el-button-text-color: var(--app-primary);
+  --el-button-hover-bg-color: var(--app-primary-soft);
+  --el-button-hover-border-color: var(--app-primary-hover);
+  --el-button-active-bg-color: rgba(64, 158, 255, 0.18);
+  --el-button-active-border-color: #2b74bf;
+}
+
+.el-button--default {
+  --el-button-bg-color: #ffffff;
+  --el-button-border-color: var(--app-border);
+  --el-button-text-color: #334155;
+  --el-button-hover-border-color: rgba(47, 84, 235, 0.5);
+  --el-button-hover-bg-color: #ffffff;
+  --el-button-active-border-color: rgba(47, 84, 235, 0.65);
+}
+
+.el-button--text {
+  --el-button-text-color: var(--app-primary);
+  --el-button-hover-text-color: var(--app-primary-hover);
+}
+
+/* Element Plus - inputs */
+.el-input__wrapper,
+.el-textarea__inner {
+  border-radius: 12px;
+}
+
+/* Element Plus - tags */
+.el-tag--plain.el-tag--primary {
+  --el-tag-border-color: rgba(64, 158, 255, 0.35);
+  --el-tag-text-color: var(--app-primary);
+  --el-tag-bg-color: rgba(64, 158, 255, 0.08);
+}
+
+/* Reduce motion (keep subtle) */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
+}

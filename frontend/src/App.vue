@@ -12,7 +12,7 @@
       </el-footer>
     </el-container>
     <!-- RAG悬浮窗 -->
-    <RAGFloatingWindow />
+    <RAGFloatingWindow v-if="showRAGFloatingWindow" />
   </div>
 </template>
 
@@ -27,30 +27,50 @@ export default {
     Header,
     Footer,
     RAGFloatingWindow
+  },
+  computed: {
+    showRAGFloatingWindow() {
+      return this.$route?.name !== 'WikiEditor'
+    }
   }
 }
 </script>
 
 <style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 #app {
+  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   min-height: 100vh;
-  position: relative;
+  background-color: var(--app-bg, #fff);
 }
 
 .el-header {
   padding: 0;
   height: 60px !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+  background: var(--app-surface, #fff);
 }
 
 .el-main {
   padding: 32px 24px;
   min-height: calc(100vh - 120px);
-  position: relative;
+  background-color: var(--app-bg, #fff);
 }
 
 .el-footer {
-  min-height: auto !important;
-  padding: 0 !important;
-  background: transparent;
+  height: 60px !important;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--app-surface, #fff);
+  color: #909399;
+  border-top: 1px solid #f0f0f0;
 }
 </style>
